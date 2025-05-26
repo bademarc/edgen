@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
         xUsername,
         xUserId,
         image,
-        updatedAt: new Date(),
       },
       create: {
         id,
@@ -47,8 +46,6 @@ export async function POST(request: NextRequest) {
         image,
         totalPoints: 0,
         autoMonitoringEnabled: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
     })
 
