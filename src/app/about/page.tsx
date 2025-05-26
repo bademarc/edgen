@@ -201,7 +201,7 @@ export default function AboutPage() {
                 </ul>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-3">❌ Don't:</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-3">❌ Don&apos;t:</h3>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Submit fake or spam content</li>
                   <li>• Use automated tools for engagement</li>

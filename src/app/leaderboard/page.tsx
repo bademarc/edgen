@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { TrophyIcon, SparklesIcon, UserIcon } from '@heroicons/react/24/outline'
 import { formatNumber } from '@/lib/utils'
@@ -117,7 +118,7 @@ export default function LeaderboardPage() {
               Top community members ranked by total points earned
             </p>
           </div>
-          
+
           <div className="space-y-4">
             {[...Array(10)].map((_, i) => (
               <div key={i} className="bg-card border border-border rounded-lg p-6 animate-pulse">
@@ -166,8 +167,8 @@ export default function LeaderboardPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
               className={`relative bg-card border-2 rounded-lg p-6 text-center ${
-                user.rank === 1 ? 'border-yellow-500 md:order-2' : 
-                user.rank === 2 ? 'border-gray-400 md:order-1' : 
+                user.rank === 1 ? 'border-yellow-500 md:order-2' :
+                user.rank === 2 ? 'border-gray-400 md:order-1' :
                 'border-amber-600 md:order-3'
               }`}
             >
@@ -176,12 +177,14 @@ export default function LeaderboardPage() {
                   #{user.rank}
                 </div>
               </div>
-              
+
               <div className="mt-4">
                 {user.image ? (
-                  <img
+                  <Image
                     src={user.image}
                     alt={user.name || user.xUsername || 'User'}
+                    width={64}
+                    height={64}
                     className="h-16 w-16 rounded-full mx-auto mb-4"
                   />
                 ) : (
@@ -189,14 +192,14 @@ export default function LeaderboardPage() {
                     <UserIcon className="h-8 w-8 text-muted-foreground" />
                   </div>
                 )}
-                
+
                 <h3 className="text-lg font-semibold text-foreground">
                   {user.name || user.xUsername || 'Anonymous'}
                 </h3>
                 {user.xUsername && (
                   <p className="text-sm text-muted-foreground">@{user.xUsername}</p>
                 )}
-                
+
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-center space-x-1">
                     <SparklesIcon className="h-4 w-4 text-primary" />
@@ -233,12 +236,14 @@ export default function LeaderboardPage() {
                 <div className="flex items-center justify-center w-12 h-12">
                   {getRankIcon(user.rank)}
                 </div>
-                
+
                 <div className="flex-1 flex items-center space-x-4">
                   {user.image ? (
-                    <img
+                    <Image
                       src={user.image}
                       alt={user.name || user.xUsername || 'User'}
+                      width={40}
+                      height={40}
                       className="h-10 w-10 rounded-full"
                     />
                   ) : (
@@ -246,7 +251,7 @@ export default function LeaderboardPage() {
                       <UserIcon className="h-5 w-5 text-muted-foreground" />
                     </div>
                   )}
-                  
+
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">
                       {user.name || user.xUsername || 'Anonymous'}
@@ -256,7 +261,7 @@ export default function LeaderboardPage() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="text-right">
                   <div className="flex items-center space-x-1">
                     <SparklesIcon className="h-4 w-4 text-primary" />

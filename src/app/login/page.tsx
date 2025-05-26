@@ -79,7 +79,7 @@ export default function LoginPage() {
         >
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground mb-4">
-              What we'll access:
+              What we&apos;ll access:
             </h3>
             {permissions.map((permission, index) => (
               <motion.div

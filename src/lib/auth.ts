@@ -3,6 +3,13 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import TwitterProvider from 'next-auth/providers/twitter'
 import { prisma } from './db'
 
+interface TwitterProfile {
+  id: string
+  username: string
+  name: string
+  email?: string
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -38,11 +45,12 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === 'twitter' && profile) {
         // Update user with Twitter data
+        const twitterProfile = profile as TwitterProfile
         await prisma.user.update({
           where: { id: user.id },
           data: {
-            xUsername: (profile as any).username,
-            xUserId: (profile as any).id,
+            xUsername: twitterProfile.username,
+            xUserId: twitterProfile.id,
           },
         })
       }

@@ -32,6 +32,15 @@ interface TwitterApiResponse {
   }>
 }
 
+interface TwitterUserApiResponse {
+  data?: TwitterUserData
+  errors?: Array<{
+    title: string
+    detail: string
+    type: string
+  }>
+}
+
 export class TwitterApiService {
   private bearerToken: string
 
@@ -42,7 +51,7 @@ export class TwitterApiService {
     }
   }
 
-  private async makeRequest(url: string): Promise<any> {
+  private async makeRequest(url: string): Promise<TwitterApiResponse | TwitterUserApiResponse> {
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${this.bearerToken}`,
@@ -78,8 +87,8 @@ export class TwitterApiService {
       }
 
       const url = `https://api.twitter.com/2/tweets/${tweetId}?expansions=author_id&tweet.fields=public_metrics,created_at&user.fields=username,name,profile_image_url`
-      
-      const response: TwitterApiResponse = await this.makeRequest(url)
+
+      const response = await this.makeRequest(url) as TwitterApiResponse
 
       if (response.errors || !response.data) {
         console.error('Twitter API errors:', response.errors)
@@ -119,7 +128,7 @@ export class TwitterApiService {
       // In a full implementation, you would need to check if the tweet
       // is actually from the specific community using Twitter's API
       const communityUrl = process.env.LAYEREDGE_COMMUNITY_URL || 'https://x.com/i/communities/1890107751621363'
-      return tweetUrl.includes('communities/1890107751621363') || 
+      return tweetUrl.includes('communities/1890107751621363') ||
              tweetUrl.includes(communityUrl)
     } catch (error) {
       console.error('Error verifying tweet community:', error)
@@ -130,8 +139,8 @@ export class TwitterApiService {
   async getUserData(username: string): Promise<TwitterUserData | null> {
     try {
       const url = `https://api.twitter.com/2/users/by/username/${username}?user.fields=profile_image_url`
-      const response = await this.makeRequest(url)
-      
+      const response = await this.makeRequest(url) as TwitterUserApiResponse
+
       if (response.errors || !response.data) {
         console.error('Twitter API errors:', response.errors)
         return null

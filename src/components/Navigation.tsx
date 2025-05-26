@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useSession, signIn, signOut } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -76,9 +77,11 @@ export function Navigation() {
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   {session.user?.image && (
-                    <img
+                    <Image
                       src={session.user.image}
                       alt={session.user.name || 'User'}
+                      width={32}
+                      height={32}
                       className="h-8 w-8 rounded-full"
                     />
                   )}
@@ -154,9 +157,11 @@ export function Navigation() {
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2 px-3 py-2">
                       {session.user?.image && (
-                        <img
+                        <Image
                           src={session.user.image}
                           alt={session.user.name || 'User'}
+                          width={32}
+                          height={32}
                           className="h-8 w-8 rounded-full"
                         />
                       )}

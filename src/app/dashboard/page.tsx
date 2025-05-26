@@ -130,7 +130,7 @@ export default function DashboardPage() {
             Welcome back, {session.user?.name || session.user?.xUsername}!
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Here's your community engagement overview
+            Here&apos;s your community engagement overview
           </p>
         </motion.div>
 

@@ -1,7 +1,8 @@
+import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { 
-  HeartIcon, 
-  ArrowPathRoundedSquareIcon, 
+import {
+  HeartIcon,
+  ArrowPathRoundedSquareIcon,
   ChatBubbleLeftIcon,
   SparklesIcon,
   CalendarIcon,
@@ -42,9 +43,11 @@ export function TweetCard({ tweet, showUser = true, className = '' }: TweetCardP
         {showUser && (
           <div className="flex items-center space-x-3">
             {tweet.user.image ? (
-              <img
+              <Image
                 src={tweet.user.image}
                 alt={tweet.user.name || tweet.user.xUsername || 'User'}
+                width={40}
+                height={40}
                 className="h-10 w-10 rounded-full"
               />
             ) : (
@@ -62,7 +65,7 @@ export function TweetCard({ tweet, showUser = true, className = '' }: TweetCardP
             </div>
           </div>
         )}
-        
+
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1">
             <SparklesIcon className="h-4 w-4 text-primary" />

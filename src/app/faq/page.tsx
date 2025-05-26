@@ -83,8 +83,8 @@ export default function FAQPage() {
   })
 
   const toggleItem = (id: number) => {
-    setOpenItems(prev => 
-      prev.includes(id) 
+    setOpenItems(prev =>
+      prev.includes(id)
         ? prev.filter(item => item !== id)
         : [...prev, id]
     )
@@ -183,7 +183,7 @@ export default function FAQPage() {
                     )}
                   />
                 </button>
-                
+
                 <AnimatePresence>
                   {openItems.includes(faq.id) && (
                     <motion.div
@@ -217,7 +217,7 @@ export default function FAQPage() {
             Still have questions?
           </h2>
           <p className="text-muted-foreground mb-6">
-            Can't find the answer you're looking for? Our support team is here to help.
+            Can&apos;t find the answer you&apos;re looking for? Our support team is here to help.
           </p>
           <div className="flex items-center justify-center gap-4">
             <a

@@ -26,7 +26,7 @@ const submitSchema = z.object({
 type SubmitFormData = z.infer<typeof submitSchema>
 
 export default function SubmitPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -57,7 +57,7 @@ export default function SubmitPage() {
     return null
   }
 
-  const onSubmit = async (data: SubmitFormData) => {
+  const onSubmit = async () => {
     setIsSubmitting(true)
     setSubmitStatus('idle')
     setErrorMessage('')
@@ -76,7 +76,7 @@ export default function SubmitPage() {
         setSubmitStatus('error')
         setErrorMessage('This tweet has already been submitted or is not accessible.')
       }
-    } catch (error) {
+    } catch {
       setSubmitStatus('error')
       setErrorMessage('An error occurred while submitting your tweet. Please try again.')
     } finally {
@@ -226,7 +226,7 @@ export default function SubmitPage() {
                     Tweet Submitted Successfully!
                   </h3>
                   <p className="text-green-800 dark:text-green-200">
-                    Your tweet has been added to the system and you've earned 5 base points.
+                    Your tweet has been added to the system and you&apos;ve earned 5 base points.
                     Bonus points will be added as the tweet receives engagement.
                   </p>
                 </div>
