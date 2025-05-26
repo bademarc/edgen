@@ -5,19 +5,19 @@ export async function GET(request: NextRequest) {
   try {
     // Verify this is a legitimate cron request
     const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'layeredge-cron-secret-2024'
-    
+    const cronSecret = process.env.CRON_SECRET || 'layeredge-cron-secret-2024-auto-monitoring'
+
     // Allow requests from Koyeb cron or with proper authorization
     const isKoyebCron = request.headers.get('user-agent')?.includes('Koyeb')
     const hasValidAuth = authHeader === `Bearer ${cronSecret}`
-    
+
     if (!isKoyebCron && !hasValidAuth) {
       console.log('Unauthorized cron request:', {
         userAgent: request.headers.get('user-agent'),
         hasAuth: !!authHeader,
         isKoyeb: isKoyebCron
       })
-      
+
       return NextResponse.json(
         { error: 'Unauthorized - Invalid cron request' },
         { status: 401 }
@@ -25,14 +25,14 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Starting scheduled tweet monitoring job...')
-    
+
     const monitoringService = new TwitterMonitoringService()
     const startTime = Date.now()
-    
+
     const result = await monitoringService.monitorAllUsers()
-    
+
     const duration = Date.now() - startTime
-    
+
     console.log(`Scheduled monitoring completed in ${duration}ms:`, {
       totalUsers: result.totalUsers,
       successfulUsers: result.successfulUsers,
@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in scheduled monitoring job:', error)
-    
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Internal server error during scheduled monitoring',
         details: error instanceof Error ? error.message : 'Unknown error',
