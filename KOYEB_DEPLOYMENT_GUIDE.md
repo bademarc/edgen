@@ -80,7 +80,7 @@ TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAAHyCzwEAAAAAh9uE7X3FHoLzdxGTfVwuDVkhDV4
 
 #### Application Configuration
 ```bash
-LAYEREDGE_COMMUNITY_URL=https://x.com/i/communities/1890107751621363
+LAYEREDGE_COMMUNITY_URL=https://x.com/i/communities/1890107751621357663
 NODE_ENV=production
 ```
 

@@ -127,8 +127,8 @@ export class TwitterApiService {
       // For now, we'll do basic URL validation
       // In a full implementation, you would need to check if the tweet
       // is actually from the specific community using Twitter's API
-      const communityUrl = process.env.LAYEREDGE_COMMUNITY_URL || 'https://x.com/i/communities/1890107751621363'
-      return tweetUrl.includes('communities/1890107751621363') ||
+      const communityUrl = process.env.LAYEREDGE_COMMUNITY_URL || 'https://x.com/i/communities/1890107751621357663'
+      return tweetUrl.includes('communities/1890107751621357663') ||
              tweetUrl.includes(communityUrl)
     } catch (error) {
       console.error('Error verifying tweet community:', error)

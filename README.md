@@ -5,7 +5,7 @@ A comprehensive React.js web application for the LayerEdge $Edgen token communit
 ## 🚀 Features
 
 ### Core Functionality
-- **X Community Integration**: Connect to the LayerEdge X community at https://x.com/i/communities/1890107751621363
+- **X Community Integration**: Connect to the LayerEdge X community at https://x.com/i/communities/1890107751621357663
 - **Points System**: Earn points for tweet submissions and engagement
 - **Leaderboard**: Compete with community members and track rankings
 - **User Dashboard**: Personal statistics and activity overview
@@ -90,7 +90,7 @@ A comprehensive React.js web application for the LayerEdge $Edgen token communit
    TWITTER_CLIENT_ID="your-twitter-client-id"
    TWITTER_CLIENT_SECRET="your-twitter-client-secret"
    TWITTER_BEARER_TOKEN="your-twitter-bearer-token"
-   LAYEREDGE_COMMUNITY_URL="https://x.com/i/communities/1890107751621363"
+   LAYEREDGE_COMMUNITY_URL="https://x.com/i/communities/1890107751621357663"
    ```
 
 4. **Set up the database**

@@ -28,8 +28,8 @@ export function isValidTwitterUrl(url: string): boolean {
 }
 
 export function isLayerEdgeCommunityUrl(url: string): boolean {
-  const communityUrl = process.env.LAYEREDGE_COMMUNITY_URL || 'https://x.com/i/communities/1890107751621363'
-  return url.includes(communityUrl) || url.includes('communities/1890107751621363')
+  const communityUrl = process.env.LAYEREDGE_COMMUNITY_URL || 'https://x.com/i/communities/1890107751621357663'
+  return url.includes(communityUrl) || url.includes('communities/1890107751621357663')
 }
 
 export function extractTweetId(url: string): string | null {

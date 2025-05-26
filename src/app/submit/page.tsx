@@ -57,24 +57,30 @@ export default function SubmitPage() {
     return null
   }
 
-  const onSubmit = async () => {
+  const onSubmit = async (data: SubmitFormData) => {
     setIsSubmitting(true)
     setSubmitStatus('idle')
     setErrorMessage('')
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      const response = await fetch('/api/tweets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tweetUrl: data.tweetUrl,
+        }),
+      })
 
-      // Mock success/error for demonstration
-      const isSuccess = Math.random() > 0.3 // 70% success rate
+      const result = await response.json()
 
-      if (isSuccess) {
+      if (response.ok) {
         setSubmitStatus('success')
         reset()
       } else {
         setSubmitStatus('error')
-        setErrorMessage('This tweet has already been submitted or is not accessible.')
+        setErrorMessage(result.error || 'Failed to submit tweet')
       }
     } catch {
       setSubmitStatus('error')
@@ -121,7 +127,7 @@ export default function SubmitPage() {
               </ol>
               <div className="mt-4">
                 <a
-                  href="https://x.com/i/communities/1890107751621363"
+                  href="https://x.com/i/communities/1890107751621357663"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
