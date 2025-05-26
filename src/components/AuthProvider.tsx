@@ -1,12 +1,26 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { mockAuth, MockUser } from '@/lib/mock-auth'
+import { createClientComponentClient } from '@/lib/supabase'
+import { User } from '@supabase/supabase-js'
+
+interface AuthUser {
+  id: string
+  name: string | null
+  email: string | null
+  xUsername: string | null
+  xUserId: string | null
+  image: string | null
+  totalPoints: number
+  rank?: number | null
+  autoMonitoringEnabled: boolean
+}
 
 interface AuthContextType {
-  user: MockUser | null
+  user: AuthUser | null
+  supabaseUser: User | null
   isLoading: boolean
-  signIn: (userId?: string) => Promise<void>
+  signInWithTwitter: () => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -25,14 +39,36 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<MockUser | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [supabaseUser, setSupabaseUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClientComponentClient()
 
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const session = await mockAuth.getSession()
-        setUser(session?.user || null)
+        // Get initial session
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (session?.user) {
+          setSupabaseUser(session.user)
+          await syncUserData(session.user)
+        }
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (session?.user) {
+              setSupabaseUser(session.user)
+              await syncUserData(session.user)
+            } else {
+              setSupabaseUser(null)
+              setUser(null)
+            }
+          }
+        )
+
+        return () => subscription.unsubscribe()
       } catch (error) {
         console.error('Auth initialization error:', error)
       } finally {
@@ -41,25 +77,77 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     initAuth()
-  }, [])
+  }, [supabase.auth])
 
-  const signIn = async (userId?: string) => {
+  const syncUserData = async (supabaseUser: User) => {
+    try {
+      // Extract Twitter data from user metadata
+      const twitterData = supabaseUser.user_metadata
+      const xUsername = twitterData?.user_name || twitterData?.screen_name
+      const xUserId = twitterData?.provider_id || supabaseUser.id
+
+      // Create or update user in our database via API
+      const response = await fetch('/api/auth/sync-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          name: twitterData?.name || twitterData?.full_name,
+          xUsername,
+          xUserId,
+          image: twitterData?.avatar_url || twitterData?.profile_image_url,
+        }),
+      })
+
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+      } else {
+        console.error('Failed to sync user data')
+      }
+    } catch (error) {
+      console.error('Error syncing user data:', error)
+    }
+  }
+
+  const signInWithTwitter = async () => {
     setIsLoading(true)
     try {
-      const user = await mockAuth.signIn(userId)
-      setUser(user)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'twitter',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+
+      if (error) {
+        console.error('Sign in error:', error)
+        throw error
+      }
     } catch (error) {
       console.error('Sign in error:', error)
-    } finally {
       setIsLoading(false)
+      throw error
     }
   }
 
   const signOut = async () => {
     setIsLoading(true)
     try {
-      await mockAuth.signOut()
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Sign out error:', error)
+        throw error
+      }
       setUser(null)
+      setSupabaseUser(null)
     } catch (error) {
       console.error('Sign out error:', error)
     } finally {
@@ -69,8 +157,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const value = {
     user,
+    supabaseUser,
     isLoading,
-    signIn,
+    signInWithTwitter,
     signOut,
   }
 

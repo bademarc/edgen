@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { prisma } from '@/lib/db'
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent } from '@/lib/utils'
 import { getFallbackService } from '@/lib/fallback-service'
@@ -43,9 +42,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -92,10 +92,10 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingTweet) {
-      const isOwnTweet = existingTweet.userId === session.user.id
+      const isOwnTweet = existingTweet.userId === user.id
       const submitterName = existingTweet.user.name || existingTweet.user.xUsername || 'Another user'
 
-      console.log(`Duplicate tweet detected. URL: ${tweetUrl}, Original submitter: ${submitterName}, Current user: ${session.user.id}`)
+      console.log(`Duplicate tweet detected. URL: ${tweetUrl}, Original submitter: ${submitterName}, Current user: ${user.id}`)
 
       return NextResponse.json(
         {
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
       data: {
         url: tweetUrl,
         content: tweetData.content,
-        userId: session.user.id,
+        userId: user.id,
         likes: tweetData.likes,
         retweets: tweetData.retweets,
         replies: tweetData.replies,
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
 
     // Update user's total points
     await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: user.id },
       data: {
         totalPoints: {
           increment: totalPoints,
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
     // Create points history record
     await prisma.pointsHistory.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         tweetId: tweet.id,
         pointsAwarded: totalPoints,
         reason: 'Tweet submission',

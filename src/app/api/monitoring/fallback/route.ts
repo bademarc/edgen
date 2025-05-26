@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { TwitterMonitoringService } from '@/lib/twitter-monitoring'
 import { getFallbackService } from '@/lib/fallback-service'
 import { prisma } from '@/lib/db'
@@ -13,9 +12,10 @@ import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const forceMethod = searchParams.get('method') // 'api', 'scraper', or 'auto'
-    const userId = session.user.id
+    const userId = user.id
 
     console.log(`🔄 Starting fallback monitoring for user ${userId} with method: ${forceMethod || 'auto'}`)
 
@@ -145,11 +145,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { prisma } from '@/lib/db'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -15,8 +15,8 @@ export async function GET() {
     }
 
     // Get user data from database
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         id: true,
         name: true,
@@ -34,7 +34,7 @@ export async function GET() {
       }
     })
 
-    if (!user) {
+    if (!dbUser) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -42,28 +42,28 @@ export async function GET() {
     }
 
     // Validate Twitter credentials
-    const hasValidCredentials = !!(user.xUsername && user.xUserId)
+    const hasValidCredentials = !!(dbUser.xUsername && dbUser.xUserId)
     const credentialIssues: string[] = []
 
-    if (!user.xUsername) {
+    if (!dbUser.xUsername) {
       credentialIssues.push('Missing Twitter username')
     }
-    if (!user.xUserId) {
+    if (!dbUser.xUserId) {
       credentialIssues.push('Missing Twitter user ID')
     }
 
     // Check monitoring status
-    const monitoringStatus = user.tweetMonitoring[0]
+    const monitoringStatus = dbUser.tweetMonitoring[0]
     const hasMonitoringError = monitoringStatus?.status === 'error'
 
     return NextResponse.json({
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        xUsername: user.xUsername,
-        xUserId: user.xUserId,
-        autoMonitoringEnabled: user.autoMonitoringEnabled,
+        id: dbUser.id,
+        name: dbUser.name,
+        email: dbUser.email,
+        xUsername: dbUser.xUsername,
+        xUserId: dbUser.xUserId,
+        autoMonitoringEnabled: dbUser.autoMonitoringEnabled,
       },
       validation: {
         hasValidCredentials,
@@ -93,9 +93,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -108,13 +109,13 @@ export async function POST(request: NextRequest) {
     if (action === 'repair') {
       // Attempt to repair user credentials by resetting monitoring status
       await prisma.tweetMonitoring.upsert({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         update: {
           status: 'error',
           errorMessage: 'Credentials need refresh - please re-authenticate with Twitter',
         },
         create: {
-          userId: session.user.id,
+          userId: user.id,
           status: 'error',
           errorMessage: 'Credentials need refresh - please re-authenticate with Twitter',
           tweetsFound: 0,
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
 
       // Disable monitoring until re-authentication
       await prisma.user.update({
-        where: { id: session.user.id },
+        where: { id: user.id },
         data: {
           autoMonitoringEnabled: false,
         },

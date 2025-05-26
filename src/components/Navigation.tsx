@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useSession, signIn, signOut } from 'next-auth/react'
+import { useAuth } from './AuthProvider'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bars3Icon,
@@ -28,10 +28,10 @@ const navigation = [
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { data: session, status } = useSession()
+  const { user, isLoading, signInWithTwitter, signOut } = useAuth()
 
   const filteredNavigation = navigation.filter(item =>
-    !item.requiresAuth || (item.requiresAuth && session)
+    !item.requiresAuth || (item.requiresAuth && user)
   )
 
   return (
@@ -76,16 +76,16 @@ export function Navigation() {
 
           {/* Auth Button */}
           <div className="hidden md:block">
-            {status === 'loading' ? (
+            {isLoading ? (
               <div className="h-10 w-24 skeleton-layeredge rounded-lg" />
-            ) : session ? (
+            ) : user ? (
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-3 card-layeredge px-4 py-2">
-                  {session.user?.image && (
+                  {user.image && (
                     <div className="relative">
                       <Image
-                        src={session.user.image}
-                        alt={session.user.name || 'User'}
+                        src={user.image}
+                        alt={user.name || 'User'}
                         width={32}
                         height={32}
                         className="h-8 w-8 rounded-full ring-2 ring-border hover:ring-layeredge-orange transition-all duration-300"
@@ -95,11 +95,11 @@ export function Navigation() {
                   )}
                   <div className="text-sm">
                     <p className="text-foreground font-medium">
-                      {session.user?.name || session.user?.xUsername}
+                      {user.name || user.xUsername}
                     </p>
-                    {session.user?.totalPoints !== undefined && (
+                    {user.totalPoints !== undefined && (
                       <div className="badge-layeredge-primary text-xs">
-                        {session.user.totalPoints} points
+                        {user.totalPoints} points
                       </div>
                     )}
                   </div>
@@ -113,7 +113,7 @@ export function Navigation() {
               </div>
             ) : (
               <button
-                onClick={() => signIn('twitter')}
+                onClick={() => signInWithTwitter()}
                 className="btn-layeredge-primary px-6 py-2 rounded-lg text-sm font-semibold hover-lift"
               >
                 Sign in with X
@@ -161,15 +161,15 @@ export function Navigation() {
 
               {/* Mobile Auth */}
               <div className="pt-4 mt-4 border-t border-border/50">
-                {session ? (
+                {user ? (
                   <div className="space-y-3">
                     <div className="card-layeredge p-4">
                       <div className="flex items-center space-x-3">
-                        {session.user?.image && (
+                        {user.image && (
                           <div className="relative">
                             <Image
-                              src={session.user.image}
-                              alt={session.user.name || 'User'}
+                              src={user.image}
+                              alt={user.name || 'User'}
                               width={40}
                               height={40}
                               className="h-10 w-10 rounded-full ring-2 ring-border"
@@ -179,11 +179,11 @@ export function Navigation() {
                         )}
                         <div className="text-sm">
                           <p className="text-foreground font-medium">
-                            {session.user?.name || session.user?.xUsername}
+                            {user.name || user.xUsername}
                           </p>
-                          {session.user?.totalPoints !== undefined && (
+                          {user.totalPoints !== undefined && (
                             <div className="badge-layeredge-primary text-xs mt-1">
-                              {session.user.totalPoints} points
+                              {user.totalPoints} points
                             </div>
                           )}
                         </div>
@@ -202,7 +202,7 @@ export function Navigation() {
                 ) : (
                   <button
                     onClick={() => {
-                      signIn('twitter')
+                      signInWithTwitter()
                       setMobileMenuOpen(false)
                     }}
                     className="w-full btn-layeredge-primary px-4 py-3 rounded-lg text-base font-semibold"

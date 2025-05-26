@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@/components/AuthProvider'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -46,7 +46,7 @@ interface RecentTweet {
 }
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession()
+  const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentTweets, setRecentTweets] = useState<RecentTweet[]>([])
@@ -69,7 +69,7 @@ export default function DashboardPage() {
   })
 
   const fetchDashboardData = useCallback(async () => {
-    if (!session?.user?.id) return
+    if (!user?.id) return
 
     setIsLoading(true)
     setError(null)
@@ -84,7 +84,7 @@ export default function DashboardPage() {
       setStats(statsData)
 
       // Fetch user's recent tweets
-      const tweetsResponse = await fetch(`/api/tweets?userId=${session.user.id}&limit=5`)
+      const tweetsResponse = await fetch(`/api/tweets?userId=${user.id}&limit=5`)
       if (!tweetsResponse.ok) {
         throw new Error('Failed to fetch recent tweets')
       }
@@ -96,20 +96,20 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [session?.user?.id])
+  }, [user?.id])
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!authLoading && !user) {
       router.push('/login')
       return
     }
 
-    if (status === 'authenticated' && session?.user?.id) {
+    if (user?.id) {
       fetchDashboardData()
     }
-  }, [status, router, session?.user?.id, fetchDashboardData])
+  }, [authLoading, user, router, fetchDashboardData])
 
-  if (status === 'loading' || isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -130,7 +130,7 @@ export default function DashboardPage() {
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null // Will redirect
   }
 
@@ -164,7 +164,7 @@ export default function DashboardPage() {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, {session.user?.name || session.user?.xUsername}!
+            Welcome back, {user.name || user.xUsername}!
           </h1>
           <p className="mt-2 text-muted-foreground">
             Here&apos;s your community engagement overview

@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useSession, signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/components/AuthProvider'
 import {
   ShieldCheckIcon,
   UserGroupIcon,
@@ -33,11 +33,12 @@ const permissions = [
 
 // Component that uses useSearchParams - needs to be wrapped in Suspense
 function LoginContent() {
-  const { data: session, status } = useSession()
+  const { user, isLoading, signInWithTwitter } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [message, setMessage] = useState<string | null>(null)
   const [messageType, setMessageType] = useState<'info' | 'warning' | 'error'>('info')
+  const [isSigningIn, setIsSigningIn] = useState(false)
 
   useEffect(() => {
     // Check for messages from URL parameters
@@ -54,12 +55,15 @@ function LoginContent() {
   }, [searchParams])
 
   useEffect(() => {
-    if (session) {
-      router.push('/dashboard')
+    // Redirect if already authenticated
+    if (user && !isLoading) {
+      const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+      router.push(callbackUrl)
     }
-  }, [session, router])
+  }, [user, isLoading, router, searchParams])
 
-  if (status === 'loading') {
+  // Show loading state while checking authentication
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -67,8 +71,22 @@ function LoginContent() {
     )
   }
 
-  if (session) {
-    return null // Will redirect
+  // Don't render login form if already authenticated
+  if (user) {
+    return null
+  }
+
+  const handleSignIn = async () => {
+    setIsSigningIn(true)
+    try {
+      await signInWithTwitter()
+    } catch (error) {
+      console.error('Sign in failed:', error)
+      setMessage('Sign in failed. Please try again.')
+      setMessageType('error')
+    } finally {
+      setIsSigningIn(false)
+    }
   }
 
   return (
@@ -156,14 +174,19 @@ function LoginContent() {
             className="mt-6"
           >
             <button
-              onClick={() => signIn('twitter', { callbackUrl: '/dashboard' })}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              onClick={handleSignIn}
+              disabled={isSigningIn}
+              className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
             >
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-              Continue with X
-              <ArrowRightIcon className="h-4 w-4" />
+              {isSigningIn ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+              )}
+              {isSigningIn ? 'Signing in...' : 'Continue with X'}
+              {!isSigningIn && <ArrowRightIcon className="h-4 w-4" />}
             </button>
           </motion.div>
 
