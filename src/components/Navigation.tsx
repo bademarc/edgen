@@ -13,13 +13,15 @@ import {
   PlusIcon,
   InformationCircleIcon,
   QuestionMarkCircleIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon, requiresAuth: true },
+  { name: 'Recent Submissions', href: '/recent', icon: ChatBubbleLeftRightIcon },
   { name: 'Leaderboard', href: '/leaderboard', icon: TrophyIcon },
   { name: 'Submit Tweet', href: '/submit', icon: PlusIcon, requiresAuth: true },
   { name: 'About', href: '/about', icon: InformationCircleIcon },

@@ -75,6 +75,8 @@ model Tweet {
   bonusPoints  Int      @default(0)
   totalPoints  Int      @default(5)
   isVerified   Boolean  @default(false)
+  lastEngagementUpdate DateTime? // Track when engagement was last updated
+  engagementUpdateCount Int @default(0) // Track how many times engagement was updated
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

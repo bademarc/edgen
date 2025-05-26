@@ -208,4 +208,77 @@ export class TwitterApiService {
       return null
     }
   }
+
+  // New method for fetching only engagement metrics (lighter API call)
+  async getTweetEngagementMetrics(tweetUrl: string): Promise<{
+    likes: number
+    retweets: number
+    replies: number
+  } | null> {
+    try {
+      console.log(`Fetching engagement metrics for URL: ${tweetUrl}`)
+
+      const tweetId = extractTweetId(tweetUrl)
+      if (!tweetId) {
+        console.error('Failed to extract tweet ID from URL:', tweetUrl)
+        return null
+      }
+
+      const url = `https://api.twitter.com/2/tweets/${tweetId}?tweet.fields=public_metrics`
+      const response = await this.makeRequest(url) as TwitterApiResponse
+
+      if (response.errors && response.errors.length > 0) {
+        console.error('Twitter API returned errors:', response.errors)
+        return null
+      }
+
+      if (!response.data) {
+        console.error('No tweet data returned from Twitter API')
+        return null
+      }
+
+      const tweet = response.data
+      return {
+        likes: tweet.public_metrics?.like_count || 0,
+        retweets: tweet.public_metrics?.retweet_count || 0,
+        replies: tweet.public_metrics?.reply_count || 0,
+      }
+    } catch (error) {
+      console.error('Error fetching tweet engagement metrics:', error)
+      return null
+    }
+  }
+
+  // Batch fetch engagement metrics for multiple tweets
+  async getBatchTweetEngagementMetrics(tweetUrls: string[]): Promise<Array<{
+    url: string
+    metrics: {
+      likes: number
+      retweets: number
+      replies: number
+    } | null
+  }>> {
+    const results = []
+
+    // Process in batches to respect rate limits
+    const batchSize = 5
+    for (let i = 0; i < tweetUrls.length; i += batchSize) {
+      const batch = tweetUrls.slice(i, i + batchSize)
+
+      const batchPromises = batch.map(async (url) => {
+        const metrics = await this.getTweetEngagementMetrics(url)
+        return { url, metrics }
+      })
+
+      const batchResults = await Promise.all(batchPromises)
+      results.push(...batchResults)
+
+      // Add delay between batches to respect rate limits
+      if (i + batchSize < tweetUrls.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+
+    return results
+  }
 }

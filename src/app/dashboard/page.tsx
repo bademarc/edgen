@@ -12,9 +12,14 @@ import {
   PlusIcon,
   CalendarIcon,
   ArrowTrendingUpIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  ArrowPathIcon,
+  HeartIcon,
+  ArrowPathRoundedSquareIcon,
+  ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline'
 import { formatNumber, formatDate } from '@/lib/utils'
+import { useRealTimeEngagement } from '@/hooks/useRealTimeEngagement'
 
 interface DashboardStats {
   totalPoints: number
@@ -47,6 +52,21 @@ export default function DashboardPage() {
   const [recentTweets, setRecentTweets] = useState<RecentTweet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Real-time engagement updates
+  const {
+    updatedTweets,
+    isUpdating,
+    lastUpdateTime,
+    updateCount,
+    error: engagementError,
+    forceUpdate,
+    retryCount
+  } = useRealTimeEngagement({
+    tweets: recentTweets,
+    enabled: recentTweets.length > 0,
+    updateInterval: 30000, // 30 seconds
+  })
 
   const fetchDashboardData = useCallback(async () => {
     if (!session?.user?.id) return
@@ -263,14 +283,45 @@ export default function DashboardPage() {
           transition={{ duration: 0.6, delay: 0.3 }}
         >
           <div className="card-layeredge p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-layeredge-blue/10">
-                <ChatBubbleLeftRightIcon className="h-5 w-5 text-layeredge-blue" />
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-layeredge-blue/10">
+                  <ChatBubbleLeftRightIcon className="h-5 w-5 text-layeredge-blue" />
+                </div>
+                Recent Submissions
+              </h2>
+              <div className="flex items-center space-x-3">
+                {lastUpdateTime && (
+                  <div className="text-xs text-muted-foreground">
+                    Last updated: {lastUpdateTime.toLocaleTimeString()}
+                  </div>
+                )}
+                {updateCount > 0 && (
+                  <div className="text-xs text-layeredge-blue">
+                    {updateCount} updates
+                  </div>
+                )}
+                <button
+                  onClick={forceUpdate}
+                  disabled={isUpdating}
+                  className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
+                  title="Update engagement metrics"
+                >
+                  <ArrowPathIcon className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
+                </button>
               </div>
-              Recent Submissions
-            </h2>
+            </div>
 
-            {recentTweets.length === 0 ? (
+            {engagementError && (
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive">
+                  Error updating engagement metrics: {engagementError}
+                  {retryCount > 0 && ` (Retry ${retryCount}/3)`}
+                </p>
+              </div>
+            )}
+
+            {updatedTweets.length === 0 ? (
               <div className="text-center py-12">
                 <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
                   <ChatBubbleLeftRightIcon className="h-12 w-12 text-muted-foreground" />
@@ -285,7 +336,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {recentTweets.map((tweet, index) => (
+                {updatedTweets.map((tweet, index) => (
                   <motion.div
                     key={tweet.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -312,17 +363,17 @@ export default function DashboardPage() {
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4 text-sm">
-                        <div className="flex items-center space-x-1 text-red-400">
-                          <span>❤️</span>
-                          <span>{tweet.likes}</span>
+                        <div className="flex items-center space-x-2 text-red-400 hover:text-red-300 transition-colors group">
+                          <HeartIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                          <span className="font-medium">{formatNumber(tweet.likes)}</span>
                         </div>
-                        <div className="flex items-center space-x-1 text-green-400">
-                          <span>🔄</span>
-                          <span>{tweet.retweets}</span>
+                        <div className="flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors group">
+                          <ArrowPathRoundedSquareIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                          <span className="font-medium">{formatNumber(tweet.retweets)}</span>
                         </div>
-                        <div className="flex items-center space-x-1 text-blue-400">
-                          <span>💬</span>
-                          <span>{tweet.replies}</span>
+                        <div className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors group">
+                          <ChatBubbleLeftIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                          <span className="font-medium">{formatNumber(tweet.replies)}</span>
                         </div>
                       </div>
                       <a
