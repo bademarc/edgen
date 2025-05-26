@@ -28,7 +28,7 @@ const faqs = [
     id: 4,
     category: 'Tweet Submission',
     question: 'What tweets can I submit?',
-    answer: 'You can only submit tweets that are posted within the official LayerEdge X community (https://x.com/i/communities/1890107751621363). Tweets from outside this community will not be accepted.',
+    answer: 'You can only submit tweets that are posted within the official LayerEdge X community (https://x.com/i/communities/1890107751621357663). Tweets from outside this community will not be accepted.',
   },
   {
     id: 5,

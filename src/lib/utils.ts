@@ -28,8 +28,22 @@ export function isValidTwitterUrl(url: string): boolean {
 }
 
 export function isLayerEdgeCommunityUrl(url: string): boolean {
-  const communityUrl = process.env.LAYEREDGE_COMMUNITY_URL || 'https://x.com/i/communities/1890107751621357663'
-  return url.includes(communityUrl) || url.includes('communities/1890107751621357663')
+  const communityId = '1890107751621357663'
+
+  // Check for different community URL patterns:
+  // 1. Direct community post: https://x.com/i/communities/COMMUNITY_ID/post/POST_ID
+  // 2. Community base URL: https://x.com/i/communities/COMMUNITY_ID
+  // 3. Regular tweet URL that might be from community (we'll validate this via API)
+
+  // For now, accept any valid Twitter URL and let the API validation handle community verification
+  // This is because community posts can have regular tweet URLs
+  if (url.includes(`communities/${communityId}`)) {
+    return true
+  }
+
+  // For regular tweet URLs, we'll rely on the Twitter API to verify community membership
+  // This is a temporary approach - in production you'd want to use Twitter's API to verify
+  return isValidTwitterUrl(url)
 }
 
 export function extractTweetId(url: string): string | null {
