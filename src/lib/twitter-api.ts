@@ -52,18 +52,31 @@ export class TwitterApiService {
   }
 
   private async makeRequest(url: string): Promise<TwitterApiResponse | TwitterUserApiResponse> {
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${this.bearerToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    try {
+      console.log(`Making Twitter API request to: ${url}`)
 
-    if (!response.ok) {
-      throw new Error(`Twitter API error: ${response.status} ${response.statusText}`)
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${this.bearerToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      console.log(`Twitter API response status: ${response.status}`)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`Twitter API error: ${response.status} ${response.statusText}`, errorText)
+        throw new Error(`Twitter API error: ${response.status} ${response.statusText} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log('Twitter API response data:', JSON.stringify(data, null, 2))
+      return data
+    } catch (error) {
+      console.error('Error in makeRequest:', error)
+      throw error
     }
-
-    return response.json()
   }
 
   async getTweetData(tweetUrl: string): Promise<{
@@ -81,17 +94,33 @@ export class TwitterApiService {
     createdAt: Date
   } | null> {
     try {
+      console.log(`Fetching tweet data for URL: ${tweetUrl}`)
+
       const tweetId = extractTweetId(tweetUrl)
       if (!tweetId) {
-        throw new Error('Invalid tweet URL')
+        console.error('Failed to extract tweet ID from URL:', tweetUrl)
+        throw new Error('Invalid tweet URL - could not extract tweet ID')
       }
+
+      console.log(`Extracted tweet ID: ${tweetId}`)
 
       const url = `https://api.twitter.com/2/tweets/${tweetId}?expansions=author_id&tweet.fields=public_metrics,created_at&user.fields=username,name,profile_image_url`
 
       const response = await this.makeRequest(url) as TwitterApiResponse
 
-      if (response.errors || !response.data) {
-        console.error('Twitter API errors:', response.errors)
+      if (response.errors && response.errors.length > 0) {
+        console.error('Twitter API returned errors:', response.errors)
+        // Check for specific error types
+        const notFoundError = response.errors.find(err => err.title === 'Not Found Entity' || err.detail?.includes('Could not find'))
+        if (notFoundError) {
+          console.error('Tweet not found or not accessible:', notFoundError)
+          return null
+        }
+        return null
+      }
+
+      if (!response.data) {
+        console.error('No tweet data returned from Twitter API')
         return null
       }
 
@@ -99,15 +128,18 @@ export class TwitterApiService {
       const author = response.includes?.users?.[0]
 
       if (!author) {
+        console.error('Author data not found in response')
         throw new Error('Author data not found')
       }
 
+      console.log(`Successfully fetched tweet data for ID: ${tweet.id}`)
+
       return {
         id: tweet.id,
-        content: tweet.text,
-        likes: tweet.public_metrics.like_count,
-        retweets: tweet.public_metrics.retweet_count,
-        replies: tweet.public_metrics.reply_count,
+        content: tweet.text || '',
+        likes: tweet.public_metrics?.like_count || 0,
+        retweets: tweet.public_metrics?.retweet_count || 0,
+        replies: tweet.public_metrics?.reply_count || 0,
         author: {
           id: author.id,
           username: author.username,
