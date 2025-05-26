@@ -36,7 +36,7 @@ export function TweetCard({ tweet, showUser = true, className = '' }: TweetCardP
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors ${className}`}
+      className={`card-layeredge p-6 ${className}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -67,9 +67,9 @@ export function TweetCard({ tweet, showUser = true, className = '' }: TweetCardP
         )}
 
         <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1">
-            <SparklesIcon className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-primary">
+          <div className="flex items-center space-x-1 bg-layeredge-orange/10 px-3 py-1 rounded-full">
+            <SparklesIcon className="h-4 w-4 text-layeredge-orange" />
+            <span className="text-sm font-semibold text-layeredge-orange">
               {formatNumber(tweet.totalPoints)} points
             </span>
           </div>
@@ -111,7 +111,7 @@ export function TweetCard({ tweet, showUser = true, className = '' }: TweetCardP
             href={tweet.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
+            className="text-layeredge-orange hover:text-layeredge-orange-light text-sm font-semibold transition-colors"
           >
             View Tweet →
           </a>

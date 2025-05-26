@@ -78,6 +78,11 @@ export default function SubmitPage() {
       if (response.ok) {
         setSubmitStatus('success')
         reset()
+
+        // Trigger a page refresh after a short delay to show updated dashboard data
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 2000)
       } else {
         setSubmitStatus('error')
         setErrorMessage(result.error || 'Failed to submit tweet')
@@ -202,7 +207,7 @@ export default function SubmitPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              className="w-full btn-layeredge-primary disabled:bg-muted disabled:text-muted-foreground px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <>
@@ -229,11 +234,14 @@ export default function SubmitPage() {
                 <CheckCircleIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
                 <div>
                   <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">
-                    Tweet Submitted Successfully!
+                    🎉 Tweet Submitted Successfully!
                   </h3>
-                  <p className="text-green-800 dark:text-green-200">
-                    Your tweet has been added to the system and you&apos;ve earned 5 base points.
+                  <p className="text-green-800 dark:text-green-200 mb-2">
+                    Your tweet has been added to the system and you&apos;ve earned points!
                     Bonus points will be added as the tweet receives engagement.
+                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    Redirecting to your dashboard in 2 seconds to see your updated stats...
                   </p>
                 </div>
               </div>

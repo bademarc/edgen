@@ -17,7 +17,7 @@ import { formatNumber, formatDate } from '@/lib/utils'
 
 interface DashboardStats {
   totalPoints: number
-  rank: number
+  rank: number | null
   tweetsSubmitted: number
   thisWeekPoints: number
 }
@@ -25,44 +25,19 @@ interface DashboardStats {
 interface RecentTweet {
   id: string
   url: string
-  content: string
+  content?: string | null
   likes: number
   retweets: number
   replies: number
   totalPoints: number
-  createdAt: Date
+  createdAt: string
+  user: {
+    id: string
+    name: string | null
+    xUsername: string | null
+    image: string | null
+  }
 }
-
-// Mock data for demonstration
-const mockStats: DashboardStats = {
-  totalPoints: 1250,
-  rank: 15,
-  tweetsSubmitted: 23,
-  thisWeekPoints: 180,
-}
-
-const mockRecentTweets: RecentTweet[] = [
-  {
-    id: '1',
-    url: 'https://x.com/user/status/123456789',
-    content: 'Excited about the latest LayerEdge developments! The future of blockchain infrastructure is here. #LayerEdge #Edgen',
-    likes: 45,
-    retweets: 12,
-    replies: 8,
-    totalPoints: 89,
-    createdAt: new Date('2024-01-15'),
-  },
-  {
-    id: '2',
-    url: 'https://x.com/user/status/123456790',
-    content: 'Just joined the LayerEdge community and loving the engagement! Great to see such an active ecosystem.',
-    likes: 23,
-    retweets: 5,
-    replies: 3,
-    totalPoints: 44,
-    createdAt: new Date('2024-01-14'),
-  },
-]
 
 export default function DashboardPage() {
   const { data: session, status } = useSession()
@@ -70,6 +45,37 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentTweets, setRecentTweets] = useState<RecentTweet[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchDashboardData = async () => {
+    if (!session?.user?.id) return
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      // Fetch user stats
+      const statsResponse = await fetch('/api/user/stats')
+      if (!statsResponse.ok) {
+        throw new Error('Failed to fetch user stats')
+      }
+      const statsData = await statsResponse.json()
+      setStats(statsData)
+
+      // Fetch user's recent tweets
+      const tweetsResponse = await fetch(`/api/tweets?userId=${session.user.id}&limit=5`)
+      if (!tweetsResponse.ok) {
+        throw new Error('Failed to fetch recent tweets')
+      }
+      const tweetsData = await tweetsResponse.json()
+      setRecentTweets(tweetsData)
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -77,19 +83,10 @@ export default function DashboardPage() {
       return
     }
 
-    if (status === 'authenticated') {
-      // Simulate API calls
-      const fetchDashboardData = async () => {
-        setIsLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        setStats(mockStats)
-        setRecentTweets(mockRecentTweets)
-        setIsLoading(false)
-      }
-
+    if (status === 'authenticated' && session?.user?.id) {
       fetchDashboardData()
     }
-  }, [status, router])
+  }, [status, router, session?.user?.id])
 
   if (status === 'loading' || isLoading) {
     return (
@@ -114,6 +111,25 @@ export default function DashboardPage() {
 
   if (!session) {
     return null // Will redirect
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-foreground mb-4">Error Loading Dashboard</h1>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <button
+              onClick={fetchDashboardData}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

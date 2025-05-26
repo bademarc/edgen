@@ -16,69 +16,31 @@ interface LeaderboardUser {
   tweetsCount: number
 }
 
-// Mock data for demonstration
-const mockLeaderboard: LeaderboardUser[] = [
-  {
-    id: '1',
-    name: 'CryptoEnthusiast',
-    xUsername: 'crypto_enthusiast',
-    image: null,
-    totalPoints: 2450,
-    rank: 1,
-    tweetsCount: 45,
-  },
-  {
-    id: '2',
-    name: 'LayerEdgeFan',
-    xUsername: 'layeredge_fan',
-    image: null,
-    totalPoints: 2180,
-    rank: 2,
-    tweetsCount: 38,
-  },
-  {
-    id: '3',
-    name: 'TokenTrader',
-    xUsername: 'token_trader',
-    image: null,
-    totalPoints: 1950,
-    rank: 3,
-    tweetsCount: 32,
-  },
-  {
-    id: '4',
-    name: 'DeFiExplorer',
-    xUsername: 'defi_explorer',
-    image: null,
-    totalPoints: 1720,
-    rank: 4,
-    tweetsCount: 28,
-  },
-  {
-    id: '5',
-    name: 'BlockchainBull',
-    xUsername: 'blockchain_bull',
-    image: null,
-    totalPoints: 1580,
-    rank: 5,
-    tweetsCount: 25,
-  },
-]
-
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Simulate API call
-    const fetchLeaderboard = async () => {
-      setIsLoading(true)
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setLeaderboard(mockLeaderboard)
+  const fetchLeaderboard = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/leaderboard')
+      if (!response.ok) {
+        throw new Error('Failed to fetch leaderboard')
+      }
+      const data = await response.json()
+      setLeaderboard(data)
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load leaderboard')
+    } finally {
       setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchLeaderboard()
   }, [])
 
@@ -132,6 +94,38 @@ export default function LeaderboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-foreground mb-4">Error Loading Leaderboard</h1>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <button
+              onClick={fetchLeaderboard}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (leaderboard.length === 0) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-foreground mb-4">Community Leaderboard</h1>
+            <p className="text-muted-foreground mb-6">No community members found yet. Be the first to submit a tweet!</p>
           </div>
         </div>
       </div>

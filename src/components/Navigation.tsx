@@ -40,13 +40,18 @@ export function Navigation() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <span className="text-sm font-bold text-white">LE</span>
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-layeredge-orange to-layeredge-orange-light flex items-center justify-center shadow-lg">
+                <span className="text-sm font-bold text-black">LE</span>
               </div>
-              <span className="text-xl font-bold text-foreground">
-                LayerEdge <span className="text-accent">$Edgen</span>
-              </span>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-foreground">
+                  LayerEdge
+                </span>
+                <span className="text-sm text-layeredge-gradient font-semibold -mt-1">
+                  $Edgen Community
+                </span>
+              </div>
             </Link>
           </div>
 
@@ -106,7 +111,7 @@ export function Navigation() {
             ) : (
               <button
                 onClick={() => signIn('twitter')}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                className="btn-layeredge-primary px-6 py-2 rounded-lg text-sm font-semibold"
               >
                 Sign in with X
               </button>
@@ -192,7 +197,7 @@ export function Navigation() {
                       signIn('twitter')
                       setMobileMenuOpen(false)
                     }}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-2 rounded-md text-base font-medium transition-colors"
+                    className="w-full btn-layeredge-primary px-3 py-2 rounded-lg text-base font-semibold"
                   >
                     Sign in with X
                   </button>

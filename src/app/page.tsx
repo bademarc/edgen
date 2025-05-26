@@ -45,7 +45,7 @@ export default function Home() {
     <div className="relative">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-secondary/20">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+        <div className="absolute inset-0 bg-grid-pattern-subtle opacity-30" />
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -55,27 +55,27 @@ export default function Home() {
           >
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
               Join the{' '}
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <span className="text-layeredge-gradient">
                 LayerEdge
               </span>{' '}
               <br />
-              <span className="text-accent">$Edgen</span> Community
+              <span className="text-layeredge-gradient">$Edgen</span> Community
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Engage with our X community posts and earn points for your participation.
-              Compete with fellow community members and climb the leaderboard while supporting the LayerEdge ecosystem.
+              Join the Bitcoin-backed internet revolution. Engage with LayerEdge community content,
+              earn points for your participation, and help build the future of decentralized verification.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <Link
                 href="/login"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg text-lg font-semibold transition-colors flex items-center gap-2"
+                className="btn-layeredge-primary px-8 py-4 rounded-xl text-lg font-bold flex items-center gap-2"
               >
                 Join Community
                 <ArrowRightIcon className="h-5 w-5" />
               </Link>
               <Link
                 href="/about"
-                className="text-foreground hover:text-primary font-semibold text-lg transition-colors"
+                className="text-foreground hover:text-layeredge-orange font-semibold text-lg transition-colors"
               >
                 Learn more <span aria-hidden="true">→</span>
               </Link>
@@ -103,7 +103,7 @@ export default function Home() {
                 viewport={{ once: true }}
                 className="text-center"
               >
-                <dt className="text-3xl font-bold text-primary">{stat.value}</dt>
+                <dt className="text-3xl font-bold text-layeredge-gradient">{stat.value}</dt>
                 <dd className="mt-1 text-sm text-muted-foreground">{stat.name}</dd>
               </motion.div>
             ))}
@@ -139,8 +139,8 @@ export default function Home() {
                 viewport={{ once: true }}
                 className="relative group"
               >
-                <div className="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
-                  <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary mb-4">
+                <div className="card-layeredge p-6">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-layeredge-orange/10 text-layeredge-orange mb-4">
                     <feature.icon className="h-6 w-6" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -175,13 +175,13 @@ export default function Home() {
             <div className="mt-8 flex items-center justify-center gap-x-6">
               <Link
                 href="/login"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg text-lg font-semibold transition-colors"
+                className="btn-layeredge-primary px-8 py-3 rounded-xl text-lg font-bold"
               >
                 Sign in with X
               </Link>
               <Link
                 href="/leaderboard"
-                className="border border-border hover:border-primary text-foreground hover:text-primary px-6 py-3 rounded-lg text-lg font-semibold transition-colors"
+                className="border border-border hover:border-layeredge-orange text-foreground hover:text-layeredge-orange px-8 py-3 rounded-xl text-lg font-semibold transition-colors"
               >
                 View Leaderboard
               </Link>
