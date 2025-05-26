@@ -18,6 +18,9 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "prisma migrate deploy",
     "db:verify": "tsx scripts/verify-database.ts",
+    "auth:fix": "tsx scripts/fix-auth-configuration.ts",
+    "auth:diagnose": "tsx scripts/diagnose-auth-issues.ts",
+    "auth:test": "tsx scripts/test-auth-fixes.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

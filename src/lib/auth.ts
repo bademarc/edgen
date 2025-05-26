@@ -1,3 +1,8 @@
+// DEPRECATED: This file contains NextAuth.js configuration that is no longer used
+// The application now uses Supabase Auth exclusively for Twitter OAuth
+// This file is kept for reference but should not be imported or used
+
+/*
 import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import TwitterProvider from 'next-auth/providers/twitter'
@@ -223,3 +228,4 @@ export const authOptions: NextAuthOptions = {
     strategy: 'database',
   },
 }
+*/

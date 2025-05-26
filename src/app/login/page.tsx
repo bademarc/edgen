@@ -45,11 +45,38 @@ function LoginContent() {
     const urlMessage = searchParams.get('message')
     const error = searchParams.get('error')
 
-    if (error) {
-      setMessage('Authentication failed. Please try again.')
+    if (error && urlMessage) {
+      // Use the specific error message if provided
+      setMessage(decodeURIComponent(urlMessage))
+      setMessageType('error')
+    } else if (error) {
+      // Fallback error messages based on error type
+      let errorMessage = 'Authentication failed. Please try again.'
+
+      switch (error) {
+        case 'oauth_error':
+          errorMessage = 'OAuth authentication failed. Please try again.'
+          break
+        case 'auth_failed':
+          errorMessage = 'Unable to complete authentication. Please check your Twitter account settings.'
+          break
+        case 'auth_exception':
+          errorMessage = 'An unexpected error occurred during authentication.'
+          break
+        case 'no_code':
+          errorMessage = 'Authentication was cancelled or incomplete.'
+          break
+        case 'server_error':
+          errorMessage = 'Server error during authentication. Please try again later.'
+          break
+        default:
+          errorMessage = 'Authentication failed. Please try again.'
+      }
+
+      setMessage(errorMessage)
       setMessageType('error')
     } else if (urlMessage) {
-      setMessage(urlMessage)
+      setMessage(decodeURIComponent(urlMessage))
       setMessageType('warning')
     }
   }, [searchParams])
