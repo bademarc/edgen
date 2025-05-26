@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSession, signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   ShieldCheckIcon,
   UserGroupIcon,
   SparklesIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline'
 
 const permissions = [
@@ -32,6 +34,23 @@ const permissions = [
 export default function LoginPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [message, setMessage] = useState<string | null>(null)
+  const [messageType, setMessageType] = useState<'info' | 'warning' | 'error'>('info')
+
+  useEffect(() => {
+    // Check for messages from URL parameters
+    const urlMessage = searchParams.get('message')
+    const error = searchParams.get('error')
+
+    if (error) {
+      setMessage('Authentication failed. Please try again.')
+      setMessageType('error')
+    } else if (urlMessage) {
+      setMessage(urlMessage)
+      setMessageType('warning')
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (session) {
@@ -70,6 +89,31 @@ export default function LoginPage() {
             Sign in with your X account to start earning points
           </p>
         </motion.div>
+
+        {/* Message display */}
+        {message && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className={`p-4 rounded-lg border ${
+              messageType === 'error'
+                ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                : messageType === 'warning'
+                ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {messageType === 'error' ? (
+                <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0" />
+              ) : (
+                <InformationCircleIcon className="h-5 w-5 flex-shrink-0" />
+              )}
+              <p className="text-sm">{message}</p>
+            </div>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

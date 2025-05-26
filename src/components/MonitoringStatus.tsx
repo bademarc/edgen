@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { signOut } from 'next-auth/react'
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ClockIcon,
   ArrowPathIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils'
 
@@ -128,6 +130,21 @@ export function MonitoringStatus() {
     }
   }
 
+  const handleReAuthenticate = async () => {
+    try {
+      setIsUpdating(true)
+      // Sign out and redirect to login page
+      await signOut({
+        callbackUrl: '/login?message=Please sign in again to refresh your Twitter credentials'
+      })
+    } catch (error) {
+      console.error('Error during re-authentication:', error)
+      setError('Failed to sign out. Please try refreshing the page.')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   useEffect(() => {
     fetchMonitoringStatus()
   }, [])
@@ -218,6 +235,19 @@ export function MonitoringStatus() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Show re-authenticate button for authentication errors */}
+          {monitoringData.monitoring?.status === 'error' &&
+           monitoringData.monitoring?.errorMessage?.toLowerCase().includes('twitter') && (
+            <button
+              onClick={handleReAuthenticate}
+              disabled={isUpdating}
+              className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Re-authenticate with Twitter"
+            >
+              <ArrowRightOnRectangleIcon className="h-4 w-4 text-red-400" />
+            </button>
+          )}
+
           <button
             onClick={triggerManualCheck}
             disabled={isUpdating || !monitoringData.isEnabled}
@@ -248,8 +278,13 @@ export function MonitoringStatus() {
               Total tweets found: {monitoringData.monitoring.tweetsFound}
             </div>
             {monitoringData.monitoring.errorMessage && (
-              <div className="text-red-400">
-                Error: {monitoringData.monitoring.errorMessage}
+              <div className="text-red-400 space-y-1">
+                <div>Error: {monitoringData.monitoring.errorMessage}</div>
+                {monitoringData.monitoring.errorMessage.toLowerCase().includes('twitter') && (
+                  <div className="text-xs text-muted-foreground">
+                    💡 Click the re-authenticate button (↗) above to refresh your Twitter credentials
+                  </div>
+                )}
               </div>
             )}
           </>

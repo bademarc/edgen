@@ -5,9 +5,15 @@ import { prisma } from './db'
 
 interface TwitterProfile {
   id: string
-  username: string
+  username?: string
   name: string
   email?: string
+  // Twitter API v2 might use different field names
+  data?: {
+    id: string
+    username: string
+    name: string
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -30,21 +36,39 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id
-        // Get additional user data from database
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: {
-            xUsername: true,
-            xUserId: true,
-            totalPoints: true,
-            rank: true,
-          },
-        })
-        if (dbUser) {
-          session.user.xUsername = dbUser.xUsername
-          session.user.xUserId = dbUser.xUserId
-          session.user.totalPoints = dbUser.totalPoints
-          session.user.rank = dbUser.rank
+
+        try {
+          // Get additional user data from database with comprehensive error handling
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+              xUsername: true,
+              xUserId: true,
+              totalPoints: true,
+              rank: true,
+              autoMonitoringEnabled: true,
+            },
+          })
+
+          if (dbUser) {
+            session.user.xUsername = dbUser.xUsername
+            session.user.xUserId = dbUser.xUserId
+            session.user.totalPoints = dbUser.totalPoints
+            session.user.rank = dbUser.rank
+
+            // Log session data for debugging
+            console.log('Session callback - User data:', {
+              userId: user.id,
+              hasXUsername: !!dbUser.xUsername,
+              hasXUserId: !!dbUser.xUserId,
+              monitoringEnabled: dbUser.autoMonitoringEnabled
+            })
+          } else {
+            console.warn('Session callback - User not found in database:', user.id)
+          }
+        } catch (error) {
+          console.error('Session callback - Database error:', error)
+          // Continue with session creation even if database lookup fails
         }
       }
       return session
@@ -61,28 +85,76 @@ export const authOptions: NextAuthOptions = {
         try {
           const twitterProfile = profile as TwitterProfile
 
-          // Validate Twitter profile data
-          if (!twitterProfile.username || !twitterProfile.id) {
-            console.error('Invalid Twitter profile data:', {
-              username: twitterProfile.username,
-              id: twitterProfile.id,
-              userId: user.id
+          // Enhanced Twitter profile data extraction with multiple fallbacks
+          let twitterUsername: string | undefined
+          let twitterId: string | undefined
+
+          // Try different possible field structures from Twitter API
+          if (twitterProfile.data) {
+            // Twitter API v2 structure
+            twitterUsername = twitterProfile.data.username
+            twitterId = twitterProfile.data.id
+          } else {
+            // Direct profile structure
+            twitterUsername = twitterProfile.username
+            twitterId = twitterProfile.id
+          }
+
+          // Additional fallbacks for different Twitter API responses
+          if (!twitterUsername && (profile as any).screen_name) {
+            twitterUsername = (profile as any).screen_name
+          }
+          if (!twitterId && (profile as any).id_str) {
+            twitterId = (profile as any).id_str
+          }
+
+          console.log('Twitter profile data received:', {
+            rawProfile: JSON.stringify(profile, null, 2),
+            extractedUsername: twitterUsername,
+            extractedId: twitterId,
+            userId: user.id
+          })
+
+          // Enhanced validation with detailed error reporting
+          if (!twitterUsername || !twitterId) {
+            console.error('❌ Missing Twitter credentials after extraction:', {
+              username: twitterUsername,
+              id: twitterId,
+              userId: user.id,
+              profileKeys: Object.keys(profile),
+              hasData: !!twitterProfile.data
             })
+
+            // Set monitoring status to error for incomplete data
+            await prisma.tweetMonitoring.upsert({
+              where: { userId: user.id },
+              update: {
+                status: 'error',
+                errorMessage: 'Incomplete Twitter data received during authentication. Please try signing out and signing in again.',
+              },
+              create: {
+                userId: user.id,
+                status: 'error',
+                errorMessage: 'Incomplete Twitter data received during authentication. Please try signing out and signing in again.',
+                tweetsFound: 0,
+              },
+            })
+
             return // Don't update user if Twitter data is incomplete
           }
 
-          console.log('Updating user with Twitter data:', {
+          console.log('✅ Updating user with Twitter data:', {
             userId: user.id,
-            username: twitterProfile.username,
-            twitterId: twitterProfile.id,
+            username: twitterUsername,
+            twitterId: twitterId,
           })
 
           // Use upsert to handle both new and existing users
           await prisma.user.upsert({
             where: { id: user.id },
             update: {
-              xUsername: twitterProfile.username,
-              xUserId: twitterProfile.id,
+              xUsername: twitterUsername,
+              xUserId: twitterId,
               autoMonitoringEnabled: true, // Re-enable monitoring on successful auth
             },
             create: {
@@ -90,8 +162,8 @@ export const authOptions: NextAuthOptions = {
               name: user.name,
               email: user.email,
               image: user.image,
-              xUsername: twitterProfile.username,
-              xUserId: twitterProfile.id,
+              xUsername: twitterUsername,
+              xUserId: twitterId,
               totalPoints: 0,
               autoMonitoringEnabled: true,
             },
@@ -103,17 +175,39 @@ export const authOptions: NextAuthOptions = {
             update: {
               status: 'active',
               errorMessage: null,
+              lastCheckAt: new Date(),
             },
             create: {
               userId: user.id,
               status: 'active',
               tweetsFound: 0,
+              lastCheckAt: new Date(),
             },
           })
 
-          console.log('Successfully updated user with Twitter data and initialized monitoring')
+          console.log('✅ Successfully updated user with Twitter data and initialized monitoring')
         } catch (error) {
-          console.error('Error updating user with Twitter data:', error)
+          console.error('❌ Error updating user with Twitter data:', error)
+
+          // Set error status in monitoring
+          try {
+            await prisma.tweetMonitoring.upsert({
+              where: { userId: user.id },
+              update: {
+                status: 'error',
+                errorMessage: `Authentication error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              },
+              create: {
+                userId: user.id,
+                status: 'error',
+                errorMessage: `Authentication error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                tweetsFound: 0,
+              },
+            })
+          } catch (dbError) {
+            console.error('❌ Failed to update monitoring status:', dbError)
+          }
+
           // Don't throw error to avoid breaking the sign-in flow
         }
       }
