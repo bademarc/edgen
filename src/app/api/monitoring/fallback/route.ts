@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     console.log(`🔄 Starting fallback monitoring for user ${userId} with method: ${forceMethod || 'auto'}`)
 
     // Get user data
-    const user = await prisma.user.findUnique({
+    const dbUser = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    if (!user) {
+    if (!dbUser) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    if (!user.xUsername) {
+    if (!dbUser.xUsername) {
       return NextResponse.json(
         { error: 'Twitter username not set. Please re-authenticate with Twitter.' },
         { status: 400 }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       console.log('🕷️ Forcing web scraping method')
       try {
         const scrapedTweets = await monitoringService.searchUserTweetsWithFallback(
-          user.xUsername,
+          dbUser.xUsername,
           undefined
         )
 
@@ -127,8 +127,8 @@ export async function POST(request: NextRequest) {
       tweetsFound: result.tweetsFound,
       error: result.error,
       user: {
-        name: user.name,
-        username: user.xUsername
+        name: dbUser.name,
+        username: dbUser.xUsername
       },
       timestamp: new Date().toISOString()
     })
