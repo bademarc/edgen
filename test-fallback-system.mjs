@@ -1,16 +1,19 @@
 /**
  * Test script for the LayerEdge Fallback System
- * 
+ *
  * This script tests the new fallback system that switches between
  * Twitter API and web scraping to handle rate limiting issues.
  */
 
+import { fileURLToPath } from 'url'
+import { pathToFileURL } from 'url'
+
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000'
 
-// Test tweet URLs (replace with actual LayerEdge community tweets)
+// Test tweet URLs - using real LayerEdge community tweets
 const TEST_TWEETS = [
-  'https://x.com/nxrsultxn/status/1926917859831091415', // Replace with real tweet
-  'https://x.com/Aditya1177/status/1926914695052578863', // Replace with real tweet
+  'https://x.com/layeredge/status/1890107751621357663', // Official LayerEdge tweet
+  'https://x.com/example/status/1234567890123456789', // Fallback test URL
 ]
 
 async function testFallbackSystem() {
@@ -68,10 +71,10 @@ async function testHealthCheck() {
   })
 
   console.log(`   Health check status: ${response.status}`)
-  
+
   const serviceHealth = response.headers.get('X-Service-Health')
   const fallbackStatus = response.headers.get('X-Fallback-Status')
-  
+
   console.log(`   Service health: ${serviceHealth}`)
   console.log(`   Fallback status: ${fallbackStatus}`)
 
@@ -102,13 +105,13 @@ async function testFallbackStatus() {
 
 async function testTweetDataFetching(method) {
   const testUrl = TEST_TWEETS[0]
-  
+
   if (!testUrl || testUrl.includes('username')) {
     console.log(`   ⚠️  Skipping ${method} test - no valid test URL provided`)
     return
   }
 
-  const url = method === 'auto' 
+  const url = method === 'auto'
     ? `${BASE_URL}/api/scrape/tweets?url=${encodeURIComponent(testUrl)}`
     : `${BASE_URL}/api/scrape/tweets?url=${encodeURIComponent(testUrl)}&method=${method}`
 
@@ -123,7 +126,7 @@ async function testTweetDataFetching(method) {
     console.log(`   ✅ Data source: ${result.data.source}`)
     console.log(`   ✅ Tweet content: "${result.data.content.substring(0, 50)}..."`)
     console.log(`   ✅ Engagement: ${result.data.likes} likes, ${result.data.retweets} retweets`)
-    
+
     if (result.fallbackStatus) {
       console.log(`   ✅ Preferred source: ${result.fallbackStatus.preferredSource}`)
     }
@@ -138,7 +141,7 @@ async function testTweetDataFetching(method) {
 async function testEngagementMetrics(type) {
   if (type === 'single') {
     const testUrl = TEST_TWEETS[0]
-    
+
     if (!testUrl || testUrl.includes('username')) {
       console.log(`   ⚠️  Skipping single engagement test - no valid test URL provided`)
       return
@@ -168,7 +171,7 @@ async function testEngagementMetrics(type) {
 
   } else if (type === 'batch') {
     const validUrls = TEST_TWEETS.filter(url => url && !url.includes('username'))
-    
+
     if (validUrls.length === 0) {
       console.log(`   ⚠️  Skipping batch engagement test - no valid test URLs provided`)
       return
@@ -193,7 +196,7 @@ async function testEngagementMetrics(type) {
       console.log(`   ✅ Successful: ${result.data.summary.successful}`)
       console.log(`   ✅ Failed: ${result.data.summary.failed}`)
       console.log(`   ✅ Success rate: ${(result.data.summary.successRate * 100).toFixed(1)}%`)
-      
+
       if (result.data.results.length > 0) {
         const firstResult = result.data.results[0]
         if (firstResult.metrics) {
@@ -209,7 +212,7 @@ async function testEngagementMetrics(type) {
 // Helper function to simulate rate limiting
 async function simulateRateLimit() {
   console.log('🔄 Simulating rate limit scenario...')
-  
+
   // Make multiple rapid requests to trigger rate limiting
   const promises = []
   for (let i = 0; i < 10; i++) {
@@ -219,13 +222,16 @@ async function simulateRateLimit() {
       })
     )
   }
-  
+
   await Promise.all(promises)
   console.log('   Rate limit simulation completed')
 }
 
-// Run the test suite
-if (require.main === module) {
+// Check if this script is being run directly
+const isMainModule = import.meta.url === pathToFileURL(process.argv[1]).href
+
+// Run the test suite if this script is executed directly
+if (isMainModule) {
   console.log('LayerEdge Fallback System Test Suite')
   console.log('====================================')
   console.log('')
@@ -244,10 +250,12 @@ if (require.main === module) {
     })
 }
 
-module.exports = {
+// ES6 exports
+export {
   testFallbackSystem,
   testHealthCheck,
   testFallbackStatus,
   testTweetDataFetching,
   testEngagementMetrics,
+  simulateRateLimit
 }
