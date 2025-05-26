@@ -14,6 +14,9 @@ interface TwitterProfile {
     username: string
     name: string
   }
+  // Legacy Twitter API v1.1 fields for fallback compatibility
+  screen_name?: string
+  id_str?: string
 }
 
 export const authOptions: NextAuthOptions = {
@@ -101,11 +104,11 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Additional fallbacks for different Twitter API responses
-          if (!twitterUsername && (profile as any).screen_name) {
-            twitterUsername = (profile as any).screen_name
+          if (!twitterUsername && twitterProfile.screen_name) {
+            twitterUsername = twitterProfile.screen_name
           }
-          if (!twitterId && (profile as any).id_str) {
-            twitterId = (profile as any).id_str
+          if (!twitterId && twitterProfile.id_str) {
+            twitterId = twitterProfile.id_str
           }
 
           console.log('Twitter profile data received:', {
