@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { TwitterMonitoringService } from '@/lib/twitter-monitoring'
 import { getFallbackService } from '@/lib/fallback-service'
-import { getWebScraperInstance } from '@/lib/web-scraper'
 import { prisma } from '@/lib/db'
 
 /**
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize monitoring service
     const monitoringService = new TwitterMonitoringService()
-    
+
     let result
     let method = 'unknown'
 
@@ -69,7 +68,7 @@ export async function POST(request: NextRequest) {
           user.xUsername,
           undefined
         )
-        
+
         if (scrapedTweets.length > 0) {
           const processedCount = await monitoringService['processScrapedTweets'](userId, scrapedTweets)
           result = { success: true, tweetsFound: processedCount }
@@ -78,10 +77,10 @@ export async function POST(request: NextRequest) {
           result = { success: false, tweetsFound: 0, error: 'No tweets found via scraping' }
         }
       } catch (error) {
-        result = { 
-          success: false, 
-          tweetsFound: 0, 
-          error: error instanceof Error ? error.message : 'Scraping failed' 
+        result = {
+          success: false,
+          tweetsFound: 0,
+          error: error instanceof Error ? error.message : 'Scraping failed'
         }
       }
     } else if (forceMethod === 'api') {
@@ -91,10 +90,10 @@ export async function POST(request: NextRequest) {
         result = await monitoringService.monitorUserTweets(userId)
         method = 'api'
       } catch (error) {
-        result = { 
-          success: false, 
-          tweetsFound: 0, 
-          error: error instanceof Error ? error.message : 'API failed' 
+        result = {
+          success: false,
+          tweetsFound: 0,
+          error: error instanceof Error ? error.message : 'API failed'
         }
       }
     } else {
@@ -137,7 +136,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in fallback monitoring:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -146,7 +145,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions)
 
@@ -159,7 +158,9 @@ export async function GET(request: NextRequest) {
 
     // Get fallback system status
     const fallbackService = getFallbackService()
-    const webScraper = getWebScraperInstance()
+    const fallbackStatus = fallbackService.getStatus()
+
+    console.log('Fallback system status:', fallbackStatus)
 
     // Check API availability
     let apiStatus = 'unknown'
@@ -172,7 +173,7 @@ export async function GET(request: NextRequest) {
         signal: AbortSignal.timeout(5000)
       })
       apiStatus = testResponse.ok ? 'available' : 'error'
-    } catch (error) {
+    } catch {
       apiStatus = 'unavailable'
     }
 
@@ -231,7 +232,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error getting fallback status:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

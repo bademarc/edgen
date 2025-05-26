@@ -118,7 +118,7 @@ async function testFallbackMonitoring() {
         console.log('⚠️ No tweet data returned (expected for test URL)')
       }
     } catch (error) {
-      console.log('⚠️ Individual tweet test failed (expected for test URL):', error.message)
+      console.log('⚠️ Individual tweet test failed (expected for test URL):', error instanceof Error ? error.message : String(error))
     }
 
     // Test 6: Test monitoring status
@@ -163,6 +163,7 @@ async function testFallbackMonitoring() {
   } finally {
     // Cleanup
     try {
+      const webScraper = getWebScraperInstance()
       await webScraper.close()
       await prisma.$disconnect()
       console.log('🧹 Cleanup completed')

@@ -353,85 +353,102 @@ export class WebScraperService {
 
         while (collectedTweets < maxTweets && scrollAttempts < maxScrollAttempts) {
           // Extract tweets from current view
-          const tweets = await page.evaluate((filterKeywords, includeReplies, sinceId) => {
-            const tweetElements = document.querySelectorAll('[data-testid="tweet"]')
-            const extractedTweets: any[] = []
-
-            tweetElements.forEach((tweetElement) => {
-              try {
-                // Skip replies if not included
-                if (!includeReplies && tweetElement.querySelector('[data-testid="reply"]')) {
-                  return
+          const tweets = await page.evaluate(
+            ({ filterKeywords, includeReplies, sinceId }) => {
+              const tweetElements = document.querySelectorAll('[data-testid="tweet"]')
+              const extractedTweets: Array<{
+                id: string
+                content: string
+                likes: string
+                retweets: string
+                replies: string
+                author: {
+                  id: string
+                  username: string
+                  name: string
+                  profileImage?: string
                 }
+                timestamp: string
+                url: string
+              }> = []
 
-                // Extract tweet text
-                const tweetTextElement = tweetElement.querySelector('[data-testid="tweetText"]')
-                const content = tweetTextElement?.textContent || ''
+              tweetElements.forEach((tweetElement) => {
+                try {
+                  // Skip replies if not included
+                  if (!includeReplies && tweetElement.querySelector('[data-testid="reply"]')) {
+                    return
+                  }
 
-                // Filter by keywords if provided
-                if (filterKeywords.length > 0) {
-                  const hasKeyword = filterKeywords.some(keyword =>
-                    content.toLowerCase().includes(keyword.toLowerCase())
-                  )
-                  if (!hasKeyword) return
+                  // Extract tweet text
+                  const tweetTextElement = tweetElement.querySelector('[data-testid="tweetText"]')
+                  const content = tweetTextElement?.textContent || ''
+
+                  // Filter by keywords if provided
+                  if (filterKeywords.length > 0) {
+                    const hasKeyword = filterKeywords.some((keyword: string) =>
+                      content.toLowerCase().includes(keyword.toLowerCase())
+                    )
+                    if (!hasKeyword) return
+                  }
+
+                  // Extract tweet ID from URL
+                  const tweetLink = tweetElement.querySelector('a[href*="/status/"]')
+                  const tweetUrl = tweetLink?.getAttribute('href')
+                  if (!tweetUrl) return
+
+                  const tweetId = tweetUrl.split('/status/')[1]?.split('?')[0]
+                  if (!tweetId) return
+
+                  // Skip if we've already processed this tweet (sinceId check)
+                  if (sinceId && tweetId <= sinceId) return
+
+                  // Extract author information
+                  const authorElement = tweetElement.querySelector('[data-testid="User-Name"]')
+                  const authorName = authorElement?.querySelector('span')?.textContent || ''
+                  const authorUsernameElement = authorElement?.querySelector('a[href*="/"]')
+                  const authorUsername = authorUsernameElement?.getAttribute('href')?.replace('/', '') || ''
+
+                  // Extract engagement metrics
+                  const likeElement = tweetElement.querySelector('[data-testid="like"]')
+                  const retweetElement = tweetElement.querySelector('[data-testid="retweet"]')
+                  const replyElement = tweetElement.querySelector('[data-testid="reply"]')
+
+                  const likes = likeElement?.getAttribute('aria-label') || '0'
+                  const retweets = retweetElement?.getAttribute('aria-label') || '0'
+                  const replies = replyElement?.getAttribute('aria-label') || '0'
+
+                  // Extract timestamp
+                  const timeElement = tweetElement.querySelector('time')
+                  const timestamp = timeElement?.getAttribute('datetime') || new Date().toISOString()
+
+                  // Extract profile image
+                  const profileImageElement = tweetElement.querySelector('img[alt*="profile"]')
+                  const profileImage = profileImageElement?.getAttribute('src') || undefined
+
+                  extractedTweets.push({
+                    id: tweetId,
+                    content,
+                    likes,
+                    retweets,
+                    replies,
+                    author: {
+                      id: authorUsername,
+                      username: authorUsername,
+                      name: authorName,
+                      profileImage
+                    },
+                    timestamp,
+                    url: `https://x.com${tweetUrl}`
+                  })
+                } catch (error) {
+                  console.error('Error extracting tweet:', error)
                 }
+              })
 
-                // Extract tweet ID from URL
-                const tweetLink = tweetElement.querySelector('a[href*="/status/"]')
-                const tweetUrl = tweetLink?.getAttribute('href')
-                if (!tweetUrl) return
-
-                const tweetId = tweetUrl.split('/status/')[1]?.split('?')[0]
-                if (!tweetId) return
-
-                // Skip if we've already processed this tweet (sinceId check)
-                if (sinceId && tweetId <= sinceId) return
-
-                // Extract author information
-                const authorElement = tweetElement.querySelector('[data-testid="User-Name"]')
-                const authorName = authorElement?.querySelector('span')?.textContent || ''
-                const authorUsernameElement = authorElement?.querySelector('a[href*="/"]')
-                const authorUsername = authorUsernameElement?.getAttribute('href')?.replace('/', '') || ''
-
-                // Extract engagement metrics
-                const likeElement = tweetElement.querySelector('[data-testid="like"]')
-                const retweetElement = tweetElement.querySelector('[data-testid="retweet"]')
-                const replyElement = tweetElement.querySelector('[data-testid="reply"]')
-
-                const likes = likeElement?.getAttribute('aria-label') || '0'
-                const retweets = retweetElement?.getAttribute('aria-label') || '0'
-                const replies = replyElement?.getAttribute('aria-label') || '0'
-
-                // Extract timestamp
-                const timeElement = tweetElement.querySelector('time')
-                const timestamp = timeElement?.getAttribute('datetime') || new Date().toISOString()
-
-                // Extract profile image
-                const profileImageElement = tweetElement.querySelector('img[alt*="profile"]')
-                const profileImage = profileImageElement?.getAttribute('src')
-
-                extractedTweets.push({
-                  id: tweetId,
-                  content,
-                  likes,
-                  retweets,
-                  replies,
-                  author: {
-                    id: authorUsername,
-                    username: authorUsername,
-                    name: authorName,
-                    profileImage
-                  },
-                  timestamp,
-                  url: `https://x.com${tweetUrl}`
-                })
-              } catch (error) {
-                console.error('Error extracting tweet:', error)
-              }
-            })
-
-            return extractedTweets
-          }, filterKeywords, includeReplies, sinceId)
+              return extractedTweets
+            },
+            { filterKeywords, includeReplies, sinceId }
+          )
 
           // Process and add new tweets
           for (const tweet of tweets) {

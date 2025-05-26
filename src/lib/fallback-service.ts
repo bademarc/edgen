@@ -49,7 +49,7 @@ export class FallbackService {
       this.twitterApi = new TwitterApiService()
       console.log('✅ Twitter API service initialized')
     } catch (error) {
-      console.warn('⚠️ Twitter API service unavailable:', error.message)
+      console.warn('⚠️ Twitter API service unavailable:', error instanceof Error ? error.message : String(error))
       this.twitterApi = null
     }
 
@@ -141,7 +141,7 @@ export class FallbackService {
         console.log('Attempting to fetch tweet data via Twitter API...')
 
         const apiData = await Promise.race([
-          this.twitterApi.getTweetData(tweetUrl),
+          this.twitterApi!.getTweetData(tweetUrl),
           new Promise<null>((_, reject) =>
             setTimeout(() => reject(new Error('API timeout')), this.config.apiTimeoutMs)
           )
@@ -151,7 +151,7 @@ export class FallbackService {
           this.handleApiSuccess()
 
           // Verify community membership via API
-          const isFromCommunity = await this.twitterApi.verifyTweetFromCommunity(tweetUrl)
+          const isFromCommunity = await this.twitterApi!.verifyTweetFromCommunity(tweetUrl)
 
           const fallbackData: FallbackTweetData = {
             ...apiData,
@@ -209,7 +209,7 @@ export class FallbackService {
         console.log('Attempting to fetch engagement metrics via Twitter API...')
 
         const apiMetrics = await Promise.race([
-          this.twitterApi.getTweetEngagementMetrics(tweetUrl),
+          this.twitterApi!.getTweetEngagementMetrics(tweetUrl),
           new Promise<null>((_, reject) =>
             setTimeout(() => reject(new Error('API timeout')), this.config.apiTimeoutMs)
           )
@@ -272,7 +272,7 @@ export class FallbackService {
       try {
         console.log('Attempting batch fetch via Twitter API...')
 
-        const apiResults = await this.twitterApi.getBatchTweetEngagementMetrics(tweetUrls)
+        const apiResults = await this.twitterApi!.getBatchTweetEngagementMetrics(tweetUrls)
 
         // Check if API was successful for most tweets
         const successfulResults = apiResults.filter(result => result.metrics !== null)

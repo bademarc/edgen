@@ -1,8 +1,8 @@
 import { TwitterApiService } from './twitter-api'
 import { prisma } from './db'
 import { validateTweetContent, calculatePoints } from './utils'
-import { getFallbackService, FallbackTweetData } from './fallback-service'
-import { getWebScraperInstance } from './web-scraper'
+import { getFallbackService, FallbackTweetData, FallbackService } from './fallback-service'
+import { getWebScraperInstance, WebScraperService } from './web-scraper'
 
 interface TwitterTimelineResponse {
   data?: Array<{
@@ -37,8 +37,8 @@ interface TwitterTimelineResponse {
 
 export class TwitterMonitoringService {
   private twitterApi: TwitterApiService | null = null
-  private fallbackService: any
-  private webScraper: any
+  private fallbackService: FallbackService
+  private webScraper: WebScraperService
 
   constructor() {
     try {
@@ -78,10 +78,20 @@ export class TwitterMonitoringService {
       if (recentTweets && recentTweets.length > 0) {
         console.log(`✅ Found ${recentTweets.length} tweets via web scraping for @${username}`)
 
-        // Filter for LayerEdge mentions
-        const layeredgeTweets = recentTweets.filter(tweet =>
-          validateTweetContent(tweet.content)
-        )
+        // Filter for LayerEdge mentions and convert to FallbackTweetData format
+        const layeredgeTweets: FallbackTweetData[] = recentTweets
+          .filter(tweet => validateTweetContent(tweet.content))
+          .map(tweet => ({
+            id: tweet.id,
+            content: tweet.content,
+            likes: tweet.likes,
+            retweets: tweet.retweets,
+            replies: tweet.replies,
+            author: tweet.author,
+            createdAt: tweet.createdAt,
+            source: 'scraper' as const,
+            isFromLayerEdgeCommunity: tweet.isFromLayerEdgeCommunity
+          }))
 
         console.log(`📝 ${layeredgeTweets.length} tweets contain LayerEdge mentions`)
         return layeredgeTweets
@@ -424,7 +434,7 @@ export class TwitterMonitoringService {
           if (tweetResponse && tweetResponse.data && tweetResponse.data.length > 0) {
             processedCount = await this.processDiscoveredTweets(userId, tweetResponse)
             searchMethod = 'api'
-            console.log(`✅ API search successful: ${processedCount} tweets processed`)
+            console.log(`✅ API search successful: ${processedCount} tweets processed via ${searchMethod}`)
           } else {
             throw new Error('API returned no data')
           }
@@ -447,7 +457,7 @@ export class TwitterMonitoringService {
           if (scrapedTweets && scrapedTweets.length > 0) {
             processedCount = await this.processScrapedTweets(userId, scrapedTweets)
             searchMethod = 'scraper'
-            console.log(`✅ Web scraping successful: ${processedCount} tweets processed`)
+            console.log(`✅ Web scraping successful: ${processedCount} tweets processed via ${searchMethod}`)
           } else {
             console.log(`⚠️ No tweets found via web scraping for @${user.xUsername}`)
           }
