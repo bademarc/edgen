@@ -35,7 +35,7 @@ export interface FallbackServiceConfig {
 }
 
 export class FallbackService {
-  private twitterApi: TwitterApiService
+  private twitterApi: TwitterApiService | null = null
   private webScraper: WebScraperService
   private config: FallbackServiceConfig
   private apiFailureCount: number = 0
@@ -44,19 +44,35 @@ export class FallbackService {
   private rateLimitResetTime: Date | null = null
 
   constructor(config: Partial<FallbackServiceConfig> = {}) {
-    this.twitterApi = new TwitterApiService()
+    // Try to initialize Twitter API, but don't fail if credentials are missing
+    try {
+      this.twitterApi = new TwitterApiService()
+      console.log('✅ Twitter API service initialized')
+    } catch (error) {
+      console.warn('⚠️ Twitter API service unavailable:', error.message)
+      this.twitterApi = null
+    }
+
     this.webScraper = getWebScraperInstance()
     this.config = {
       enableScraping: true,
       apiTimeoutMs: 10000, // 10 seconds
       maxApiRetries: 2,
-      preferApi: true,
+      preferApi: this.twitterApi !== null, // Only prefer API if it's available
       rateLimitCooldownMs: 15 * 60 * 1000, // 15 minutes
       ...config
     }
+
+    console.log('FallbackService initialized with config:', this.config)
+    console.log(`API available: ${this.twitterApi !== null}, Scraping enabled: ${this.config.enableScraping}`)
   }
 
   private shouldUseApi(): boolean {
+    // Don't use API if it's not available
+    if (!this.twitterApi) {
+      return false
+    }
+
     // Don't use API if scraping is disabled
     if (!this.config.enableScraping) {
       return true

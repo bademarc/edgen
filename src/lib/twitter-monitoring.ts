@@ -1,6 +1,8 @@
 import { TwitterApiService } from './twitter-api'
 import { prisma } from './db'
 import { validateTweetContent, calculatePoints } from './utils'
+import { getFallbackService, FallbackTweetData } from './fallback-service'
+import { getWebScraperInstance } from './web-scraper'
 
 interface TwitterTimelineResponse {
   data?: Array<{
@@ -34,14 +36,68 @@ interface TwitterTimelineResponse {
 }
 
 export class TwitterMonitoringService {
-  private twitterApi: TwitterApiService
+  private twitterApi: TwitterApiService | null = null
+  private fallbackService: any
+  private webScraper: any
 
   constructor() {
-    this.twitterApi = new TwitterApiService()
+    try {
+      this.twitterApi = new TwitterApiService()
+    } catch (error) {
+      console.warn('Twitter API service unavailable, using fallback methods only:', error)
+      this.twitterApi = null
+    }
+
+    // Initialize fallback service with scraping enabled
+    this.fallbackService = getFallbackService({
+      enableScraping: true,
+      preferApi: this.twitterApi !== null,
+      apiTimeoutMs: 10000,
+      maxApiRetries: 2,
+      rateLimitCooldownMs: 900000 // 15 minutes
+    })
+
+    this.webScraper = getWebScraperInstance()
   }
 
   /**
-   * Search for tweets from a specific user that contain LayerEdge mentions
+   * Search for tweets from a specific user using web scraping fallback
+   */
+  async searchUserTweetsWithFallback(username: string, sinceId?: string): Promise<FallbackTweetData[]> {
+    console.log(`🔍 Searching tweets for @${username} using fallback methods...`)
+
+    try {
+      // First, try to get recent tweets from user's profile using web scraping
+      const userProfileUrl = `https://x.com/${username}`
+      const recentTweets = await this.webScraper.scrapeUserTweets(userProfileUrl, {
+        maxTweets: 20,
+        sinceId: sinceId,
+        filterKeywords: ['@layeredge', '$EDGEN', 'layeredge', 'EDGEN']
+      })
+
+      if (recentTweets && recentTweets.length > 0) {
+        console.log(`✅ Found ${recentTweets.length} tweets via web scraping for @${username}`)
+
+        // Filter for LayerEdge mentions
+        const layeredgeTweets = recentTweets.filter(tweet =>
+          validateTweetContent(tweet.content)
+        )
+
+        console.log(`📝 ${layeredgeTweets.length} tweets contain LayerEdge mentions`)
+        return layeredgeTweets
+      }
+
+      console.log(`⚠️ No tweets found via web scraping for @${username}`)
+      return []
+
+    } catch (error) {
+      console.error(`❌ Error searching tweets for @${username}:`, error)
+      return []
+    }
+  }
+
+  /**
+   * Search for tweets from a specific user that contain LayerEdge mentions (API method)
    */
   async searchUserTweets(username: string, sinceId?: string): Promise<TwitterTimelineResponse | null> {
     try {
@@ -185,6 +241,74 @@ export class TwitterMonitoringService {
   }
 
   /**
+   * Process scraped tweets and save them to database
+   */
+  private async processScrapedTweets(userId: string, scrapedTweets: FallbackTweetData[]): Promise<number> {
+    let processedCount = 0
+
+    for (const tweet of scrapedTweets) {
+      try {
+        // Check if tweet already exists by tweetId
+        const existingTweet = await prisma.tweet.findFirst({
+          where: { tweetId: tweet.id }
+        })
+
+        if (existingTweet) {
+          console.log(`Tweet ${tweet.id} already exists, skipping...`)
+          continue
+        }
+
+        // Validate tweet content
+        if (!validateTweetContent(tweet.content)) {
+          console.log(`Tweet ${tweet.id} does not contain required LayerEdge mentions, skipping...`)
+          continue
+        }
+
+        // Calculate points
+        const basePoints = 5
+        const bonusPoints = calculatePoints(tweet.likes, tweet.retweets, tweet.replies) - basePoints
+        const totalPoints = basePoints + bonusPoints
+
+        // Save tweet to database
+        await prisma.tweet.create({
+          data: {
+            tweetId: tweet.id,
+            content: tweet.content,
+            likes: tweet.likes,
+            retweets: tweet.retweets,
+            replies: tweet.replies,
+            basePoints: basePoints,
+            bonusPoints: bonusPoints,
+            totalPoints: totalPoints,
+            userId: userId,
+            isAutoDiscovered: true,
+            discoveredAt: new Date(),
+            url: `https://x.com/i/web/status/${tweet.id}`,
+          }
+        })
+
+        // Update user points
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            totalPoints: {
+              increment: totalPoints
+            }
+          }
+        })
+
+        console.log(`✅ Processed scraped tweet ${tweet.id} for user ${userId} (+${totalPoints} points)`)
+        processedCount++
+
+      } catch (error) {
+        console.error(`Error processing scraped tweet ${tweet.id}:`, error)
+      }
+    }
+
+    return processedCount
+  }
+
+  /**
    * Monitor tweets for a specific user
    */
   async monitorUserTweets(userId: string): Promise<{
@@ -283,30 +407,71 @@ export class TwitterMonitoringService {
         }
       })
 
-      // Search for new tweets with enhanced error handling
-      console.log(`Searching tweets for user @${user.xUsername} (ID: ${userId})`)
+      // Search for new tweets using fallback methods (API + Web Scraping)
+      console.log(`🔍 Searching tweets for user @${user.xUsername} (ID: ${userId}) using fallback methods`)
 
-      const tweetResponse = await this.searchUserTweets(
-        user.xUsername,
-        lastTweet?.tweetId || undefined
-      )
+      let processedCount = 0
+      let searchMethod = 'unknown'
 
-      if (!tweetResponse) {
-        console.warn(`Failed to fetch tweets for user @${user.xUsername} - Twitter API returned null`)
+      // Try API first if available
+      if (this.twitterApi) {
+        try {
+          const tweetResponse = await this.searchUserTweets(
+            user.xUsername,
+            lastTweet?.tweetId || undefined
+          )
 
-        // Update monitoring status but don't disable monitoring (could be temporary API issue)
+          if (tweetResponse && tweetResponse.data && tweetResponse.data.length > 0) {
+            processedCount = await this.processDiscoveredTweets(userId, tweetResponse)
+            searchMethod = 'api'
+            console.log(`✅ API search successful: ${processedCount} tweets processed`)
+          } else {
+            throw new Error('API returned no data')
+          }
+        } catch (apiError) {
+          console.warn(`⚠️ API search failed for @${user.xUsername}:`, apiError)
+          // Continue to fallback method
+        }
+      }
+
+      // Fallback to web scraping if API failed or unavailable
+      if (processedCount === 0) {
+        try {
+          console.log(`🕷️ Falling back to web scraping for @${user.xUsername}`)
+
+          const scrapedTweets = await this.searchUserTweetsWithFallback(
+            user.xUsername,
+            lastTweet?.tweetId || undefined
+          )
+
+          if (scrapedTweets && scrapedTweets.length > 0) {
+            processedCount = await this.processScrapedTweets(userId, scrapedTweets)
+            searchMethod = 'scraper'
+            console.log(`✅ Web scraping successful: ${processedCount} tweets processed`)
+          } else {
+            console.log(`⚠️ No tweets found via web scraping for @${user.xUsername}`)
+          }
+        } catch (scrapingError) {
+          console.error(`❌ Web scraping failed for @${user.xUsername}:`, scrapingError)
+        }
+      }
+
+      // If both methods failed
+      if (processedCount === 0) {
+        console.warn(`❌ All methods failed for user @${user.xUsername}`)
+
         await prisma.tweetMonitoring.upsert({
           where: { userId },
           update: {
             lastCheckAt: new Date(),
             status: 'error',
-            errorMessage: 'Failed to fetch tweets from Twitter API - will retry next cycle',
+            errorMessage: 'Both API and web scraping failed - will retry next cycle',
           },
           create: {
             userId,
             lastCheckAt: new Date(),
             status: 'error',
-            errorMessage: 'Failed to fetch tweets from Twitter API - will retry next cycle',
+            errorMessage: 'Both API and web scraping failed - will retry next cycle',
             tweetsFound: 0,
           },
         })
@@ -314,12 +479,9 @@ export class TwitterMonitoringService {
         return {
           success: false,
           tweetsFound: 0,
-          error: 'Failed to fetch tweets from Twitter API - will retry next cycle'
+          error: 'Both API and web scraping failed - will retry next cycle'
         }
       }
-
-      // Process discovered tweets
-      const processedCount = await this.processDiscoveredTweets(userId, tweetResponse)
 
       // Update monitoring status
       await prisma.tweetMonitoring.upsert({
@@ -399,14 +561,28 @@ export class TwitterMonitoringService {
     const users = await prisma.user.findMany({
       where: {
         autoMonitoringEnabled: true,
-        xUsername: {
-          not: null,
-          not: ''
-        },
-        xUserId: {
-          not: null,
-          not: ''
-        }
+        AND: [
+          {
+            xUsername: {
+              not: null
+            }
+          },
+          {
+            xUsername: {
+              not: ''
+            }
+          },
+          {
+            xUserId: {
+              not: null
+            }
+          },
+          {
+            xUserId: {
+              not: ''
+            }
+          }
+        ]
       },
       select: {
         id: true,

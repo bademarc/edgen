@@ -24,6 +24,30 @@ export interface ScrapedEngagementMetrics {
   timestamp: Date
 }
 
+export interface UserTweetScrapingOptions {
+  maxTweets?: number
+  sinceId?: string
+  filterKeywords?: string[]
+  includeReplies?: boolean
+}
+
+export interface ScrapedUserTweet {
+  id: string
+  content: string
+  likes: number
+  retweets: number
+  replies: number
+  author: {
+    id: string
+    username: string
+    name: string
+    profileImage?: string
+  }
+  createdAt: Date
+  isFromLayerEdgeCommunity: boolean
+  url: string
+}
+
 export class WebScraperService {
   private browser: Browser | null = null
   private isInitialized = false
@@ -293,6 +317,174 @@ export class WebScraperService {
 
     console.error(`Failed to scrape engagement metrics after ${this.maxRetries} attempts`)
     return null
+  }
+
+  async scrapeUserTweets(userProfileUrl: string, options: UserTweetScrapingOptions = {}): Promise<ScrapedUserTweet[]> {
+    const {
+      maxTweets = 20,
+      sinceId,
+      filterKeywords = [],
+      includeReplies = false
+    } = options
+
+    let page: Page | null = null
+    let retryCount = 0
+    const results: ScrapedUserTweet[] = []
+
+    while (retryCount < this.maxRetries) {
+      try {
+        console.log(`Scraping user tweets (attempt ${retryCount + 1}): ${userProfileUrl}`)
+
+        page = await this.createPage()
+
+        // Navigate to user profile
+        await page.goto(userProfileUrl, {
+          waitUntil: 'networkidle',
+          timeout: 30000
+        })
+
+        // Wait for tweets to load
+        await page.waitForSelector('[data-testid="tweet"]', { timeout: 15000 })
+
+        // Scroll and collect tweets
+        let collectedTweets = 0
+        let scrollAttempts = 0
+        const maxScrollAttempts = 10
+
+        while (collectedTweets < maxTweets && scrollAttempts < maxScrollAttempts) {
+          // Extract tweets from current view
+          const tweets = await page.evaluate((filterKeywords, includeReplies, sinceId) => {
+            const tweetElements = document.querySelectorAll('[data-testid="tweet"]')
+            const extractedTweets: any[] = []
+
+            tweetElements.forEach((tweetElement) => {
+              try {
+                // Skip replies if not included
+                if (!includeReplies && tweetElement.querySelector('[data-testid="reply"]')) {
+                  return
+                }
+
+                // Extract tweet text
+                const tweetTextElement = tweetElement.querySelector('[data-testid="tweetText"]')
+                const content = tweetTextElement?.textContent || ''
+
+                // Filter by keywords if provided
+                if (filterKeywords.length > 0) {
+                  const hasKeyword = filterKeywords.some(keyword =>
+                    content.toLowerCase().includes(keyword.toLowerCase())
+                  )
+                  if (!hasKeyword) return
+                }
+
+                // Extract tweet ID from URL
+                const tweetLink = tweetElement.querySelector('a[href*="/status/"]')
+                const tweetUrl = tweetLink?.getAttribute('href')
+                if (!tweetUrl) return
+
+                const tweetId = tweetUrl.split('/status/')[1]?.split('?')[0]
+                if (!tweetId) return
+
+                // Skip if we've already processed this tweet (sinceId check)
+                if (sinceId && tweetId <= sinceId) return
+
+                // Extract author information
+                const authorElement = tweetElement.querySelector('[data-testid="User-Name"]')
+                const authorName = authorElement?.querySelector('span')?.textContent || ''
+                const authorUsernameElement = authorElement?.querySelector('a[href*="/"]')
+                const authorUsername = authorUsernameElement?.getAttribute('href')?.replace('/', '') || ''
+
+                // Extract engagement metrics
+                const likeElement = tweetElement.querySelector('[data-testid="like"]')
+                const retweetElement = tweetElement.querySelector('[data-testid="retweet"]')
+                const replyElement = tweetElement.querySelector('[data-testid="reply"]')
+
+                const likes = likeElement?.getAttribute('aria-label') || '0'
+                const retweets = retweetElement?.getAttribute('aria-label') || '0'
+                const replies = replyElement?.getAttribute('aria-label') || '0'
+
+                // Extract timestamp
+                const timeElement = tweetElement.querySelector('time')
+                const timestamp = timeElement?.getAttribute('datetime') || new Date().toISOString()
+
+                // Extract profile image
+                const profileImageElement = tweetElement.querySelector('img[alt*="profile"]')
+                const profileImage = profileImageElement?.getAttribute('src')
+
+                extractedTweets.push({
+                  id: tweetId,
+                  content,
+                  likes,
+                  retweets,
+                  replies,
+                  author: {
+                    id: authorUsername,
+                    username: authorUsername,
+                    name: authorName,
+                    profileImage
+                  },
+                  timestamp,
+                  url: `https://x.com${tweetUrl}`
+                })
+              } catch (error) {
+                console.error('Error extracting tweet:', error)
+              }
+            })
+
+            return extractedTweets
+          }, filterKeywords, includeReplies, sinceId)
+
+          // Process and add new tweets
+          for (const tweet of tweets) {
+            if (results.find(t => t.id === tweet.id)) continue // Skip duplicates
+
+            const scrapedTweet: ScrapedUserTweet = {
+              id: tweet.id,
+              content: tweet.content,
+              likes: this.parseEngagementCount(tweet.likes),
+              retweets: this.parseEngagementCount(tweet.retweets),
+              replies: this.parseEngagementCount(tweet.replies),
+              author: tweet.author,
+              createdAt: new Date(tweet.timestamp),
+              isFromLayerEdgeCommunity: false, // Will be checked separately
+              url: tweet.url
+            }
+
+            results.push(scrapedTweet)
+            collectedTweets++
+
+            if (collectedTweets >= maxTweets) break
+          }
+
+          // Scroll down to load more tweets
+          await page.evaluate(() => {
+            window.scrollBy(0, window.innerHeight)
+          })
+
+          // Wait for new content to load
+          await this.delay(2000)
+          scrollAttempts++
+        }
+
+        console.log(`Successfully scraped ${results.length} user tweets`)
+        return results
+
+      } catch (error) {
+        console.error(`User tweet scraping attempt ${retryCount + 1} failed:`, error)
+        retryCount++
+
+        if (retryCount < this.maxRetries) {
+          console.log(`Retrying in ${this.retryDelay}ms...`)
+          await this.delay(this.retryDelay)
+        }
+      } finally {
+        if (page) {
+          await page.close()
+        }
+      }
+    }
+
+    console.error(`Failed to scrape user tweets after ${this.maxRetries} attempts`)
+    return results
   }
 
   private async checkLayerEdgeCommunity(page: Page, tweetUrl: string): Promise<boolean> {
