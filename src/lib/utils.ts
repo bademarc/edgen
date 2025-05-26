@@ -32,6 +32,11 @@ export function isLayerEdgeCommunityUrl(url: string): boolean {
   return url.includes(communityUrl) || url.includes('communities/1890107751621363')
 }
 
+export function extractTweetId(url: string): string | null {
+  const match = url.match(/\/status\/(\d+)/)
+  return match ? match[1] : null
+}
+
 export function calculatePoints(likes: number, retweets: number, replies: number): number {
   const basePoints = 5
   const likePoints = likes * 1

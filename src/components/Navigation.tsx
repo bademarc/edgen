@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from './AuthProvider'
+import { useSession, signIn, signOut } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bars3Icon,
@@ -27,10 +27,10 @@ const navigation = [
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { user, isLoading, signIn, signOut } = useAuth()
+  const { data: session, status } = useSession()
 
   const filteredNavigation = navigation.filter(item =>
-    !item.requiresAuth || (item.requiresAuth && user)
+    !item.requiresAuth || (item.requiresAuth && session)
   )
 
   return (
@@ -70,25 +70,25 @@ export function Navigation() {
 
           {/* Auth Button */}
           <div className="hidden md:block">
-            {isLoading ? (
+            {status === 'loading' ? (
               <div className="h-8 w-20 bg-muted animate-pulse rounded-md" />
-            ) : user ? (
+            ) : session ? (
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  {user.image && (
+                  {session.user?.image && (
                     <img
-                      src={user.image}
-                      alt={user.name || 'User'}
+                      src={session.user.image}
+                      alt={session.user.name || 'User'}
                       className="h-8 w-8 rounded-full"
                     />
                   )}
                   <div className="text-sm">
                     <p className="text-foreground font-medium">
-                      {user.name || user.xUsername}
+                      {session.user?.name || session.user?.xUsername}
                     </p>
-                    {user.totalPoints !== undefined && (
+                    {session.user?.totalPoints !== undefined && (
                       <p className="text-muted-foreground">
-                        {user.totalPoints} points
+                        {session.user.totalPoints} points
                       </p>
                     )}
                   </div>
@@ -102,7 +102,7 @@ export function Navigation() {
               </div>
             ) : (
               <button
-                onClick={() => signIn()}
+                onClick={() => signIn('twitter')}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Sign in with X
@@ -150,23 +150,23 @@ export function Navigation() {
 
               {/* Mobile Auth */}
               <div className="pt-4 border-t border-border">
-                {user ? (
+                {session ? (
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2 px-3 py-2">
-                      {user.image && (
+                      {session.user?.image && (
                         <img
-                          src={user.image}
-                          alt={user.name || 'User'}
+                          src={session.user.image}
+                          alt={session.user.name || 'User'}
                           className="h-8 w-8 rounded-full"
                         />
                       )}
                       <div className="text-sm">
                         <p className="text-foreground font-medium">
-                          {user.name || user.xUsername}
+                          {session.user?.name || session.user?.xUsername}
                         </p>
-                        {user.totalPoints !== undefined && (
+                        {session.user?.totalPoints !== undefined && (
                           <p className="text-muted-foreground">
-                            {user.totalPoints} points
+                            {session.user.totalPoints} points
                           </p>
                         )}
                       </div>
@@ -184,7 +184,7 @@ export function Navigation() {
                 ) : (
                   <button
                     onClick={() => {
-                      signIn()
+                      signIn('twitter')
                       setMobileMenuOpen(false)
                     }}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-2 rounded-md text-base font-medium transition-colors"

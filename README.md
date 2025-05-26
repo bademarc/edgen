@@ -81,7 +81,10 @@ A comprehensive React.js web application for the LayerEdge $Edgen token communit
 
    Update `.env.local` with your configuration:
    ```env
-   DATABASE_URL="file:./dev.db"
+   # Database - Supabase PostgreSQL (already configured)
+   DATABASE_URL="postgres://postgres.bzqayhnlogpaxfcmmrlq:d234A879a1%23@aws-0-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+   DIRECT_URL="postgres://postgres.bzqayhnlogpaxfcmmrlq:d234A879a1%23@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
+
    NEXTAUTH_URL="http://localhost:3000"
    NEXTAUTH_SECRET="your-secret-key-here"
    TWITTER_CLIENT_ID="your-twitter-client-id"
@@ -92,8 +95,14 @@ A comprehensive React.js web application for the LayerEdge $Edgen token communit
 
 4. **Set up the database**
    ```bash
+   # Apply database schema to Supabase
    npm run db:push
+
+   # Seed with demo data
    npm run db:seed
+
+   # Verify database setup (optional)
+   npm run db:verify
    ```
 
 5. **Start the development server**
@@ -106,12 +115,20 @@ A comprehensive React.js web application for the LayerEdge $Edgen token communit
 
 ## 📊 Database Schema
 
-The application uses Prisma with the following main models:
+The application uses **Supabase PostgreSQL** with Prisma ORM and the following main models:
 
 - **User**: User profiles with points and rankings
 - **Tweet**: Submitted tweets with engagement metrics
 - **PointsHistory**: Track points awarded over time
 - **Account/Session**: Authentication data (NextAuth.js compatible)
+
+### Database Configuration
+- **Provider**: Supabase PostgreSQL
+- **Region**: EU North (Stockholm) - `aws-0-eu-north-1`
+- **Connection Pooling**: Transaction pooler for serverless compatibility
+- **IPv4/IPv6**: Dual support for maximum deployment compatibility
+
+For detailed database setup information, see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md).
 
 ## 🔧 Development
 
@@ -121,10 +138,12 @@ The application uses Prisma with the following main models:
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
-- `npm run db:push` - Push database schema changes
+- `npm run db:push` - Push database schema changes to Supabase
 - `npm run db:studio` - Open Prisma Studio
 - `npm run db:generate` - Generate Prisma client
 - `npm run db:seed` - Seed database with demo data
+- `npm run db:verify` - Verify Supabase database setup and connectivity
+- `npm run db:migrate` - Deploy migrations (used in production)
 
 ### Mock Authentication
 

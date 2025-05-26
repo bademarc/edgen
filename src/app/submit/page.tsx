@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/components/AuthProvider'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
@@ -26,7 +26,7 @@ const submitSchema = z.object({
 type SubmitFormData = z.infer<typeof submitSchema>
 
 export default function SubmitPage() {
-  const { user, isLoading } = useAuth()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -44,7 +44,7 @@ export default function SubmitPage() {
 
   const tweetUrl = watch('tweetUrl')
 
-  if (isLoading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -52,7 +52,7 @@ export default function SubmitPage() {
     )
   }
 
-  if (!user) {
+  if (status === 'unauthenticated') {
     router.push('/login')
     return null
   }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/components/AuthProvider'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -65,19 +65,19 @@ const mockRecentTweets: RecentTweet[] = [
 ]
 
 export default function DashboardPage() {
-  const { user, isLoading: authLoading } = useAuth()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentTweets, setRecentTweets] = useState<RecentTweet[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (status === 'unauthenticated') {
       router.push('/login')
       return
     }
 
-    if (user) {
+    if (status === 'authenticated') {
       // Simulate API calls
       const fetchDashboardData = async () => {
         setIsLoading(true)
@@ -89,9 +89,9 @@ export default function DashboardPage() {
 
       fetchDashboardData()
     }
-  }, [user, authLoading, router])
+  }, [status, router])
 
-  if (authLoading || isLoading) {
+  if (status === 'loading' || isLoading) {
     return (
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -112,7 +112,7 @@ export default function DashboardPage() {
     )
   }
 
-  if (!user) {
+  if (!session) {
     return null // Will redirect
   }
 
@@ -127,7 +127,7 @@ export default function DashboardPage() {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, {user.name || user.xUsername}!
+            Welcome back, {session.user?.name || session.user?.xUsername}!
           </h1>
           <p className="mt-2 text-muted-foreground">
             Here's your community engagement overview

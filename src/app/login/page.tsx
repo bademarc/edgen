@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useAuth } from '@/components/AuthProvider'
+import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
@@ -30,16 +30,16 @@ const permissions = [
 ]
 
 export default function LoginPage() {
-  const { user, isLoading, signIn } = useAuth()
+  const { data: session, status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
-    if (user) {
+    if (session) {
       router.push('/dashboard')
     }
-  }, [user, router])
+  }, [session, router])
 
-  if (isLoading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -47,7 +47,7 @@ export default function LoginPage() {
     )
   }
 
-  if (user) {
+  if (session) {
     return null // Will redirect
   }
 
@@ -111,7 +111,7 @@ export default function LoginPage() {
             className="mt-6"
           >
             <button
-              onClick={() => signIn()}
+              onClick={() => signIn('twitter', { callbackUrl: '/dashboard' })}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
