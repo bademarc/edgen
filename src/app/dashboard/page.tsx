@@ -11,7 +11,8 @@ import {
   ChatBubbleLeftRightIcon,
   PlusIcon,
   CalendarIcon,
-  ArrowTrendingUpIcon
+  ArrowTrendingUpIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline'
 import { formatNumber, formatDate } from '@/lib/utils'
 
@@ -157,38 +158,44 @@ export default function DashboardPage() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8"
         >
-          <div className="bg-card border border-border rounded-lg p-6">
+          <div className="card-layeredge p-6 hover-lift">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <SparklesIcon className="h-8 w-8 text-primary" />
+                <div className="p-3 rounded-xl bg-layeredge-orange/10">
+                  <SparklesIcon className="h-8 w-8 text-layeredge-orange" />
+                </div>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Total Points</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-2xl font-bold text-layeredge-gradient">
                   {stats ? formatNumber(stats.totalPoints) : '0'}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-lg p-6">
+          <div className="card-layeredge p-6 hover-lift">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <TrophyIcon className="h-8 w-8 text-accent" />
+                <div className="p-3 rounded-xl bg-layeredge-blue/10">
+                  <TrophyIcon className="h-8 w-8 text-layeredge-blue" />
+                </div>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Rank</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-2xl font-bold text-gradient-blue">
                   #{stats?.rank || 'N/A'}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-lg p-6">
+          <div className="card-layeredge p-6 hover-lift">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <ChatBubbleLeftRightIcon className="h-8 w-8 text-blue-500" />
+                <div className="p-3 rounded-xl bg-success/10">
+                  <ChatBubbleLeftRightIcon className="h-8 w-8 text-success" />
+                </div>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">Tweets Submitted</p>
@@ -199,14 +206,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-lg p-6">
+          <div className="card-layeredge p-6 hover-lift">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <ArrowTrendingUpIcon className="h-8 w-8 text-green-500" />
+                <div className="p-3 rounded-xl bg-success/10">
+                  <ArrowTrendingUpIcon className="h-8 w-8 text-success" />
+                </div>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">This Week</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-2xl font-bold text-success">
                   +{stats?.thisWeekPoints || 0}
                 </p>
               </div>
@@ -221,19 +230,24 @@ export default function DashboardPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8"
         >
-          <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
+          <div className="card-layeredge-elevated p-6 bg-gradient-to-r from-layeredge-orange/5 to-layeredge-blue/5">
+            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-layeredge-orange/10">
+                <SparklesIcon className="h-5 w-5 text-layeredge-orange" />
+              </div>
+              Quick Actions
+            </h2>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
                 href="/submit"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                className="btn-layeredge-primary px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover-lift"
               >
                 <PlusIcon className="h-5 w-5" />
                 Submit New Tweet
               </Link>
               <Link
                 href="/leaderboard"
-                className="border border-border hover:border-primary text-foreground hover:text-primary px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                className="btn-layeredge-secondary px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover-lift"
               >
                 <TrophyIcon className="h-5 w-5" />
                 View Leaderboard
@@ -248,16 +262,23 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-6">Recent Submissions</h2>
+          <div className="card-layeredge p-6">
+            <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-layeredge-blue/10">
+                <ChatBubbleLeftRightIcon className="h-5 w-5 text-layeredge-blue" />
+              </div>
+              Recent Submissions
+            </h2>
 
             {recentTweets.length === 0 ? (
               <div className="text-center py-12">
-                <ChatBubbleLeftRightIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                  <ChatBubbleLeftRightIcon className="h-12 w-12 text-muted-foreground" />
+                </div>
                 <p className="text-muted-foreground mb-4">No tweets submitted yet</p>
                 <Link
                   href="/submit"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="btn-layeredge-primary px-6 py-3 rounded-lg font-semibold hover-lift"
                 >
                   Submit Your First Tweet
                 </Link>
@@ -270,18 +291,16 @@ export default function DashboardPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
-                    className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
+                    className="card-layeredge-interactive p-4 hover-lift"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                         <CalendarIcon className="h-4 w-4" />
                         <span>{formatDate(tweet.createdAt)}</span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <SparklesIcon className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium text-primary">
-                          {tweet.totalPoints} points
-                        </span>
+                      <div className="badge-layeredge-primary">
+                        <SparklesIcon className="h-3 w-3 mr-1" />
+                        {tweet.totalPoints} points
                       </div>
                     </div>
 
@@ -289,19 +308,31 @@ export default function DashboardPage() {
                       {tweet.content}
                     </p>
 
+                    <div className="divider-layeredge my-3"></div>
+
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <span>❤️ {tweet.likes}</span>
-                        <span>🔄 {tweet.retweets}</span>
-                        <span>💬 {tweet.replies}</span>
+                      <div className="flex items-center space-x-4 text-sm">
+                        <div className="flex items-center space-x-1 text-red-400">
+                          <span>❤️</span>
+                          <span>{tweet.likes}</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-green-400">
+                          <span>🔄</span>
+                          <span>{tweet.retweets}</span>
+                        </div>
+                        <div className="flex items-center space-x-1 text-blue-400">
+                          <span>💬</span>
+                          <span>{tweet.replies}</span>
+                        </div>
                       </div>
                       <a
                         href={tweet.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
+                        className="text-layeredge-orange hover:text-layeredge-orange-light text-sm font-medium transition-colors flex items-center gap-1 hover-lift"
                       >
-                        View Tweet →
+                        View Tweet
+                        <ArrowRightIcon className="h-4 w-4" />
                       </a>
                     </div>
                   </motion.div>

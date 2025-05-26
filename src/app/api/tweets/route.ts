@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints } from '@/lib/utils'
+import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent } from '@/lib/utils'
 import { TwitterApiService } from '@/lib/twitter-api'
 
 export async function GET(request: NextRequest) {
@@ -105,6 +105,18 @@ export async function POST(request: NextRequest) {
     if (!isFromCommunity) {
       return NextResponse.json(
         { error: 'Tweet must be from the LayerEdge community' },
+        { status: 400 }
+      )
+    }
+
+    // Validate tweet content for required keywords
+    const isValidContent = validateTweetContent(tweetData.content)
+    if (!isValidContent) {
+      return NextResponse.json(
+        {
+          error: 'Tweet must contain either "@layeredge" or "$EDGEN" to earn points. Please make sure your tweet mentions LayerEdge or the $EDGEN token.',
+          contentValidationFailed: true
+        },
         { status: 400 }
       )
     }

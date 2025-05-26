@@ -59,3 +59,19 @@ export function calculatePoints(likes: number, retweets: number, replies: number
   const replyPoints = replies * 2
   return basePoints + likePoints + retweetPoints + replyPoints
 }
+
+export function validateTweetContent(content: string): boolean {
+  if (!content || typeof content !== 'string') {
+    return false
+  }
+
+  const normalizedContent = content.toLowerCase()
+
+  // Check for @layeredge mention (case-insensitive)
+  const hasLayerEdgeMention = normalizedContent.includes('@layeredge')
+
+  // Check for $EDGEN token reference (case-insensitive)
+  const hasEdgenToken = normalizedContent.includes('$edgen')
+
+  return hasLayerEdgeMention || hasEdgenToken
+}
