@@ -41,7 +41,7 @@ model Session {
 model User {
   id            String    @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?   // Removed @unique constraint as Twitter OAuth might not provide email
   emailVerified DateTime?
   image         String?
   xUsername     String?   @unique

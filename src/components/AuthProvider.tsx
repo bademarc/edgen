@@ -120,7 +120,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         provider: 'twitter',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          scopes: 'users.read tweet.read offline.access',
+          // Use basic scopes that are most likely to work
+          scopes: 'users.read tweet.read'
         },
       })
 

@@ -57,6 +57,10 @@ function LoginContent() {
         case 'oauth_error':
           errorMessage = 'OAuth authentication failed. Please try again.'
           break
+        case 'oauth_warning':
+          errorMessage = urlMessage || 'Authentication completed with warnings.'
+          setMessageType('warning')
+          break
         case 'auth_failed':
           errorMessage = 'Unable to complete authentication. Please check your Twitter account settings.'
           break
