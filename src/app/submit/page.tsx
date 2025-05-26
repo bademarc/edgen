@@ -314,15 +314,15 @@ export default function SubmitPage() {
                     <ul className="space-y-2 text-sm text-foreground-muted">
                       <li className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-layeredge-orange rounded-full"></span>
-                        <strong>@layeredge</strong> mention (e.g., "Check out @layeredge!")
+                        <strong>@layeredge</strong> mention (e.g., &quot;Check out @layeredge!&quot;)
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-layeredge-blue rounded-full"></span>
-                        <strong>$EDGEN</strong> token reference (e.g., "Bullish on $EDGEN")
+                        <strong>$EDGEN</strong> token reference (e.g., &quot;Bullish on $EDGEN&quot;)
                       </li>
                     </ul>
                     <p className="text-xs text-foreground-muted mt-3 italic">
-                      * Case doesn't matter - both uppercase and lowercase work
+                      * Case doesn&apos;t matter - both uppercase and lowercase work
                     </p>
                   </div>
                 </div>
