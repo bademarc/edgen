@@ -1,36 +1,171 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LayerEdge $Edgen Community Platform
 
-## Getting Started
+A comprehensive React.js web application for the LayerEdge $Edgen token community that gamifies user engagement with X (Twitter) community posts.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Core Functionality
+- **X Community Integration**: Connect to the LayerEdge X community at https://x.com/i/communities/1890107751621363
+- **Points System**: Earn points for tweet submissions and engagement
+- **Leaderboard**: Compete with community members and track rankings
+- **User Dashboard**: Personal statistics and activity overview
+- **Tweet Submission**: Submit and verify tweets from the LayerEdge community
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Technical Features
+- **Modern Stack**: Next.js 15, React 19, TypeScript, Tailwind CSS v4
+- **Dark Theme**: Futuristic dark design with smooth animations
+- **Responsive Design**: Optimized for desktop, tablet, and mobile
+- **Real-time Updates**: Live points calculation and leaderboard updates
+- **Database Integration**: Prisma ORM with SQLite for development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🎯 Points System
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Base Points**: 5 points per verified tweet submission
+- **Engagement Multipliers**:
+  - +1 point per like
+  - +3 points per retweet
+  - +2 points per reply
+- **Real-time Updates**: Points update automatically as engagement changes
 
-## Learn More
+## 📱 Pages & Components
 
-To learn more about Next.js, take a look at the following resources:
+### Pages
+1. **Home Page** (`/`) - Hero section with project overview and call-to-action
+2. **Login Page** (`/login`) - Authentication with X OAuth (currently using mock auth for demo)
+3. **Dashboard** (`/dashboard`) - Personal stats, recent activity, and quick actions
+4. **Leaderboard** (`/leaderboard`) - Top community members ranked by points
+5. **Submit Tweet** (`/submit`) - Form to submit tweets with validation
+6. **About** (`/about`) - Project information and community guidelines
+7. **FAQ** (`/faq`) - Frequently asked questions with search functionality
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Key Components
+- **Navigation**: Responsive navigation with authentication state
+- **AuthProvider**: Mock authentication system for development
+- **TweetCard**: Display tweet information with engagement metrics
+- **PointsProgress**: Circular progress indicators for points tracking
+- **LoadingSpinner**: Consistent loading states throughout the app
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠 Tech Stack
 
-## Deploy on Vercel
+- **Frontend**: React 19, Next.js 15, TypeScript
+- **Styling**: Tailwind CSS v4, Framer Motion for animations
+- **Database**: Prisma ORM with SQLite
+- **Forms**: React Hook Form with Zod validation
+- **State Management**: Zustand for global state
+- **Icons**: Heroicons
+- **Authentication**: Mock system (ready for X OAuth integration)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🚀 Getting Started
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd layeredge-edgen-community
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install --legacy-peer-deps
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+   Update `.env.local` with your configuration:
+   ```env
+   DATABASE_URL="file:./dev.db"
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your-secret-key-here"
+   TWITTER_CLIENT_ID="your-twitter-client-id"
+   TWITTER_CLIENT_SECRET="your-twitter-client-secret"
+   TWITTER_BEARER_TOKEN="your-twitter-bearer-token"
+   LAYEREDGE_COMMUNITY_URL="https://x.com/i/communities/1890107751621363"
+   ```
+
+4. **Set up the database**
+   ```bash
+   npm run db:push
+   npm run db:seed
+   ```
+
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+## 📊 Database Schema
+
+The application uses Prisma with the following main models:
+
+- **User**: User profiles with points and rankings
+- **Tweet**: Submitted tweets with engagement metrics
+- **PointsHistory**: Track points awarded over time
+- **Account/Session**: Authentication data (NextAuth.js compatible)
+
+## 🔧 Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run db:push` - Push database schema changes
+- `npm run db:studio` - Open Prisma Studio
+- `npm run db:generate` - Generate Prisma client
+- `npm run db:seed` - Seed database with demo data
+
+### Mock Authentication
+
+For development purposes, the app uses a mock authentication system. Click "Sign in with X" to authenticate as a demo user. In production, this would be replaced with real X OAuth.
+
+## 🎨 Design System
+
+### Colors
+- **Primary**: Blue (#3b82f6)
+- **Accent**: Green (#10b981)
+- **Background**: Dark (#0a0a0a)
+- **Cards**: Dark gray (#111827)
+- **Text**: Light (#ededed)
+
+### Components
+- Consistent spacing and typography
+- Smooth animations with Framer Motion
+- Responsive grid layouts
+- Card-based design patterns
+
+## 🔮 Future Enhancements
+
+1. **Real X OAuth Integration**: Replace mock auth with actual X API
+2. **Real-time Notifications**: WebSocket integration for live updates
+3. **Advanced Analytics**: Detailed engagement metrics and charts
+4. **Mobile App**: React Native version
+5. **Token Integration**: Actual $Edgen token rewards
+6. **Community Features**: Comments, reactions, and social features
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📞 Support
+
+For questions or support, please contact the LayerEdge team or open an issue in this repository.
