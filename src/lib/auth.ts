@@ -60,6 +60,17 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === 'twitter' && profile && user.id) {
         try {
           const twitterProfile = profile as TwitterProfile
+
+          // Validate Twitter profile data
+          if (!twitterProfile.username || !twitterProfile.id) {
+            console.error('Invalid Twitter profile data:', {
+              username: twitterProfile.username,
+              id: twitterProfile.id,
+              userId: user.id
+            })
+            return // Don't update user if Twitter data is incomplete
+          }
+
           console.log('Updating user with Twitter data:', {
             userId: user.id,
             username: twitterProfile.username,
@@ -72,6 +83,7 @@ export const authOptions: NextAuthOptions = {
             update: {
               xUsername: twitterProfile.username,
               xUserId: twitterProfile.id,
+              autoMonitoringEnabled: true, // Re-enable monitoring on successful auth
             },
             create: {
               id: user.id,

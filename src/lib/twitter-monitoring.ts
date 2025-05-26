@@ -47,15 +47,15 @@ export class TwitterMonitoringService {
     try {
       // Build search query for tweets from user containing @layeredge or $EDGEN
       const query = `from:${username} (@layeredge OR $EDGEN)`
-      
+
       let url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&tweet.fields=public_metrics,created_at&user.fields=username,name,profile_image_url&expansions=author_id&max_results=100`
-      
+
       if (sinceId) {
         url += `&since_id=${sinceId}`
       }
 
       console.log(`Searching for tweets from ${username} with LayerEdge mentions...`)
-      
+
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${process.env.TWITTER_BEARER_TOKEN}`,
@@ -73,7 +73,7 @@ export class TwitterMonitoringService {
       }
 
       const data = await response.json() as TwitterTimelineResponse
-      
+
       if (data.errors && data.errors.length > 0) {
         console.error('Twitter API search errors:', data.errors)
         return null
@@ -81,7 +81,7 @@ export class TwitterMonitoringService {
 
       console.log(`Found ${data.data?.length || 0} tweets from ${username} with LayerEdge mentions`)
       return data
-      
+
     } catch (error) {
       console.error('Error searching user tweets:', error)
       return null
@@ -195,29 +195,77 @@ export class TwitterMonitoringService {
     try {
       console.log(`Starting tweet monitoring for user ${userId}`)
 
-      // Get user data
+      // Get user data with more comprehensive checks
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
+          id: true,
+          name: true,
           xUsername: true,
+          xUserId: true,
           autoMonitoringEnabled: true,
           lastTweetCheck: true,
         },
       })
 
-      if (!user || !user.xUsername) {
+      // Enhanced validation with specific error messages
+      if (!user) {
+        console.warn(`User ${userId} not found in database`)
         return {
           success: false,
           tweetsFound: 0,
-          error: 'User not found or missing Twitter username'
+          error: 'User not found in database'
         }
       }
 
       if (!user.autoMonitoringEnabled) {
+        console.log(`Automatic monitoring is disabled for user ${userId} (@${user.xUsername || 'no username'})`)
         return {
           success: true,
           tweetsFound: 0,
           error: 'Automatic monitoring is disabled for this user'
+        }
+      }
+
+      // Check for missing Twitter data
+      if (!user.xUsername || !user.xUserId) {
+        console.warn(`User ${userId} (${user.name || 'no name'}) has incomplete Twitter data - xUsername: ${user.xUsername || 'MISSING'}, xUserId: ${user.xUserId || 'MISSING'}`)
+
+        // Disable monitoring for this user to prevent future errors
+        await prisma.user.update({
+          where: { id: userId },
+          data: { autoMonitoringEnabled: false }
+        })
+
+        // Update monitoring status
+        await prisma.tweetMonitoring.upsert({
+          where: { userId },
+          update: {
+            status: 'error',
+            errorMessage: 'Missing Twitter username or user ID - monitoring disabled. Please re-authenticate.',
+          },
+          create: {
+            userId,
+            status: 'error',
+            errorMessage: 'Missing Twitter username or user ID - monitoring disabled. Please re-authenticate.',
+            tweetsFound: 0,
+          },
+        })
+
+        return {
+          success: false,
+          tweetsFound: 0,
+          error: 'Missing Twitter username or user ID - monitoring disabled. Please re-authenticate.'
+        }
+      }
+
+      // Validate username format (basic check)
+      if (user.xUsername.length < 1 || user.xUsername.length > 15) {
+        console.warn(`User ${userId} has invalid Twitter username format: "${user.xUsername}"`)
+        return {
+          success: false,
+          tweetsFound: 0,
+          error: 'Invalid Twitter username format'
         }
       }
 
@@ -235,17 +283,38 @@ export class TwitterMonitoringService {
         }
       })
 
-      // Search for new tweets
+      // Search for new tweets with enhanced error handling
+      console.log(`Searching tweets for user @${user.xUsername} (ID: ${userId})`)
+
       const tweetResponse = await this.searchUserTweets(
         user.xUsername,
         lastTweet?.tweetId || undefined
       )
 
       if (!tweetResponse) {
+        console.warn(`Failed to fetch tweets for user @${user.xUsername} - Twitter API returned null`)
+
+        // Update monitoring status but don't disable monitoring (could be temporary API issue)
+        await prisma.tweetMonitoring.upsert({
+          where: { userId },
+          update: {
+            lastCheckAt: new Date(),
+            status: 'error',
+            errorMessage: 'Failed to fetch tweets from Twitter API - will retry next cycle',
+          },
+          create: {
+            userId,
+            lastCheckAt: new Date(),
+            status: 'error',
+            errorMessage: 'Failed to fetch tweets from Twitter API - will retry next cycle',
+            tweetsFound: 0,
+          },
+        })
+
         return {
           success: false,
           tweetsFound: 0,
-          error: 'Failed to fetch tweets from Twitter API'
+          error: 'Failed to fetch tweets from Twitter API - will retry next cycle'
         }
       }
 
@@ -326,17 +395,35 @@ export class TwitterMonitoringService {
   }> {
     console.log('Starting batch tweet monitoring for all users...')
 
+    // Enhanced query to get users with complete Twitter data
     const users = await prisma.user.findMany({
       where: {
         autoMonitoringEnabled: true,
         xUsername: {
-          not: null
+          not: null,
+          not: ''
+        },
+        xUserId: {
+          not: null,
+          not: ''
         }
       },
       select: {
         id: true,
+        name: true,
         xUsername: true,
+        xUserId: true,
+      },
+      orderBy: {
+        lastTweetCheck: 'asc' // Check users who haven't been checked recently first
       }
+    })
+
+    console.log(`Found ${users.length} users eligible for monitoring`)
+
+    // Log users being monitored
+    users.forEach(user => {
+      console.log(`  - ${user.name || 'No name'} (@${user.xUsername})`)
     })
 
     const results = {
@@ -348,26 +435,35 @@ export class TwitterMonitoringService {
 
     for (const user of users) {
       try {
+        console.log(`\n🔍 Processing user ${user.name || 'No name'} (@${user.xUsername})...`)
+
         const result = await this.monitorUserTweets(user.id)
-        
+
         if (result.success) {
           results.successfulUsers++
           results.totalTweetsFound += result.tweetsFound
+          console.log(`✅ Success: Found ${result.tweetsFound} tweets for @${user.xUsername}`)
         } else {
           results.errors.push({
             userId: user.id,
             error: result.error || 'Unknown error'
           })
+          console.log(`❌ Error for @${user.xUsername}: ${result.error}`)
         }
 
-        // Add delay between users to respect rate limits
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Add delay between users to respect rate limits and avoid overwhelming the API
+        await new Promise(resolve => setTimeout(resolve, 2000)) // Increased to 2 seconds
 
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         results.errors.push({
           userId: user.id,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: errorMessage
         })
+        console.error(`💥 Exception for user @${user.xUsername}:`, errorMessage)
+
+        // Continue with other users even if one fails completely
+        continue
       }
     }
 
