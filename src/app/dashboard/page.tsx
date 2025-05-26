@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     if (!session?.user?.id) return
 
     setIsLoading(true)
@@ -75,7 +75,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [session?.user?.id])
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -86,7 +86,7 @@ export default function DashboardPage() {
     if (status === 'authenticated' && session?.user?.id) {
       fetchDashboardData()
     }
-  }, [status, router, session?.user?.id])
+  }, [status, router, session?.user?.id, fetchDashboardData])
 
   if (status === 'loading' || isLoading) {
     return (

@@ -65,7 +65,7 @@ interface AppState {
   refreshLeaderboard: () => Promise<void>
 }
 
-export const useStore = create<AppState>((set, get) => ({
+export const useStore = create<AppState>((set) => ({
   user: null,
   tweets: [],
   leaderboard: [],
