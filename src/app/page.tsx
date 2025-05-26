@@ -12,8 +12,8 @@ import {
 
 const features = [
   {
-    name: 'Earn Points',
-    description: 'Get 5 base points for every verified tweet submission, plus bonus points for engagement.',
+    name: 'Automatic Tracking',
+    description: 'We automatically detect and track your tweets mentioning @layeredge or $EDGEN.',
     icon: SparklesIcon,
   },
   {
@@ -27,8 +27,8 @@ const features = [
     icon: UserGroupIcon,
   },
   {
-    name: 'Track Progress',
-    description: 'Monitor your engagement metrics and points history with detailed analytics.',
+    name: 'Real-time Points',
+    description: 'Earn points automatically based on your tweet engagement - likes, retweets, and replies.',
     icon: ChartBarIcon,
   },
 ]
@@ -73,8 +73,8 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-foreground-muted"
             >
-              Join the Bitcoin-backed internet revolution. Engage with LayerEdge community content,
-              earn points for your participation, and help build the future of decentralized verification.
+              Join the Bitcoin-backed internet revolution. Tweet about @layeredge or $EDGEN and
+              automatically earn points based on engagement. No manual submissions required!
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -144,7 +144,7 @@ export default function Home() {
             </h2>
             <div className="divider-layeredge w-24 mx-auto"></div>
             <p className="mt-6 text-lg text-foreground-muted max-w-2xl mx-auto">
-              Simple steps to start earning points and engaging with our community
+              Connect your X account and start earning points automatically
             </p>
           </motion.div>
 
@@ -192,7 +192,7 @@ export default function Home() {
               </h2>
               <div className="divider-layeredge w-32 mx-auto"></div>
               <p className="mt-6 text-lg text-foreground-muted max-w-2xl mx-auto">
-                Join thousands of community members earning points and engaging with LayerEdge content.
+                Join thousands of community members earning points automatically through X engagement.
               </p>
               <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-6">
                 <Link

@@ -10,7 +10,6 @@ import {
   XMarkIcon,
   HomeIcon,
   TrophyIcon,
-  PlusIcon,
   InformationCircleIcon,
   QuestionMarkCircleIcon,
   ChartBarIcon,
@@ -23,7 +22,6 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon, requiresAuth: true },
   { name: 'Recent Submissions', href: '/recent', icon: ChatBubbleLeftRightIcon },
   { name: 'Leaderboard', href: '/leaderboard', icon: TrophyIcon },
-  { name: 'Submit Tweet', href: '/submit', icon: PlusIcon, requiresAuth: true },
   { name: 'About', href: '/about', icon: InformationCircleIcon },
   { name: 'FAQ', href: '/faq', icon: QuestionMarkCircleIcon },
 ]

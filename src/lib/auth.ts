@@ -81,9 +81,25 @@ export const authOptions: NextAuthOptions = {
               xUsername: twitterProfile.username,
               xUserId: twitterProfile.id,
               totalPoints: 0,
+              autoMonitoringEnabled: true,
             },
           })
-          console.log('Successfully updated user with Twitter data')
+
+          // Initialize tweet monitoring for new or existing users
+          await prisma.tweetMonitoring.upsert({
+            where: { userId: user.id },
+            update: {
+              status: 'active',
+              errorMessage: null,
+            },
+            create: {
+              userId: user.id,
+              status: 'active',
+              tweetsFound: 0,
+            },
+          })
+
+          console.log('Successfully updated user with Twitter data and initialized monitoring')
         } catch (error) {
           console.error('Error updating user with Twitter data:', error)
           // Don't throw error to avoid breaking the sign-in flow

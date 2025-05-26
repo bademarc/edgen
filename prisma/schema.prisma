@@ -49,10 +49,17 @@ model User {
   totalPoints   Int       @default(0)
   rank          Int?
   joinDate      DateTime  @default(now())
+
+  // Automatic monitoring fields
+  autoMonitoringEnabled Boolean @default(true)
+  lastTweetCheck        DateTime?
+  tweetCheckCount       Int @default(0)
+
   accounts      Account[]
   sessions      Session[]
   tweets        Tweet[]
   pointsHistory PointsHistory[]
+  tweetMonitoring TweetMonitoring[]
 }
 
 model VerificationToken {
@@ -77,6 +84,12 @@ model Tweet {
   isVerified   Boolean  @default(false)
   lastEngagementUpdate DateTime? // Track when engagement was last updated
   engagementUpdateCount Int @default(0) // Track how many times engagement was updated
+
+  // Automatic discovery fields
+  tweetId      String?  // Twitter's internal tweet ID
+  discoveredAt DateTime? // When this tweet was automatically discovered
+  isAutoDiscovered Boolean @default(false) // Whether this was found automatically
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -94,4 +107,19 @@ model PointsHistory {
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tweet Tweet? @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+}
+
+model TweetMonitoring {
+  id           String   @id @default(cuid())
+  userId       String
+  lastCheckAt  DateTime @default(now())
+  tweetsFound  Int      @default(0)
+  status       String   @default("active") // active, paused, error
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
 }

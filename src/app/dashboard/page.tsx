@@ -9,7 +9,6 @@ import {
   SparklesIcon,
   TrophyIcon,
   ChatBubbleLeftRightIcon,
-  PlusIcon,
   CalendarIcon,
   ArrowTrendingUpIcon,
   ArrowRightIcon,
@@ -20,6 +19,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { formatNumber, formatDate } from '@/lib/utils'
 import { useRealTimeEngagement } from '@/hooks/useRealTimeEngagement'
+import { MonitoringStatus } from '@/components/MonitoringStatus'
 
 interface DashboardStats {
   totalPoints: number
@@ -243,7 +243,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Quick Actions */}
+        {/* Automatic Monitoring Status */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -255,23 +255,26 @@ export default function DashboardPage() {
               <div className="p-2 rounded-lg bg-layeredge-orange/10">
                 <SparklesIcon className="h-5 w-5 text-layeredge-orange" />
               </div>
-              Quick Actions
+              Automatic Tweet Monitoring
             </h2>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link
-                href="/submit"
-                className="btn-layeredge-primary px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover-lift"
-              >
-                <PlusIcon className="h-5 w-5" />
-                Submit New Tweet
-              </Link>
-              <Link
-                href="/leaderboard"
-                className="btn-layeredge-secondary px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover-lift"
-              >
-                <TrophyIcon className="h-5 w-5" />
-                View Leaderboard
-              </Link>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-muted-foreground mb-2">
+                    We automatically track your tweets that mention @layeredge or $EDGEN and award points based on engagement.
+                  </p>
+                </div>
+                <Link
+                  href="/leaderboard"
+                  className="btn-layeredge-secondary px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover-lift"
+                >
+                  <TrophyIcon className="h-5 w-5" />
+                  View Leaderboard
+                </Link>
+              </div>
+
+              {/* Monitoring Status */}
+              <MonitoringStatus />
             </div>
           </div>
         </motion.div>
@@ -326,13 +329,18 @@ export default function DashboardPage() {
                 <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
                   <ChatBubbleLeftRightIcon className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground mb-4">No tweets submitted yet</p>
-                <Link
-                  href="/submit"
-                  className="btn-layeredge-primary px-6 py-3 rounded-lg font-semibold hover-lift"
-                >
-                  Submit Your First Tweet
-                </Link>
+                <h3 className="text-lg font-semibold text-foreground mb-2">No tweets found yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Start tweeting about @layeredge or $EDGEN and we&apos;ll automatically track them for you!
+                </p>
+                <div className="text-sm text-muted-foreground bg-muted/20 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="font-medium mb-2">How it works:</p>
+                  <ul className="text-left space-y-1">
+                    <li>• Tweet about @layeredge or mention $EDGEN</li>
+                    <li>• We automatically detect and track your tweets</li>
+                    <li>• Earn points based on likes, retweets, and replies</li>
+                  </ul>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
