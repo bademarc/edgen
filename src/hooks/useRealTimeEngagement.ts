@@ -1,22 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-
-interface Tweet {
-  id: string
-  url: string
-  content?: string | null
-  likes: number
-  retweets: number
-  replies: number
-  totalPoints: number
-  createdAt: string
-  lastEngagementUpdate?: string | null
-  user: {
-    id: string
-    name: string | null
-    xUsername: string | null
-    image: string | null
-  }
-}
+import { engagementManager, type Tweet, type EngagementUpdateResult } from '@/lib/engagement-manager'
 
 // Interface for future use in engagement update notifications
 // interface EngagementUpdate {
@@ -60,11 +43,42 @@ export function useRealTimeEngagement({
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const isComponentMounted = useRef(true)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
 
   // Update local tweets when props change
   useEffect(() => {
     setUpdatedTweets(tweets)
   }, [tweets])
+
+  // Subscribe to engagement manager updates
+  useEffect(() => {
+    const handleEngagementUpdate = (result: EngagementUpdateResult) => {
+      if (!isComponentMounted.current) return
+
+      if (result.success && result.tweets && result.tweets.length > 0) {
+        setUpdatedTweets(prevTweets =>
+          prevTweets.map(tweet => {
+            const updatedTweet = result.tweets!.find(t => t.id === tweet.id)
+            return updatedTweet || tweet
+          })
+        )
+        setUpdateCount(prev => prev + 1)
+        setRetryCount(0)
+        setError(null)
+      } else if (!result.success && result.error) {
+        setError(result.error)
+      }
+    }
+
+    unsubscribeRef.current = engagementManager.subscribe(handleEngagementUpdate)
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
+        unsubscribeRef.current = null
+      }
+    }
+  }, [])
 
   // Dynamic update interval calculation (for future use)
   // const getDynamicUpdateInterval = useCallback((tweet: Tweet): number => {
@@ -86,7 +100,7 @@ export function useRealTimeEngagement({
   //   }
   // }, [])
 
-  // Update engagement metrics for tweets
+  // Update engagement metrics for tweets using the global engagement manager
   const updateEngagementMetrics = useCallback(async (tweetIds?: string[]) => {
     if (!enabled || !isComponentMounted.current) return
 
@@ -97,88 +111,41 @@ export function useRealTimeEngagement({
     if (tweetsToUpdate.length === 0) return
 
     setIsUpdating(true)
-    setError(null)
-
-    console.log(`Updating engagement metrics for ${tweetsToUpdate.length} tweets using fallback service`)
 
     try {
-      // Use batch update for multiple tweets
-      if (tweetsToUpdate.length > 1) {
-        const response = await fetch('/api/tweets/engagement/batch', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            tweetIds: tweetsToUpdate.map(tweet => tweet.id),
-          }),
-        })
+      const tweetIdsToUpdate = tweetsToUpdate.map(tweet => tweet.id)
+      const result = await engagementManager.updateEngagementMetrics(tweetIdsToUpdate)
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Failed to update engagement metrics')
-        }
-
-        const result = await response.json()
-
-        if (result.success && result.tweets) {
-          // Update the tweets with new engagement data
-          setUpdatedTweets(prevTweets =>
-            prevTweets.map(tweet => {
-              const updatedTweet = result.tweets.find((t: Tweet) => t.id === tweet.id)
-              return updatedTweet || tweet
-            })
-          )
-          setUpdateCount(prev => prev + 1)
-          setRetryCount(0) // Reset retry count on success
-        }
-      } else {
-        // Single tweet update
-        const tweet = tweetsToUpdate[0]
-        const response = await fetch(`/api/tweets/${tweet.id}/engagement`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Failed to update engagement metrics')
-        }
-
-        const result = await response.json()
-
-        if (result.success && result.changed && result.tweet) {
-          setUpdatedTweets(prevTweets =>
-            prevTweets.map(t => t.id === tweet.id ? result.tweet : t)
-          )
-          setUpdateCount(prev => prev + 1)
-          setRetryCount(0) // Reset retry count on success
-        }
-      }
+      // The engagement manager will notify subscribers of the result
+      // The subscription handler will update the local state
 
       setLastUpdateTime(new Date())
-    } catch (err) {
-      console.error('Error updating engagement metrics:', err)
-      setError(err instanceof Error ? err.message : 'Failed to update engagement metrics')
 
-      // Increment retry count
-      setRetryCount(prev => {
-        const newCount = prev + 1
-        // If we've reached max retries, disable updates temporarily
-        if (newCount >= maxRetries) {
-          console.warn(`Max retries (${maxRetries}) reached. Temporarily disabling updates.`)
-          // Re-enable after 5 minutes
-          setTimeout(() => {
-            if (isComponentMounted.current) {
-              setRetryCount(0)
-              setError(null)
+      if (!result.success && result.error) {
+        // Handle errors that aren't already handled by the subscription
+        if (result.error.includes('recently updated')) {
+          // This is not really an error, just a rate limit
+          console.log('Engagement update skipped - recently updated')
+        } else {
+          // Increment retry count for actual errors
+          setRetryCount(prev => {
+            const newCount = prev + 1
+            if (newCount >= maxRetries) {
+              console.warn(`Max retries (${maxRetries}) reached. Temporarily disabling updates.`)
+              setTimeout(() => {
+                if (isComponentMounted.current) {
+                  setRetryCount(0)
+                  setError(null)
+                }
+              }, 5 * 60 * 1000)
             }
-          }, 5 * 60 * 1000)
+            return newCount
+          })
         }
-        return newCount
-      })
+      }
+    } catch (err) {
+      console.error('Error in engagement update:', err)
+      setError(err instanceof Error ? err.message : 'Failed to update engagement metrics')
     } finally {
       if (isComponentMounted.current) {
         setIsUpdating(false)
@@ -223,6 +190,9 @@ export function useRealTimeEngagement({
       isComponentMounted.current = false
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
+      }
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
       }
     }
   }, [])

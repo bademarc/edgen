@@ -14,8 +14,16 @@ export async function POST() {
       )
     }
 
+    console.log(`🔄 Manual monitoring triggered for user ${session.user.id}`)
+
     const monitoringService = new TwitterMonitoringService()
     const result = await monitoringService.monitorUserTweets(session.user.id)
+
+    console.log(`📊 Monitoring result for user ${session.user.id}:`, {
+      success: result.success,
+      tweetsFound: result.tweetsFound,
+      error: result.error
+    })
 
     if (result.success) {
       return NextResponse.json({
@@ -24,20 +32,35 @@ export async function POST() {
         tweetsFound: result.tweetsFound
       })
     } else {
+      // Provide more specific error handling
+      const errorMessage = result.error || 'Unknown monitoring error'
+      const statusCode = errorMessage.includes('re-authenticate') ? 401 :
+                        errorMessage.includes('Invalid') ? 400 :
+                        errorMessage.includes('rate limit') ? 429 : 400
+
       return NextResponse.json(
         {
           success: false,
-          error: result.error,
-          tweetsFound: result.tweetsFound
+          error: errorMessage,
+          tweetsFound: result.tweetsFound,
+          suggestion: errorMessage.includes('re-authenticate')
+            ? 'Please sign out and sign in again with Twitter to refresh your credentials.'
+            : errorMessage.includes('rate limit')
+            ? 'Twitter API is rate limited. The system will automatically retry using web scraping.'
+            : 'Please try again later or contact support if the issue persists.'
         },
-        { status: 400 }
+        { status: statusCode }
       )
     }
 
   } catch (error) {
     console.error('Error in user monitoring endpoint:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        suggestion: 'Please try again later or contact support if the issue persists.'
+      },
       { status: 500 }
     )
   }

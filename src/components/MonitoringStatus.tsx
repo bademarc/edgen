@@ -53,25 +53,47 @@ export function MonitoringStatus() {
 
   const triggerManualCheck = async () => {
     setIsUpdating(true)
+    setError(null) // Clear previous errors
+
     try {
+      console.log('🔄 Triggering manual monitoring check...')
+
       const response = await fetch('/api/monitoring/user', {
         method: 'POST'
       })
-      
+
+      const result = await response.json()
+
       if (response.ok) {
-        const result = await response.json()
         // Refresh the monitoring status
         await fetchMonitoringStatus()
-        
-        // Show success message (you could add a toast notification here)
-        console.log('Manual check completed:', result)
+
+        // Show success message
+        console.log('✅ Manual check completed:', result)
+
+        // You could add a toast notification here for better UX
+        if (result.tweetsFound > 0) {
+          console.log(`🎉 Found ${result.tweetsFound} new tweets!`)
+        } else {
+          console.log('📝 No new tweets found')
+        }
       } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Failed to trigger manual check')
+        // Handle different error types with specific messages
+        const errorMessage = result.error || 'Failed to trigger manual check'
+        const suggestion = result.suggestion || ''
+
+        console.error('❌ Manual check failed:', {
+          status: response.status,
+          error: errorMessage,
+          suggestion
+        })
+
+        setError(`${errorMessage}${suggestion ? ` ${suggestion}` : ''}`)
       }
     } catch (err) {
-      setError('Network error during manual check')
-      console.error('Error triggering manual check:', err)
+      const errorMessage = 'Network error during manual check'
+      console.error('💥 Manual check network error:', err)
+      setError(errorMessage)
     } finally {
       setIsUpdating(false)
     }
@@ -79,7 +101,7 @@ export function MonitoringStatus() {
 
   const toggleMonitoring = async () => {
     if (!monitoringData) return
-    
+
     setIsUpdating(true)
     try {
       const response = await fetch('/api/monitoring/settings', {
@@ -91,7 +113,7 @@ export function MonitoringStatus() {
           autoMonitoringEnabled: !monitoringData.isEnabled
         })
       })
-      
+
       if (response.ok) {
         await fetchMonitoringStatus()
       } else {
@@ -140,7 +162,7 @@ export function MonitoringStatus() {
     if (!monitoringData.isEnabled) {
       return <ClockIcon className="h-4 w-4 text-yellow-400" />
     }
-    
+
     switch (monitoringData.monitoring?.status) {
       case 'active':
         return <CheckCircleIcon className="h-4 w-4 text-green-400" />
@@ -155,7 +177,7 @@ export function MonitoringStatus() {
     if (!monitoringData.isEnabled) {
       return 'Monitoring Disabled'
     }
-    
+
     switch (monitoringData.monitoring?.status) {
       case 'active':
         return 'Monitoring Active'
@@ -170,7 +192,7 @@ export function MonitoringStatus() {
     if (!monitoringData.isEnabled) {
       return 'text-yellow-400'
     }
-    
+
     switch (monitoringData.monitoring?.status) {
       case 'active':
         return 'text-green-400'
@@ -194,7 +216,7 @@ export function MonitoringStatus() {
             {getStatusText()}
           </span>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <button
             onClick={triggerManualCheck}
@@ -204,7 +226,7 @@ export function MonitoringStatus() {
           >
             <ArrowPathIcon className={`h-4 w-4 text-layeredge-blue ${isUpdating ? 'animate-spin' : ''}`} />
           </button>
-          
+
           <button
             onClick={toggleMonitoring}
             disabled={isUpdating}
@@ -232,7 +254,7 @@ export function MonitoringStatus() {
             )}
           </>
         )}
-        
+
         {monitoringData.user && (
           <div>
             Checks performed: {monitoringData.user.tweetCheckCount}
