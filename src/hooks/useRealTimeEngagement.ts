@@ -99,6 +99,8 @@ export function useRealTimeEngagement({
     setIsUpdating(true)
     setError(null)
 
+    console.log(`Updating engagement metrics for ${tweetsToUpdate.length} tweets using fallback service`)
+
     try {
       // Use batch update for multiple tweets
       if (tweetsToUpdate.length > 1) {

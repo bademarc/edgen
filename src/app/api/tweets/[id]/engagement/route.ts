@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { TwitterApiService } from '@/lib/twitter-api'
+import { getFallbackService } from '@/lib/fallback-service'
 import { calculatePoints, validateTweetContent } from '@/lib/utils'
 
 export async function POST(
@@ -65,14 +66,26 @@ export async function POST(
       }
     }
 
-    const twitterApi = new TwitterApiService()
+    // Use fallback service for engagement metrics
+    const fallbackService = getFallbackService({
+      enableScraping: true,
+      preferApi: true,
+      apiTimeoutMs: 8000, // 8 seconds for engagement updates
+    })
 
-    // Fetch fresh engagement metrics from Twitter API
-    const engagementMetrics = await twitterApi.getTweetEngagementMetrics(tweet.url)
+    // Fetch fresh engagement metrics using fallback service
+    const engagementMetrics = await fallbackService.getEngagementMetrics(tweet.url)
 
     if (!engagementMetrics) {
+      const fallbackStatus = fallbackService.getStatus()
       return NextResponse.json(
-        { error: 'Failed to fetch engagement metrics from Twitter API' },
+        {
+          error: 'Failed to fetch engagement metrics from both Twitter API and web scraping',
+          fallbackStatus,
+          suggestedAction: fallbackStatus.isApiRateLimited
+            ? 'Twitter API is rate limited. Engagement updates are temporarily using web scraping.'
+            : 'Both data sources are currently unavailable. Please try again later.'
+        },
         { status: 500 }
       )
     }

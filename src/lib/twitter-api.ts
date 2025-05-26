@@ -51,22 +51,58 @@ export class TwitterApiService {
     }
   }
 
-  private async makeRequest(url: string): Promise<TwitterApiResponse | TwitterUserApiResponse> {
+  private async makeRequest(url: string, retryCount: number = 0): Promise<TwitterApiResponse | TwitterUserApiResponse> {
+    const maxRetries = 3
+    const baseDelay = 1000 // 1 second
+
     try {
-      console.log(`Making Twitter API request to: ${url}`)
+      console.log(`Making Twitter API request to: ${url} (attempt ${retryCount + 1})`)
 
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${this.bearerToken}`,
           'Content-Type': 'application/json',
         },
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(15000) // 15 second timeout
       })
 
       console.log(`Twitter API response status: ${response.status}`)
 
+      // Handle rate limiting with exponential backoff
+      if (response.status === 429) {
+        const resetTime = response.headers.get('x-rate-limit-reset')
+        const remainingRequests = response.headers.get('x-rate-limit-remaining')
+
+        console.warn(`Rate limited! Remaining requests: ${remainingRequests}, Reset time: ${resetTime}`)
+
+        if (retryCount < maxRetries) {
+          const delay = Math.min(baseDelay * Math.pow(2, retryCount), 30000) // Max 30 seconds
+          console.log(`Retrying after ${delay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return this.makeRequest(url, retryCount + 1)
+        } else {
+          throw new Error(`Twitter API rate limit exceeded after ${maxRetries} retries`)
+        }
+      }
+
       if (!response.ok) {
         const errorText = await response.text()
         console.error(`Twitter API error: ${response.status} ${response.statusText}`, errorText)
+
+        // For certain errors, don't retry
+        if (response.status === 401 || response.status === 403 || response.status === 404) {
+          throw new Error(`Twitter API error: ${response.status} ${response.statusText} - ${errorText}`)
+        }
+
+        // For server errors, retry with backoff
+        if (response.status >= 500 && retryCount < maxRetries) {
+          const delay = baseDelay * Math.pow(2, retryCount)
+          console.log(`Server error, retrying after ${delay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return this.makeRequest(url, retryCount + 1)
+        }
+
         throw new Error(`Twitter API error: ${response.status} ${response.statusText} - ${errorText}`)
       }
 
@@ -74,7 +110,20 @@ export class TwitterApiService {
       console.log('Twitter API response data:', JSON.stringify(data, null, 2))
       return data
     } catch (error) {
-      console.error('Error in makeRequest:', error)
+      console.error(`Error in makeRequest (attempt ${retryCount + 1}):`, error)
+
+      // Retry on network errors
+      if (retryCount < maxRetries && (
+        error instanceof TypeError || // Network error
+        (error as any)?.name === 'AbortError' || // Timeout
+        (error instanceof Error && error.message.includes('fetch'))
+      )) {
+        const delay = baseDelay * Math.pow(2, retryCount)
+        console.log(`Network error, retrying after ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        return this.makeRequest(url, retryCount + 1)
+      }
+
       throw error
     }
   }

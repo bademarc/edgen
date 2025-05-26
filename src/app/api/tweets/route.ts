@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent } from '@/lib/utils'
 import { TwitterApiService } from '@/lib/twitter-api'
+import { getFallbackService } from '@/lib/fallback-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -110,30 +111,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch real tweet data from Twitter API
+    // Fetch real tweet data using fallback service (API + scraping)
     console.log(`Attempting to fetch tweet data for URL: ${tweetUrl}`)
-    const twitterApi = new TwitterApiService()
-    const tweetData = await twitterApi.getTweetData(tweetUrl)
+    const fallbackService = getFallbackService({
+      enableScraping: true,
+      preferApi: true,
+      apiTimeoutMs: 12000, // 12 seconds for tweet submission
+    })
+
+    const tweetData = await fallbackService.getTweetData(tweetUrl)
 
     if (!tweetData) {
       console.error(`Failed to fetch tweet data for URL: ${tweetUrl}`)
+      const fallbackStatus = fallbackService.getStatus()
       return NextResponse.json(
         {
-          error: 'Unable to fetch tweet data. This could be due to: 1) Tweet not found or deleted, 2) Tweet is private/protected, 3) Invalid tweet URL, or 4) Twitter API rate limits.',
-          errorType: 'TWEET_NOT_FOUND'
+          error: 'Unable to fetch tweet data. This could be due to: 1) Tweet not found or deleted, 2) Tweet is private/protected, 3) Invalid tweet URL, 4) Twitter API rate limits, or 5) Web scraping failed.',
+          errorType: 'TWEET_NOT_FOUND',
+          fallbackStatus,
+          suggestedAction: fallbackStatus.isApiRateLimited
+            ? 'Twitter API is rate limited. Please try again later or contact support.'
+            : 'Please verify the tweet URL and ensure the tweet is public and accessible.'
         },
         { status: 404 }
       )
     }
 
-    console.log(`Successfully fetched tweet data. Content: "${tweetData.content.substring(0, 100)}..."`)
+    console.log(`Successfully fetched tweet data via ${tweetData.source}. Content: "${tweetData.content.substring(0, 100)}..."`)
     console.log(`Tweet metrics - Likes: ${tweetData.likes}, Retweets: ${tweetData.retweets}, Replies: ${tweetData.replies}`)
 
-    // Verify tweet is from LayerEdge community
-    const isFromCommunity = await twitterApi.verifyTweetFromCommunity(tweetUrl)
-    if (!isFromCommunity) {
+    // Verify tweet is from LayerEdge community (already checked by fallback service)
+    if (!tweetData.isFromLayerEdgeCommunity) {
       return NextResponse.json(
-        { error: 'Tweet must be from the LayerEdge community' },
+        {
+          error: 'Tweet must be from the LayerEdge community',
+          source: tweetData.source,
+          fallbackStatus: fallbackService.getStatus()
+        },
         { status: 400 }
       )
     }
@@ -148,7 +162,9 @@ export async function POST(request: NextRequest) {
           error: 'Tweet must contain either "@layeredge" or "$EDGEN" to earn points. Please make sure your tweet mentions LayerEdge or the $EDGEN token.',
           contentValidationFailed: true,
           errorType: 'CONTENT_VALIDATION_FAILED',
-          tweetContent: tweetData.content.substring(0, 200) // First 200 chars for debugging
+          tweetContent: tweetData.content.substring(0, 200), // First 200 chars for debugging
+          source: tweetData.source,
+          fallbackStatus: fallbackService.getStatus()
         },
         { status: 400 }
       )
