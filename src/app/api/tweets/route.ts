@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent } from '@/lib/utils'
-import { TwitterApiService } from '@/lib/twitter-api'
 import { getFallbackService } from '@/lib/fallback-service'
 
 export async function GET(request: NextRequest) {

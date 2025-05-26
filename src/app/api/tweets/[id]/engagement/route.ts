@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { TwitterApiService } from '@/lib/twitter-api'
 import { getFallbackService } from '@/lib/fallback-service'
 import { calculatePoints, validateTweetContent } from '@/lib/utils'
 

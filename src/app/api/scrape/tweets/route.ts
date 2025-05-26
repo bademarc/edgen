@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in scrape tweets endpoint:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error during tweet scraping',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -184,7 +184,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error in GET scrape tweets endpoint:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -194,11 +194,11 @@ export async function GET(request: NextRequest) {
 }
 
 // Health check endpoint for the scraping service
-export async function HEAD(request: NextRequest) {
+export async function HEAD() {
   try {
     const fallbackService = getFallbackService()
     const status = fallbackService.getStatus()
-    
+
     return new NextResponse(null, {
       status: 200,
       headers: {
@@ -206,7 +206,7 @@ export async function HEAD(request: NextRequest) {
         'X-Service-Health': 'ok'
       }
     })
-  } catch (error) {
+  } catch {
     return new NextResponse(null, {
       status: 503,
       headers: {

@@ -4,7 +4,7 @@ import { getFallbackService, FallbackEngagementMetrics } from './fallback-servic
 
 export interface WebSocketMessage {
   type: 'engagement_update' | 'batch_update' | 'error' | 'status'
-  data: any
+  data: EngagementUpdateData | BatchUpdateData | { message: string } | { connected?: boolean; fallbackStatus: Record<string, unknown>; connectedClients?: number; isRunning?: boolean; timestamp?: Date }
   timestamp: Date
 }
 
@@ -42,7 +42,7 @@ export class WebSocketService {
     }
 
     try {
-      this.wss = new WebSocketServer({ 
+      this.wss = new WebSocketServer({
         server: server || this.server,
         path: '/api/ws/engagement'
       })
@@ -92,16 +92,16 @@ export class WebSocketService {
     }
   }
 
-  private handleClientMessage(ws: WebSocket, message: any): void {
+  private handleClientMessage(ws: WebSocket, message: { type: string; data: Record<string, unknown> }): void {
     switch (message.type) {
       case 'subscribe_tweet':
-        this.handleTweetSubscription(ws, message.data)
+        this.handleTweetSubscription(ws, message.data as { tweetId: string; tweetUrl: string })
         break
       case 'unsubscribe_tweet':
-        this.handleTweetUnsubscription(ws, message.data)
+        this.handleTweetUnsubscription(ws, message.data as { tweetId: string })
         break
       case 'request_update':
-        this.handleUpdateRequest(ws, message.data)
+        this.handleUpdateRequest(ws, message.data as { tweetUrls: string[] })
         break
       case 'get_status':
         this.sendFallbackStatus(ws)
@@ -114,7 +114,7 @@ export class WebSocketService {
   private handleTweetSubscription(ws: WebSocket, data: { tweetId: string, tweetUrl: string }): void {
     // Store subscription info (you might want to implement a more sophisticated subscription system)
     console.log(`Client subscribed to tweet: ${data.tweetId}`)
-    
+
     // Send immediate update for this tweet
     this.updateSingleTweet(data.tweetUrl, data.tweetId)
   }
@@ -135,9 +135,9 @@ export class WebSocketService {
 
     try {
       console.log(`Processing update request for ${data.tweetUrls.length} tweets`)
-      
+
       const results = await this.fallbackService.getBatchEngagementMetrics(data.tweetUrls)
-      
+
       const updates: EngagementUpdateData[] = []
       let successCount = 0
       let failureCount = 0
@@ -197,7 +197,7 @@ export class WebSocketService {
   private async updateSingleTweet(tweetUrl: string, tweetId: string): Promise<void> {
     try {
       const metrics = await this.fallbackService.getEngagementMetrics(tweetUrl)
-      
+
       if (metrics) {
         const updateData: EngagementUpdateData = {
           tweetId,
@@ -233,7 +233,7 @@ export class WebSocketService {
 
   private broadcast(message: WebSocketMessage): void {
     const messageStr = JSON.stringify(message)
-    
+
     this.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         try {
@@ -291,18 +291,18 @@ export class WebSocketService {
 
   close(): void {
     this.stopPeriodicUpdates()
-    
+
     if (this.wss) {
       this.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
           client.close()
         }
       })
-      
+
       this.wss.close()
       this.wss = null
     }
-    
+
     this.clients.clear()
     this.isRunning = false
     console.log('WebSocket service closed')
@@ -323,7 +323,7 @@ export function getWebSocketService(server?: Server): WebSocketService {
 export interface UseWebSocketReturn {
   isConnected: boolean
   lastMessage: WebSocketMessage | null
-  sendMessage: (message: any) => void
+  sendMessage: (message: Record<string, unknown>) => void
   subscribe: (tweetId: string, tweetUrl: string) => void
   unsubscribe: (tweetId: string) => void
   requestUpdate: (tweetUrls: string[]) => void
@@ -331,7 +331,7 @@ export interface UseWebSocketReturn {
 }
 
 // This would be used in React components
-export function useWebSocket(url: string = '/api/ws/engagement'): UseWebSocketReturn {
+export function useWebSocket(): UseWebSocketReturn {
   // This is a placeholder - actual implementation would use React hooks
   // and would be implemented in a separate client-side file
   throw new Error('useWebSocket hook should be implemented in client-side code')

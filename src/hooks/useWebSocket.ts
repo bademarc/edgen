@@ -4,8 +4,20 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 export interface WebSocketMessage {
   type: 'engagement_update' | 'batch_update' | 'error' | 'status'
-  data: any
+  data: EngagementUpdateData | BatchUpdateData | ErrorData | StatusData
   timestamp: Date
+}
+
+export interface ErrorData {
+  message: string
+}
+
+export interface StatusData {
+  connected?: boolean
+  fallbackStatus?: FallbackStatus
+  connectedClients?: number
+  isRunning?: boolean
+  timestamp?: Date
 }
 
 export interface EngagementUpdateData {
@@ -44,7 +56,7 @@ export interface UseWebSocketReturn {
   isConnected: boolean
   lastMessage: WebSocketMessage | null
   fallbackStatus: FallbackStatus | null
-  sendMessage: (message: any) => void
+  sendMessage: (message: Record<string, unknown>) => void
   subscribe: (tweetId: string, tweetUrl: string) => void
   unsubscribe: (tweetId: string) => void
   requestUpdate: (tweetUrls: string[]) => void
@@ -57,7 +69,7 @@ export function useWebSocket(url: string = '/api/ws/engagement'): UseWebSocketRe
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null)
   const [fallbackStatus, setFallbackStatus] = useState<FallbackStatus | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
-  
+
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttempts = useRef(0)
@@ -69,9 +81,9 @@ export function useWebSocket(url: string = '/api/ws/engagement'): UseWebSocketRe
       // Create WebSocket URL
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
       const wsUrl = `${protocol}//${window.location.host}${url}`
-      
+
       console.log(`Connecting to WebSocket: ${wsUrl}`)
-      
+
       wsRef.current = new WebSocket(wsUrl)
 
       wsRef.current.onopen = () => {
@@ -85,12 +97,12 @@ export function useWebSocket(url: string = '/api/ws/engagement'): UseWebSocketRe
         try {
           const message: WebSocketMessage = JSON.parse(event.data)
           setLastMessage(message)
-          
+
           // Handle specific message types
-          if (message.type === 'status' && message.data.fallbackStatus) {
+          if (message.type === 'status' && 'fallbackStatus' in message.data && message.data.fallbackStatus) {
             setFallbackStatus(message.data.fallbackStatus)
           }
-          
+
           console.log('WebSocket message received:', message.type)
         } catch (error) {
           console.error('Error parsing WebSocket message:', error)
@@ -100,12 +112,12 @@ export function useWebSocket(url: string = '/api/ws/engagement'): UseWebSocketRe
       wsRef.current.onclose = (event) => {
         console.log('WebSocket disconnected:', event.code, event.reason)
         setIsConnected(false)
-        
+
         // Attempt to reconnect if not a normal closure
         if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
           reconnectAttempts.current++
           console.log(`Attempting to reconnect (${reconnectAttempts.current}/${maxReconnectAttempts})...`)
-          
+
           reconnectTimeoutRef.current = setTimeout(() => {
             connect()
           }, reconnectDelay * reconnectAttempts.current)
@@ -130,16 +142,16 @@ export function useWebSocket(url: string = '/api/ws/engagement'): UseWebSocketRe
       clearTimeout(reconnectTimeoutRef.current)
       reconnectTimeoutRef.current = null
     }
-    
+
     if (wsRef.current) {
       wsRef.current.close(1000, 'Component unmounting')
       wsRef.current = null
     }
-    
+
     setIsConnected(false)
   }, [])
 
-  const sendMessage = useCallback((message: any) => {
+  const sendMessage = useCallback((message: Record<string, unknown>) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       try {
         wsRef.current.send(JSON.stringify(message))
@@ -182,7 +194,7 @@ export function useWebSocket(url: string = '/api/ws/engagement'): UseWebSocketRe
   // Connect on mount
   useEffect(() => {
     connect()
-    
+
     return () => {
       disconnect()
     }
@@ -209,7 +221,13 @@ export function useWebSocket(url: string = '/api/ws/engagement'): UseWebSocketRe
 }
 
 // Hook for enhanced real-time engagement with WebSocket support
-export function useEnhancedRealTimeEngagement(tweets: any[], enabled: boolean = true) {
+export function useEnhancedRealTimeEngagement(tweets: Array<{
+  id: string
+  url: string
+  likes: number
+  retweets: number
+  replies: number
+}>, enabled: boolean = true) {
   const webSocket = useWebSocket()
   const [enhancedTweets, setEnhancedTweets] = useState(tweets)
   const [lastUpdateSource, setLastUpdateSource] = useState<'api' | 'scraper' | null>(null)
@@ -218,7 +236,7 @@ export function useEnhancedRealTimeEngagement(tweets: any[], enabled: boolean = 
   useEffect(() => {
     if (webSocket.lastMessage?.type === 'engagement_update') {
       const updateData = webSocket.lastMessage.data as EngagementUpdateData
-      
+
       setEnhancedTweets(prevTweets =>
         prevTweets.map(tweet => {
           if (tweet.id === updateData.tweetId) {
@@ -235,7 +253,7 @@ export function useEnhancedRealTimeEngagement(tweets: any[], enabled: boolean = 
       )
     } else if (webSocket.lastMessage?.type === 'batch_update') {
       const batchData = webSocket.lastMessage.data as BatchUpdateData
-      
+
       setEnhancedTweets(prevTweets =>
         prevTweets.map(tweet => {
           const update = batchData.updates.find(u => u.tweetId === tweet.id)
@@ -263,7 +281,7 @@ export function useEnhancedRealTimeEngagement(tweets: any[], enabled: boolean = 
         }
       })
     }
-  }, [tweets, enabled, webSocket.isConnected, webSocket.subscribe])
+  }, [tweets, enabled, webSocket.isConnected, webSocket.subscribe, webSocket])
 
   // Update local tweets when props change
   useEffect(() => {

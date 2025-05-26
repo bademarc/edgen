@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       const invalidUrls = tweetUrls.filter(url => !isValidTwitterUrl(url))
       if (invalidUrls.length > 0) {
         return NextResponse.json(
-          { 
+          {
             error: 'Invalid Twitter URLs found',
             invalidUrls: invalidUrls.slice(0, 5) // Show first 5 invalid URLs
           },
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in scrape engagement endpoint:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error during engagement scraping',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error in GET scrape engagement endpoint:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -227,11 +227,11 @@ export async function GET(request: NextRequest) {
 }
 
 // Status endpoint for monitoring the scraping service
-export async function HEAD(request: NextRequest) {
+export async function HEAD() {
   try {
     const fallbackService = getFallbackService()
     const status = fallbackService.getStatus()
-    
+
     return new NextResponse(null, {
       status: 200,
       headers: {
@@ -242,7 +242,7 @@ export async function HEAD(request: NextRequest) {
         'X-Rate-Limited': status.isApiRateLimited.toString()
       }
     })
-  } catch (error) {
+  } catch {
     return new NextResponse(null, {
       status: 503,
       headers: {

@@ -115,7 +115,7 @@ export class TwitterApiService {
       // Retry on network errors
       if (retryCount < maxRetries && (
         error instanceof TypeError || // Network error
-        (error as any)?.name === 'AbortError' || // Timeout
+        (error instanceof Error && error.name === 'AbortError') || // Timeout
         (error instanceof Error && error.message.includes('fetch'))
       )) {
         const delay = baseDelay * Math.pow(2, retryCount)

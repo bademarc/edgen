@@ -1,6 +1,5 @@
 import { TwitterApiService } from './twitter-api'
-import { WebScraperService, getWebScraperInstance, ScrapedTweetData, ScrapedEngagementMetrics } from './web-scraper'
-import { validateTweetContent } from './utils'
+import { WebScraperService, getWebScraperInstance } from './web-scraper'
 
 export interface FallbackTweetData {
   id: string
@@ -94,7 +93,7 @@ export class FallbackService {
     return this.config.preferApi
   }
 
-  private handleApiError(error: any): void {
+  private handleApiError(error: Error): void {
     this.apiFailureCount++
     this.lastApiFailure = new Date()
 
@@ -124,31 +123,31 @@ export class FallbackService {
     if (this.shouldUseApi()) {
       try {
         console.log('Attempting to fetch tweet data via Twitter API...')
-        
+
         const apiData = await Promise.race([
           this.twitterApi.getTweetData(tweetUrl),
-          new Promise<null>((_, reject) => 
+          new Promise<null>((_, reject) =>
             setTimeout(() => reject(new Error('API timeout')), this.config.apiTimeoutMs)
           )
         ])
 
         if (apiData) {
           this.handleApiSuccess()
-          
+
           // Verify community membership via API
           const isFromCommunity = await this.twitterApi.verifyTweetFromCommunity(tweetUrl)
-          
+
           const fallbackData: FallbackTweetData = {
             ...apiData,
             source: 'api' as const,
             isFromLayerEdgeCommunity: isFromCommunity
           }
-          
+
           console.log('Successfully fetched tweet data via API')
           return fallbackData
         }
       } catch (error) {
-        this.handleApiError(error)
+        this.handleApiError(error instanceof Error ? error : new Error(String(error)))
         console.log('API failed, falling back to web scraping...')
       }
     }
@@ -157,9 +156,9 @@ export class FallbackService {
     if (this.config.enableScraping) {
       try {
         console.log('Attempting to fetch tweet data via web scraping...')
-        
+
         const scrapedData = await this.webScraper.scrapeTweetData(tweetUrl)
-        
+
         if (scrapedData) {
           const fallbackData: FallbackTweetData = {
             id: scrapedData.id,
@@ -172,7 +171,7 @@ export class FallbackService {
             source: 'scraper' as const,
             isFromLayerEdgeCommunity: scrapedData.isFromLayerEdgeCommunity
           }
-          
+
           console.log('Successfully fetched tweet data via web scraping')
           return fallbackData
         }
@@ -192,28 +191,28 @@ export class FallbackService {
     if (this.shouldUseApi()) {
       try {
         console.log('Attempting to fetch engagement metrics via Twitter API...')
-        
+
         const apiMetrics = await Promise.race([
           this.twitterApi.getTweetEngagementMetrics(tweetUrl),
-          new Promise<null>((_, reject) => 
+          new Promise<null>((_, reject) =>
             setTimeout(() => reject(new Error('API timeout')), this.config.apiTimeoutMs)
           )
         ])
 
         if (apiMetrics) {
           this.handleApiSuccess()
-          
+
           const fallbackMetrics: FallbackEngagementMetrics = {
             ...apiMetrics,
             source: 'api' as const,
             timestamp: new Date()
           }
-          
+
           console.log('Successfully fetched engagement metrics via API')
           return fallbackMetrics
         }
       } catch (error) {
-        this.handleApiError(error)
+        this.handleApiError(error instanceof Error ? error : new Error(String(error)))
         console.log('API failed, falling back to web scraping...')
       }
     }
@@ -222,9 +221,9 @@ export class FallbackService {
     if (this.config.enableScraping) {
       try {
         console.log('Attempting to fetch engagement metrics via web scraping...')
-        
+
         const scrapedMetrics = await this.webScraper.scrapeEngagementMetrics(tweetUrl)
-        
+
         if (scrapedMetrics) {
           const fallbackMetrics: FallbackEngagementMetrics = {
             likes: scrapedMetrics.likes,
@@ -233,7 +232,7 @@ export class FallbackService {
             source: 'scraper' as const,
             timestamp: scrapedMetrics.timestamp
           }
-          
+
           console.log('Successfully fetched engagement metrics via web scraping')
           return fallbackMetrics
         }
@@ -256,16 +255,16 @@ export class FallbackService {
     if (this.shouldUseApi()) {
       try {
         console.log('Attempting batch fetch via Twitter API...')
-        
+
         const apiResults = await this.twitterApi.getBatchTweetEngagementMetrics(tweetUrls)
-        
+
         // Check if API was successful for most tweets
         const successfulResults = apiResults.filter(result => result.metrics !== null)
         const successRate = successfulResults.length / apiResults.length
-        
+
         if (successRate > 0.5) { // If more than 50% successful
           this.handleApiSuccess()
-          
+
           const fallbackResults = apiResults.map(result => ({
             url: result.url,
             metrics: result.metrics ? {
@@ -274,14 +273,14 @@ export class FallbackService {
               timestamp: new Date()
             } : null
           }))
-          
+
           console.log(`Successfully fetched ${successfulResults.length}/${apiResults.length} metrics via API`)
           return fallbackResults
         } else {
           throw new Error(`Low API success rate: ${successRate}`)
         }
       } catch (error) {
-        this.handleApiError(error)
+        this.handleApiError(error instanceof Error ? error : new Error(String(error)))
         console.log('API batch failed, falling back to web scraping...')
       }
     }
@@ -290,9 +289,9 @@ export class FallbackService {
     if (this.config.enableScraping) {
       try {
         console.log('Attempting batch fetch via web scraping...')
-        
+
         const scrapedResults = await this.webScraper.scrapeBatchEngagementMetrics(tweetUrls)
-        
+
         const fallbackResults = scrapedResults.map(result => ({
           url: result.url,
           metrics: result.metrics ? {
@@ -303,7 +302,7 @@ export class FallbackService {
             timestamp: result.metrics.timestamp
           } : null
         }))
-        
+
         const successfulResults = fallbackResults.filter(result => result.metrics !== null)
         console.log(`Successfully scraped ${successfulResults.length}/${fallbackResults.length} metrics`)
         return fallbackResults

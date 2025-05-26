@@ -1,5 +1,4 @@
 import { chromium, Browser, Page } from 'playwright'
-import * as cheerio from 'cheerio'
 import { extractTweetId, validateTweetContent } from './utils'
 
 export interface ScrapedTweetData {
@@ -70,13 +69,15 @@ export class WebScraperService {
     }
 
     const page = await this.browser.newPage()
-    
+
     // Set user agent to avoid detection
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-    
+    await page.setExtraHTTPHeaders({
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    })
+
     // Set viewport
     await page.setViewportSize({ width: 1280, height: 720 })
-    
+
     return page
   }
 
@@ -86,10 +87,10 @@ export class WebScraperService {
 
   private parseEngagementCount(text: string): number {
     if (!text) return 0
-    
+
     // Remove commas and convert to number
     const cleanText = text.replace(/,/g, '').trim()
-    
+
     // Handle K/M suffixes
     if (cleanText.includes('K')) {
       return Math.floor(parseFloat(cleanText.replace('K', '')) * 1000)
@@ -97,7 +98,7 @@ export class WebScraperService {
     if (cleanText.includes('M')) {
       return Math.floor(parseFloat(cleanText.replace('M', '')) * 1000000)
     }
-    
+
     return parseInt(cleanText) || 0
   }
 
@@ -108,13 +109,13 @@ export class WebScraperService {
     while (retryCount < this.maxRetries) {
       try {
         console.log(`Scraping tweet data (attempt ${retryCount + 1}): ${tweetUrl}`)
-        
+
         page = await this.createPage()
-        
+
         // Navigate to tweet URL
-        await page.goto(tweetUrl, { 
+        await page.goto(tweetUrl, {
           waitUntil: 'networkidle',
-          timeout: 30000 
+          timeout: 30000
         })
 
         // Wait for tweet content to load
@@ -210,7 +211,7 @@ export class WebScraperService {
       } catch (error) {
         console.error(`Scraping attempt ${retryCount + 1} failed:`, error)
         retryCount++
-        
+
         if (retryCount < this.maxRetries) {
           console.log(`Retrying in ${this.retryDelay}ms...`)
           await this.delay(this.retryDelay)
@@ -233,13 +234,13 @@ export class WebScraperService {
     while (retryCount < this.maxRetries) {
       try {
         console.log(`Scraping engagement metrics (attempt ${retryCount + 1}): ${tweetUrl}`)
-        
+
         page = await this.createPage()
-        
+
         // Navigate to tweet URL
-        await page.goto(tweetUrl, { 
+        await page.goto(tweetUrl, {
           waitUntil: 'networkidle',
-          timeout: 30000 
+          timeout: 30000
         })
 
         // Wait for engagement metrics to load
@@ -278,7 +279,7 @@ export class WebScraperService {
       } catch (error) {
         console.error(`Engagement scraping attempt ${retryCount + 1} failed:`, error)
         retryCount++
-        
+
         if (retryCount < this.maxRetries) {
           console.log(`Retrying in ${this.retryDelay}ms...`)
           await this.delay(this.retryDelay)
@@ -305,12 +306,11 @@ export class WebScraperService {
       // For regular tweet URLs, check if the tweet mentions LayerEdge community
       // This is a simplified check - in production you might want more sophisticated verification
       const pageContent = await page.content()
-      const $ = cheerio.load(pageContent)
-      
+
       // Look for community indicators in the page
-      const hasLayerEdgeReference = pageContent.toLowerCase().includes('layeredge') || 
+      const hasLayerEdgeReference = pageContent.toLowerCase().includes('layeredge') ||
                                    pageContent.toLowerCase().includes('$edgen')
-      
+
       return hasLayerEdgeReference
     } catch (error) {
       console.error('Error checking LayerEdge community:', error)
@@ -333,26 +333,26 @@ export class WebScraperService {
     metrics: ScrapedEngagementMetrics | null
   }>> {
     const results = []
-    
+
     // Process in smaller batches to avoid overwhelming the system
     const batchSize = 3
     for (let i = 0; i < tweetUrls.length; i += batchSize) {
       const batch = tweetUrls.slice(i, i + batchSize)
-      
+
       const batchPromises = batch.map(async (url) => {
         const metrics = await this.scrapeEngagementMetrics(url)
         return { url, metrics }
       })
-      
+
       const batchResults = await Promise.all(batchPromises)
       results.push(...batchResults)
-      
+
       // Add delay between batches to be respectful
       if (i + batchSize < tweetUrls.length) {
         await this.delay(3000) // 3 second delay between batches
       }
     }
-    
+
     return results
   }
 }
