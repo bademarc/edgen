@@ -15,6 +15,12 @@ export async function GET(request: NextRequest) {
   const origin = requestUrl.origin
   const cookieStore = await cookies()
 
+  // Use production URL for redirects, fallback to request origin for development
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+
+  console.log('OAuth callback - Request origin:', origin)
+  console.log('OAuth callback - Base URL for redirects:', baseUrl)
+
   // Handle OAuth errors
   if (error) {
     console.error('Twitter OAuth error:', { error, errorDescription })
@@ -26,11 +32,11 @@ export async function GET(request: NextRequest) {
       errorMessage = decodeURIComponent(errorDescription)
     }
 
-    return NextResponse.redirect(`${origin}/login?error=oauth_error&message=${encodeURIComponent(errorMessage)}`)
+    return NextResponse.redirect(`${baseUrl}/login?error=oauth_error&message=${encodeURIComponent(errorMessage)}`)
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${origin}/login?error=missing_params&message=${encodeURIComponent('Missing authorization code or state')}`)
+    return NextResponse.redirect(`${baseUrl}/login?error=missing_params&message=${encodeURIComponent('Missing authorization code or state')}`)
   }
 
   try {
@@ -38,14 +44,14 @@ export async function GET(request: NextRequest) {
     const storedState = cookieStore.get('twitter_oauth_state')?.value
     if (!storedState || storedState !== state) {
       console.error('OAuth state mismatch:', { stored: storedState, received: state })
-      return NextResponse.redirect(`${origin}/login?error=state_mismatch&message=${encodeURIComponent('Invalid OAuth state')}`)
+      return NextResponse.redirect(`${baseUrl}/login?error=state_mismatch&message=${encodeURIComponent('Invalid OAuth state')}`)
     }
 
     // Get code verifier from cookie
     const codeVerifier = cookieStore.get('twitter_code_verifier')?.value
     if (!codeVerifier) {
       console.error('Missing code verifier in cookies')
-      return NextResponse.redirect(`${origin}/login?error=missing_verifier&message=${encodeURIComponent('Missing OAuth code verifier')}`)
+      return NextResponse.redirect(`${baseUrl}/login?error=missing_verifier&message=${encodeURIComponent('Missing OAuth code verifier')}`)
     }
 
     // Exchange code for token
@@ -155,8 +161,9 @@ export async function GET(request: NextRequest) {
 
     console.log('User authentication successful:', user.id)
 
-    // Redirect to dashboard
-    return NextResponse.redirect(`${origin}/dashboard`)
+    // Redirect to dashboard using production URL
+    console.log('Redirecting to dashboard:', `${baseUrl}/dashboard`)
+    return NextResponse.redirect(`${baseUrl}/dashboard`)
 
   } catch (error) {
     console.error('Twitter OAuth callback error:', error)
@@ -166,6 +173,6 @@ export async function GET(request: NextRequest) {
     cookieStore.delete('twitter_oauth_state')
 
     const errorMessage = error instanceof Error ? error.message : 'Authentication failed'
-    return NextResponse.redirect(`${origin}/login?error=auth_failed&message=${encodeURIComponent(errorMessage)}`)
+    return NextResponse.redirect(`${baseUrl}/login?error=auth_failed&message=${encodeURIComponent(errorMessage)}`)
   }
 }

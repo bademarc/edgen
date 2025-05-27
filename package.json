@@ -21,6 +21,7 @@
     "auth:fix": "tsx scripts/fix-auth-configuration.ts",
     "mentions:test": "tsx scripts/test-mention-tracking.ts",
     "mentions:deploy": "bash scripts/deploy-mention-tracking.sh",
+    "oauth:test": "tsx scripts/test-oauth-config.ts",
     "auth:diagnose": "tsx scripts/diagnose-auth-issues.ts",
     "auth:test": "tsx scripts/test-auth-fixes.ts",
     "postinstall": "prisma generate"
