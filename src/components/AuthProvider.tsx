@@ -116,25 +116,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signInWithTwitter = async () => {
     setIsLoading(true)
     try {
-      // Get the correct redirect URL based on environment
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-      const redirectUrl = `${siteUrl}/auth/callback`
+      console.log('Starting Twitter OAuth...')
 
-      console.log('Starting Twitter OAuth with redirect URL:', redirectUrl)
+      // Redirect to our Twitter OAuth endpoint
+      window.location.href = '/auth/twitter'
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'twitter',
-        options: {
-          redirectTo: redirectUrl,
-          // Use basic scopes for Twitter OAuth 2.0
-          scopes: 'users.read tweet.read'
-        },
-      })
-
-      if (error) {
-        console.error('Sign in error:', error)
-        throw error
-      }
     } catch (error) {
       console.error('Sign in error:', error)
       setIsLoading(false)

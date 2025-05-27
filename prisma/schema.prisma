@@ -55,6 +55,11 @@ model User {
   lastTweetCheck        DateTime?
   tweetCheckCount       Int @default(0)
 
+  // Twitter OAuth token fields
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+
   accounts      Account[]
   sessions      Session[]
   tweets        Tweet[]
