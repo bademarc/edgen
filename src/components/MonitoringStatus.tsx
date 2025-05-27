@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { signOut } from 'next-auth/react'
+import { useAuth } from '@/components/AuthProvider'
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -30,6 +30,7 @@ interface MonitoringData {
 }
 
 export function MonitoringStatus() {
+  const { signOut } = useAuth()
   const [monitoringData, setMonitoringData] = useState<MonitoringData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -134,9 +135,9 @@ export function MonitoringStatus() {
     try {
       setIsUpdating(true)
       // Sign out and redirect to login page
-      await signOut({
-        callbackUrl: '/login?message=Please sign in again to refresh your Twitter credentials'
-      })
+      await signOut()
+      // Redirect will be handled by the AuthProvider
+      window.location.href = '/login?message=Please sign in again to refresh your Twitter credentials'
     } catch (error) {
       console.error('Error during re-authentication:', error)
       setError('Failed to sign out. Please try refreshing the page.')

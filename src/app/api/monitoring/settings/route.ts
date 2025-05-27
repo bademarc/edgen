@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     // Update user's monitoring preference
     const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: user.id },
       data: {
         autoMonitoringEnabled
       },
@@ -39,25 +39,25 @@ export async function POST(request: NextRequest) {
     // Update monitoring status
     if (autoMonitoringEnabled) {
       await prisma.tweetMonitoring.upsert({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         update: {
           status: 'active',
           errorMessage: null,
         },
         create: {
-          userId: session.user.id,
+          userId: user.id,
           status: 'active',
           tweetsFound: 0,
         },
       })
     } else {
       await prisma.tweetMonitoring.upsert({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         update: {
           status: 'paused',
         },
         create: {
-          userId: session.user.id,
+          userId: user.id,
           status: 'paused',
           tweetsFound: 0,
         },
@@ -81,11 +81,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !authUser) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -93,7 +94,7 @@ export async function GET() {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       select: {
         autoMonitoringEnabled: true,
         xUsername: true,
@@ -103,7 +104,7 @@ export async function GET() {
     })
 
     const monitoring = await prisma.tweetMonitoring.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: authUser.id },
       select: {
         status: true,
         lastCheckAt: true,

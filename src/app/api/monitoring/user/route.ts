@@ -1,25 +1,25 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { TwitterMonitoringService } from '@/lib/twitter-monitoring'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    console.log(`🔄 Manual monitoring triggered for user ${session.user.id}`)
+    console.log(`🔄 Manual monitoring triggered for user ${user.id}`)
 
     const monitoringService = new TwitterMonitoringService()
-    const result = await monitoringService.monitorUserTweets(session.user.id)
+    const result = await monitoringService.monitorUserTweets(user.id)
 
-    console.log(`📊 Monitoring result for user ${session.user.id}:`, {
+    console.log(`📊 Monitoring result for user ${user.id}:`, {
       success: result.success,
       tweetsFound: result.tweetsFound,
       error: result.error
@@ -66,11 +66,12 @@ export async function POST() {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -81,7 +82,7 @@ export async function GET() {
     const { prisma } = await import('@/lib/db')
 
     const monitoring = await prisma.tweetMonitoring.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       select: {
         lastCheckAt: true,
         tweetsFound: true,
@@ -91,8 +92,8 @@ export async function GET() {
       }
     })
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const userData = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         autoMonitoringEnabled: true,
         lastTweetCheck: true,
@@ -102,8 +103,8 @@ export async function GET() {
 
     return NextResponse.json({
       monitoring,
-      user,
-      isEnabled: user?.autoMonitoringEnabled || false
+      user: userData,
+      isEnabled: userData?.autoMonitoringEnabled || false
     })
 
   } catch (error) {

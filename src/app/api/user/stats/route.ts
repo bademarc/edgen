@@ -1,23 +1,23 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { prisma } from '@/lib/db'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createRouteHandlerClient(request)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    const userId = session.user.id
+    const userId = user.id
 
     // Get user data
-    const user = await prisma.user.findUnique({
+    const userData = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         totalPoints: true,
@@ -30,7 +30,7 @@ export async function GET() {
       },
     })
 
-    if (!user) {
+    if (!userData) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -54,9 +54,9 @@ export async function GET() {
     })
 
     const stats = {
-      totalPoints: user.totalPoints,
-      rank: user.rank,
-      tweetsSubmitted: user._count.tweets,
+      totalPoints: userData.totalPoints,
+      rank: userData.rank,
+      tweetsSubmitted: userData._count.tweets,
       thisWeekPoints: thisWeekPoints._sum.pointsAwarded || 0,
     }
 

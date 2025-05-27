@@ -2,6 +2,31 @@ import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
+interface TwitterUserData {
+  user_name?: string
+  screen_name?: string
+  username?: string
+  provider_id?: string
+  sub?: string
+  id?: string
+  name?: string
+  full_name?: string
+  display_name?: string
+  avatar_url?: string
+  profile_image_url?: string
+  picture?: string
+}
+
+interface SupabaseUserWithMetadata {
+  id: string
+  email?: string | null
+  user_metadata?: TwitterUserData
+  app_metadata?: TwitterUserData
+  identities?: Array<{
+    identity_data?: TwitterUserData
+  }>
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
@@ -68,7 +93,7 @@ export async function GET(request: NextRequest) {
 
         try {
           // Sync user data with our database
-          await syncUserWithDatabase(data.user, data.session)
+          await syncUserWithDatabase(data.user as SupabaseUserWithMetadata)
           console.log('User data synced successfully')
         } catch (syncError) {
           console.error('User sync error:', syncError)
@@ -88,7 +113,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.redirect(`${origin}/login?error=no_code&message=${encodeURIComponent('No authentication code received')}`)
 }
 
-async function syncUserWithDatabase(user: any, session: any) {
+async function syncUserWithDatabase(user: SupabaseUserWithMetadata) {
   try {
     // Extract Twitter user data from multiple possible sources
     const twitterData = user.user_metadata || {}
@@ -152,7 +177,7 @@ async function syncUserWithDatabase(user: any, session: any) {
     await prisma.user.upsert({
       where: { id: user.id },
       update: {
-        email: user.email || null, // Email might not be available from Twitter
+        email: (user.email as string) || null, // Email might not be available from Twitter
         name: userName,
         image: userImage,
         xUsername: xUsername || null,
@@ -161,7 +186,7 @@ async function syncUserWithDatabase(user: any, session: any) {
       },
       create: {
         id: user.id,
-        email: user.email || null, // Email might not be available from Twitter
+        email: (user.email as string) || null, // Email might not be available from Twitter
         name: userName,
         image: userImage,
         xUsername: xUsername || null,
