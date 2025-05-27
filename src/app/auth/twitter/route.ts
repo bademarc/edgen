@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { TwitterOAuthService } from '@/lib/twitter-oauth'
 import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const twitterOAuth = new TwitterOAuthService()
     const { url, codeVerifier, state } = twitterOAuth.generateAuthUrl()
 
     // Store code verifier and state in secure cookies
     const cookieStore = cookies()
-    
+
     // Set secure cookies for OAuth state management
     cookieStore.set('twitter_code_verifier', codeVerifier, {
       httpOnly: true,
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       maxAge: 600, // 10 minutes
       path: '/'
     })
-    
+
     cookieStore.set('twitter_oauth_state', state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -35,10 +35,10 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Twitter OAuth initiation failed:', error)
-    
+
     const errorMessage = error instanceof Error ? error.message : 'OAuth initialization failed'
     const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login?error=oauth_init_failed&message=${encodeURIComponent(errorMessage)}`
-    
+
     return NextResponse.redirect(redirectUrl)
   }
 }
