@@ -65,6 +65,7 @@ model User {
   tweets        Tweet[]
   pointsHistory PointsHistory[]
   tweetMonitoring TweetMonitoring[]
+  tweetTracking TweetTracking[]
 }
 
 model VerificationToken {
@@ -127,4 +128,26 @@ model TweetMonitoring {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId])
+}
+
+model TweetTracking {
+  id                String   @id @default(cuid())
+  tweetId           String   @unique
+  authorId          String
+  userId            String?
+  pointsAwarded     Int      @default(1)
+  processedAt       DateTime @default(now())
+  tweetContent      String?
+  engagementMetrics Json?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([authorId])
+  @@index([processedAt])
+}
+
+model SystemConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt
 }

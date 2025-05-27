@@ -16,6 +16,24 @@ const nextConfig = {
     DIRECT_URL: process.env.DIRECT_URL,
     LAYEREDGE_COMMUNITY_URL: process.env.LAYEREDGE_COMMUNITY_URL,
   },
+  webpack: (config, { isServer }) => {
+    // Ignore Supabase Edge Functions during build
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: [
+        ...(Array.isArray(config.watchOptions?.ignored) ? config.watchOptions.ignored : []),
+        '**/supabase/functions/**/*',
+        '**/node_modules/**',
+      ],
+    };
+
+    // Exclude Supabase functions from module resolution
+    config.resolve.alias = {
+      ...config.resolve.alias,
+    };
+
+    return config;
+  },
 };
 
 export default nextConfig;
