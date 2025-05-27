@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { TwitterOAuthService } from '@/lib/twitter-oauth'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/db'
-import { createRouteHandlerClient } from '@/lib/supabase-server'
+
 import crypto from 'crypto'
 
 export async function GET(request: NextRequest) {
@@ -117,40 +117,11 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Create Supabase session for the user
-    const supabase = createRouteHandlerClient(request)
-
-    // Sign in the user with Supabase using their Twitter ID as the user ID
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: `${twitterUser.username}@twitter.local`,
-      password: twitterUser.id // Use Twitter ID as password
-    })
-
-    if (signInError) {
-      // If user doesn't exist in Supabase, create them
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: `${twitterUser.username}@twitter.local`,
-        password: twitterUser.id,
-        options: {
-          data: {
-            username: twitterUser.username,
-            name: twitterUser.name,
-            twitter_id: twitterUser.id
-          }
-        }
-      })
-
-      if (signUpError) {
-        console.error('Supabase auth error:', signUpError)
-        // Continue without Supabase session - we have our own user management
-      }
-    }
-
     // Clear OAuth cookies
     cookieStore.delete('twitter_code_verifier')
     cookieStore.delete('twitter_oauth_state')
 
-    // Set user session cookie
+    // Set user session cookie (custom session management)
     cookieStore.set('user_id', user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

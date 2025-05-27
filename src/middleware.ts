@@ -6,6 +6,16 @@ export async function middleware(request: NextRequest) {
     request,
   })
 
+  // Skip authentication check for auth-related routes
+  const authRoutes = ['/auth/', '/login', '/api/auth/']
+  const isAuthRoute = authRoutes.some(route =>
+    request.nextUrl.pathname.startsWith(route)
+  )
+
+  if (isAuthRoute) {
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -35,6 +45,10 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Check for custom session cookie as fallback (for Twitter OAuth)
+  const customUserId = request.cookies.get('user_id')?.value
+  const hasCustomSession = !!customUserId
+
   // Protected routes that require authentication
   const protectedRoutes = ['/dashboard', '/profile', '/leaderboard', '/submit']
   const isProtectedRoute = protectedRoutes.some(route =>
@@ -42,7 +56,7 @@ export async function middleware(request: NextRequest) {
   )
 
   // Redirect to login if accessing protected route without authentication
-  if (isProtectedRoute && !user) {
+  if (isProtectedRoute && !user && !hasCustomSession) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('callbackUrl', request.nextUrl.pathname)

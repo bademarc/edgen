@@ -53,6 +53,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (session?.user) {
           setSupabaseUser(session.user)
           await syncUserData(session.user)
+        } else {
+          // Check for custom session cookie (Twitter OAuth fallback)
+          await checkCustomSession()
         }
 
         // Listen for auth changes
@@ -64,6 +67,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             } else {
               setSupabaseUser(null)
               setUser(null)
+              // Check for custom session as fallback
+              await checkCustomSession()
             }
           }
         )
@@ -78,6 +83,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     initAuth()
   }, [supabase.auth])
+
+  const checkCustomSession = async () => {
+    try {
+      // Check if there's a custom session via API
+      const response = await fetch('/api/auth/session', {
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        const userData = await response.json()
+        if (userData.user) {
+          setUser(userData.user)
+          console.log('Custom session found:', userData.user.id)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking custom session:', error)
+    }
+  }
 
   const syncUserData = async (supabaseUser: User) => {
     try {
@@ -131,13 +155,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     setIsLoading(true)
     try {
+      // Sign out from Supabase
       const { error } = await supabase.auth.signOut()
       if (error) {
-        console.error('Sign out error:', error)
-        throw error
+        console.error('Supabase sign out error:', error)
       }
+
+      // Clear custom session cookie via API
+      try {
+        await fetch('/api/auth/session', {
+          method: 'DELETE',
+          credentials: 'include'
+        })
+      } catch (error) {
+        console.error('Custom session clear error:', error)
+      }
+
+      // Clear local state
       setUser(null)
       setSupabaseUser(null)
+
+      // Redirect to home page
+      window.location.href = '/'
     } catch (error) {
       console.error('Sign out error:', error)
     } finally {
