@@ -116,10 +116,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signInWithTwitter = async () => {
     setIsLoading(true)
     try {
+      // Get the correct redirect URL based on environment
+      const redirectUrl = process.env.NODE_ENV === 'production'
+        ? `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`
+        : `${window.location.origin}/auth/callback`
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
           // Use basic scopes that are most likely to work
           scopes: 'users.read tweet.read'
         },

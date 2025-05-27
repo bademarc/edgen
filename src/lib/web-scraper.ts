@@ -53,15 +53,45 @@ export class WebScraperService {
   private isInitialized = false
   private maxRetries = 3
   private retryDelay = 2000 // 2 seconds
+  private initializationAttempts = 0
+  private readonly MAX_INIT_ATTEMPTS = 3
+  private lastInitAttempt = 0
+  private readonly INIT_RETRY_DELAY = 30000 // 30 seconds
+  private browserHealthy = true
 
   constructor() {
-    this.initializeBrowser()
+    // Don't initialize browser in constructor to avoid blocking
+    // It will be initialized when first needed
   }
 
   private async initializeBrowser(): Promise<void> {
+    const now = Date.now()
+
+    // Prevent too frequent initialization attempts
+    if (now - this.lastInitAttempt < this.INIT_RETRY_DELAY && this.initializationAttempts > 0) {
+      throw new Error('Browser initialization cooling down, please wait')
+    }
+
+    this.lastInitAttempt = now
+    this.initializationAttempts++
+
+    if (this.initializationAttempts > this.MAX_INIT_ATTEMPTS) {
+      this.browserHealthy = false
+      throw new Error('Maximum browser initialization attempts exceeded. Browser may not be available in this environment.')
+    }
+
     try {
       if (!this.browser) {
-        console.log('Initializing Playwright browser for web scraping...')
+        console.log(`Initializing Playwright browser for web scraping (attempt ${this.initializationAttempts})...`)
+
+        // Check if we're in a production environment
+        const isProduction = process.env.NODE_ENV === 'production'
+        const browserPath = process.env.PLAYWRIGHT_BROWSERS_PATH || '/home/nextjs/.cache/ms-playwright'
+
+        if (isProduction) {
+          console.log(`Production environment detected. Looking for browsers in: ${browserPath}`)
+        }
+
         this.browser = await chromium.launch({
           headless: true,
           args: [
@@ -71,19 +101,87 @@ export class WebScraperService {
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--disable-gpu'
-          ]
+            '--disable-gpu',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding',
+            '--disable-features=TranslateUI',
+            '--disable-ipc-flooding-protection',
+            '--disable-extensions',
+            '--disable-default-apps',
+            '--disable-sync'
+          ],
+          timeout: 30000 // 30 second timeout for browser launch
         })
+
         this.isInitialized = true
+        this.initializationAttempts = 0 // Reset on success
+        this.browserHealthy = true
         console.log('Browser initialized successfully')
       }
     } catch (error) {
-      console.error('Failed to initialize browser:', error)
+      console.error(`Failed to initialize browser (attempt ${this.initializationAttempts}):`, error)
       this.isInitialized = false
+
+      // Provide helpful error messages
+      if (error instanceof Error) {
+        if (error.message.includes('Executable doesn\'t exist') ||
+            error.message.includes('chrome-linux') ||
+            error.message.includes('headless_shell')) {
+          console.error('❌ Browser executable not found. This is likely a deployment issue.')
+          console.error('💡 Make sure Playwright browsers are installed during the build process.')
+          console.error('🔧 For Koyeb deployment, ensure the Dockerfile includes: RUN npx playwright install chromium')
+        }
+
+        if (error.message.includes('timeout')) {
+          console.error('❌ Browser launch timeout. The environment may be resource-constrained.')
+        }
+      }
+
+      // Mark browser as unhealthy after max attempts
+      if (this.initializationAttempts >= this.MAX_INIT_ATTEMPTS) {
+        this.browserHealthy = false
+        console.error('❌ Browser marked as unhealthy after multiple failed attempts')
+      }
+
+      throw new Error(`Browser initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
+  // Check if browser is available and healthy
+  isBrowserAvailable(): boolean {
+    return this.browserHealthy && this.isInitialized && this.browser !== null
+  }
+
+  // Get browser health status
+  getBrowserStatus(): {
+    isHealthy: boolean
+    isInitialized: boolean
+    initializationAttempts: number
+    lastInitAttempt: number
+  } {
+    return {
+      isHealthy: this.browserHealthy,
+      isInitialized: this.isInitialized,
+      initializationAttempts: this.initializationAttempts,
+      lastInitAttempt: this.lastInitAttempt
+    }
+  }
+
+  // Reset browser health status (for manual recovery)
+  resetBrowserHealth(): void {
+    this.browserHealthy = true
+    this.initializationAttempts = 0
+    this.lastInitAttempt = 0
+    console.log('Browser health status reset')
+  }
+
   private async createPage(): Promise<Page> {
+    // Check browser health before attempting to create page
+    if (!this.browserHealthy) {
+      throw new Error('Browser is marked as unhealthy. Cannot create page.')
+    }
+
     if (!this.browser || !this.isInitialized) {
       await this.initializeBrowser()
     }

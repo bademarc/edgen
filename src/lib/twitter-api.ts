@@ -41,19 +41,110 @@ interface TwitterUserApiResponse {
   }>
 }
 
+interface RateLimitInfo {
+  limit: number
+  remaining: number
+  resetTime: number
+}
+
 export class TwitterApiService {
   private bearerToken: string
+  private rateLimitInfo: RateLimitInfo | null = null
+  private lastRequestTime: number = 0
+  private requestCount: number = 0
+  private readonly MAX_REQUESTS_PER_MINUTE = 75 // Conservative limit
+  private isHealthy: boolean = true
+  private lastHealthCheck: number = 0
+  private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
 
   constructor() {
     this.bearerToken = process.env.TWITTER_BEARER_TOKEN || ''
     if (!this.bearerToken) {
-      throw new Error('Twitter Bearer Token is required')
+      console.warn('Twitter Bearer Token not found. Twitter API features will be limited.')
+      this.isHealthy = false
     }
+  }
+
+  // Check if API is healthy and rate limits allow requests
+  private async checkApiHealth(): Promise<boolean> {
+    const now = Date.now()
+
+    // Check if we need to perform a health check
+    if (now - this.lastHealthCheck > this.HEALTH_CHECK_INTERVAL) {
+      try {
+        // Simple health check - try to get rate limit status
+        const response = await fetch('https://api.twitter.com/2/tweets/search/recent?query=test&max_results=10', {
+          method: 'HEAD', // Use HEAD to avoid consuming quota
+          headers: {
+            'Authorization': `Bearer ${this.bearerToken}`,
+          },
+          signal: AbortSignal.timeout(5000)
+        })
+
+        this.isHealthy = response.status !== 401 && response.status !== 403
+        this.lastHealthCheck = now
+
+        // Update rate limit info from headers
+        if (response.headers.get('x-rate-limit-limit')) {
+          this.rateLimitInfo = {
+            limit: parseInt(response.headers.get('x-rate-limit-limit') || '0'),
+            remaining: parseInt(response.headers.get('x-rate-limit-remaining') || '0'),
+            resetTime: parseInt(response.headers.get('x-rate-limit-reset') || '0') * 1000
+          }
+        }
+      } catch (error) {
+        console.warn('Twitter API health check failed:', error)
+        this.isHealthy = false
+        this.lastHealthCheck = now
+      }
+    }
+
+    return this.isHealthy
+  }
+
+  // Rate limiting check
+  private async checkRateLimit(): Promise<boolean> {
+    const now = Date.now()
+
+    // Reset request count every minute
+    if (now - this.lastRequestTime > 60000) {
+      this.requestCount = 0
+      this.lastRequestTime = now
+    }
+
+    // Check if we're approaching rate limits
+    if (this.requestCount >= this.MAX_REQUESTS_PER_MINUTE) {
+      console.warn('Approaching rate limit, delaying request')
+      const waitTime = 60000 - (now - this.lastRequestTime)
+      if (waitTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+        this.requestCount = 0
+        this.lastRequestTime = Date.now()
+      }
+    }
+
+    // Check API-provided rate limit info
+    if (this.rateLimitInfo && this.rateLimitInfo.remaining <= 5 && now < this.rateLimitInfo.resetTime) {
+      const waitTime = this.rateLimitInfo.resetTime - now
+      console.warn(`Rate limit nearly exceeded, waiting ${waitTime}ms`)
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+    }
+
+    this.requestCount++
+    return true
   }
 
   private async makeRequest(url: string, retryCount: number = 0): Promise<TwitterApiResponse | TwitterUserApiResponse> {
     const maxRetries = 3
     const baseDelay = 1000 // 1 second
+
+    // Check API health before making request
+    if (!await this.checkApiHealth()) {
+      throw new Error('Twitter API is currently unhealthy')
+    }
+
+    // Check rate limits
+    await this.checkRateLimit()
 
     try {
       console.log(`Making Twitter API request to: ${url} (attempt ${retryCount + 1})`)
@@ -329,5 +420,28 @@ export class TwitterApiService {
     }
 
     return results
+  }
+
+  // Public method to check if Twitter API is available
+  async isApiAvailable(): Promise<boolean> {
+    return await this.checkApiHealth()
+  }
+
+  // Get current rate limit status
+  getRateLimitInfo(): RateLimitInfo | null {
+    return this.rateLimitInfo
+  }
+
+  // Get API health status
+  getHealthStatus(): {
+    isHealthy: boolean
+    lastCheck: number
+    rateLimitInfo: RateLimitInfo | null
+  } {
+    return {
+      isHealthy: this.isHealthy,
+      lastCheck: this.lastHealthCheck,
+      rateLimitInfo: this.rateLimitInfo
+    }
   }
 }

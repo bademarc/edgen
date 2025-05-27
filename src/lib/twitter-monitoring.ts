@@ -394,12 +394,25 @@ export class TwitterMonitoringService {
       }
 
       // Validate username format (basic check)
-      if (user.xUsername.length < 1 || user.xUsername.length > 15) {
-        console.warn(`User ${userId} has invalid Twitter username format: "${user.xUsername}"`)
+      // Twitter usernames can be 1-15 characters, but some legacy accounts may be longer
+      // We'll be more permissive and allow up to 20 characters to handle edge cases
+      if (user.xUsername.length < 1 || user.xUsername.length > 20) {
+        console.warn(`User ${userId} has invalid Twitter username format: "${user.xUsername}" (length: ${user.xUsername.length})`)
         return {
           success: false,
           tweetsFound: 0,
           error: 'Invalid Twitter username format'
+        }
+      }
+
+      // Additional validation: check for valid characters (alphanumeric and underscore)
+      const usernamePattern = /^[a-zA-Z0-9_]+$/
+      if (!usernamePattern.test(user.xUsername)) {
+        console.warn(`User ${userId} has invalid Twitter username characters: "${user.xUsername}"`)
+        return {
+          success: false,
+          tweetsFound: 0,
+          error: 'Invalid Twitter username format - contains invalid characters'
         }
       }
 
@@ -422,6 +435,10 @@ export class TwitterMonitoringService {
 
       let processedCount = 0
       let searchMethod = 'unknown'
+
+      // Check fallback service status
+      const fallbackStatus = this.fallbackService.getStatus()
+      console.log(`Fallback service status:`, fallbackStatus)
 
       // Try API first if available
       if (this.twitterApi) {
