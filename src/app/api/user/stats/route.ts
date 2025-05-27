@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@/lib/supabase-server'
+import { getAuthenticatedUserId } from '@/lib/auth-utils'
 import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const userId = await getAuthenticatedUserId(request)
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
-
-    const userId = user.id
 
     // Get user data
     const userData = await prisma.user.findUnique({
