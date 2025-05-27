@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@/lib/supabase-server'
+import { getAuthenticatedUserId } from '@/lib/auth-utils'
 import { TwitterApiService } from '@/lib/twitter-api'
 import { getFallbackService } from '@/lib/fallback-service'
 import { getWebScraperInstance } from '@/lib/web-scraper'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const userId = await getAuthenticatedUserId(request)
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -132,10 +131,9 @@ export async function GET(request: NextRequest) {
 // Reset health status for recovery
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const userId = await getAuthenticatedUserId(request)
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

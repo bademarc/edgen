@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@/lib/supabase-server'
+import { getAuthenticatedUserId } from '@/lib/auth-utils'
 import { TwitterMonitoringService } from '@/lib/twitter-monitoring'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const userId = await getAuthenticatedUserId(request)
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    console.log(`🔄 Manual monitoring triggered for user ${user.id}`)
+    console.log(`🔄 Manual monitoring triggered for user ${userId}`)
 
     const monitoringService = new TwitterMonitoringService()
-    const result = await monitoringService.monitorUserTweets(user.id)
+    const result = await monitoringService.monitorUserTweets(userId)
 
-    console.log(`📊 Monitoring result for user ${user.id}:`, {
+    console.log(`📊 Monitoring result for user ${userId}:`, {
       success: result.success,
       tweetsFound: result.tweetsFound,
       error: result.error
@@ -68,10 +67,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const userId = await getAuthenticatedUserId(request)
 
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -82,7 +80,7 @@ export async function GET(request: NextRequest) {
     const { prisma } = await import('@/lib/db')
 
     const monitoring = await prisma.tweetMonitoring.findUnique({
-      where: { userId: user.id },
+      where: { userId },
       select: {
         lastCheckAt: true,
         tweetsFound: true,
@@ -93,7 +91,7 @@ export async function GET(request: NextRequest) {
     })
 
     const userData = await prisma.user.findUnique({
-      where: { id: user.id },
+      where: { id: userId },
       select: {
         autoMonitoringEnabled: true,
         lastTweetCheck: true,
