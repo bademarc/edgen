@@ -6,16 +6,17 @@ import { getWebScraperInstance } from '@/lib/web-scraper'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId(request)
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
+    // Allow public access for health checks (remove auth requirement)
     console.log('🔍 Performing monitoring system health check...')
+
+    // Check environment variables
+    const envCheck = {
+      twitterBearerToken: !!process.env.TWITTER_BEARER_TOKEN,
+      mentionTrackerSecret: !!process.env.MENTION_TRACKER_SECRET,
+      supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      siteUrl: !!process.env.NEXT_PUBLIC_SITE_URL
+    }
 
     // Check Twitter API health
     const twitterApiHealth = {
@@ -43,7 +44,19 @@ export async function GET(request: NextRequest) {
     const webScraper = getWebScraperInstance()
     const webScraperHealth = {
       available: webScraper.isBrowserAvailable(),
-      status: webScraper.getBrowserStatus()
+      status: webScraper.getBrowserStatus(),
+      error: null as string | null
+    }
+
+    // Try to initialize browser if not available
+    if (!webScraperHealth.available) {
+      try {
+        await webScraper.initializeBrowser()
+        webScraperHealth.available = webScraper.isBrowserAvailable()
+        webScraperHealth.status = webScraper.getBrowserStatus()
+      } catch (error) {
+        webScraperHealth.error = error instanceof Error ? error.message : 'Browser initialization failed'
+      }
     }
 
     // Check Fallback Service health
