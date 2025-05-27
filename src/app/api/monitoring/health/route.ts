@@ -19,10 +19,14 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Performing monitoring system health check...')
 
     // Check Twitter API health
-    let twitterApiHealth = {
+    const twitterApiHealth = {
       available: false,
       healthy: false,
-      rateLimitInfo: null as any,
+      rateLimitInfo: null as {
+        limit: number
+        remaining: number
+        resetTime: number
+      } | null,
       error: null as string | null
     }
 
