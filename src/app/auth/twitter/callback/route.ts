@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const errorDescription = requestUrl.searchParams.get('error_description')
 
   const origin = requestUrl.origin
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
 
   // Handle OAuth errors
   if (error) {

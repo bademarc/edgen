@@ -8,7 +8,7 @@ export async function GET() {
     const { url, codeVerifier, state } = twitterOAuth.generateAuthUrl()
 
     // Store code verifier and state in secure cookies
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
 
     // Set secure cookies for OAuth state management
     cookieStore.set('twitter_code_verifier', codeVerifier, {
