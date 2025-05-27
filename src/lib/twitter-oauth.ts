@@ -32,15 +32,26 @@ export class TwitterOAuthService {
   private config: TwitterOAuthConfig
 
   constructor() {
+    // Ensure we always have https:// protocol
+    let siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://edgen.koyeb.app'
+    if (!siteUrl.startsWith('http')) {
+      siteUrl = `https://${siteUrl}`
+    }
+
     this.config = {
       clientId: process.env.TWITTER_CLIENT_ID!,
       clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-      redirectUri: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/twitter/callback`
+      redirectUri: `${siteUrl}/auth/twitter/callback`
     }
 
     if (!this.config.clientId || !this.config.clientSecret) {
       throw new Error('Twitter OAuth credentials are not configured')
     }
+
+    console.log('Twitter OAuth Config:', {
+      clientId: this.config.clientId,
+      redirectUri: this.config.redirectUri
+    })
   }
 
   /**
@@ -50,7 +61,7 @@ export class TwitterOAuthService {
     // Generate PKCE code verifier and challenge
     const codeVerifier = this.generateCodeVerifier()
     const codeChallenge = this.generateCodeChallenge(codeVerifier)
-    
+
     // Generate state for CSRF protection
     const state = crypto.randomBytes(32).toString('hex')
 
@@ -66,6 +77,9 @@ export class TwitterOAuthService {
 
     const authUrl = `https://twitter.com/i/oauth2/authorize?${params.toString()}`
 
+    console.log('Generated OAuth URL:', authUrl)
+    console.log('Redirect URI being used:', this.config.redirectUri)
+
     return {
       url: authUrl,
       codeVerifier,
@@ -77,11 +91,11 @@ export class TwitterOAuthService {
    * Exchange authorization code for access token
    */
   async exchangeCodeForToken(
-    code: string, 
+    code: string,
     codeVerifier: string
   ): Promise<TwitterTokenResponse> {
     const tokenUrl = 'https://api.twitter.com/2/oauth2/token'
-    
+
     const params = new URLSearchParams({
       grant_type: 'authorization_code',
       client_id: this.config.clientId,
@@ -113,7 +127,7 @@ export class TwitterOAuthService {
    */
   async getUserInfo(accessToken: string): Promise<TwitterUserResponse> {
     const userUrl = 'https://api.twitter.com/2/users/me?user.fields=id,name,username,profile_image_url,public_metrics'
-    
+
     const response = await fetch(userUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -152,7 +166,7 @@ export class TwitterOAuthService {
    */
   async refreshToken(refreshToken: string): Promise<TwitterTokenResponse> {
     const tokenUrl = 'https://api.twitter.com/2/oauth2/token'
-    
+
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
