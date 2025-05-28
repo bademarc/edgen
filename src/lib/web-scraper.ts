@@ -92,8 +92,18 @@ export class WebScraperService {
           console.log(`Production environment detected. Looking for browsers in: ${browserPath}`)
         }
 
+        // Try to find browser executable
+        const possiblePaths = [
+          '/home/nextjs/.cache/ms-playwright',
+          process.env.PLAYWRIGHT_BROWSERS_PATH,
+          '/root/.cache/ms-playwright'
+        ].filter(Boolean)
+
+        console.log(`Attempting to launch browser with paths: ${possiblePaths.join(', ')}`)
+
         this.browser = await chromium.launch({
           headless: true,
+          executablePath: undefined, // Let Playwright find the browser
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -109,9 +119,11 @@ export class WebScraperService {
             '--disable-ipc-flooding-protection',
             '--disable-extensions',
             '--disable-default-apps',
-            '--disable-sync'
+            '--disable-sync',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor'
           ],
-          timeout: 30000 // 30 second timeout for browser launch
+          timeout: 45000 // Increased timeout for slower environments
         })
 
         this.isInitialized = true
