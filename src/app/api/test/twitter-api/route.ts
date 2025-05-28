@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const bearerToken = process.env.TWITTER_BEARER_TOKEN
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     try {
       responseData = JSON.parse(responseText)
-    } catch (parseError) {
+    } catch {
       return NextResponse.json({
         success: false,
         error: 'Failed to parse Twitter API response',
