@@ -327,7 +327,7 @@ export class TwitterMonitoringService {
     error?: string
   }> {
     try {
-      console.log(`Starting tweet monitoring for user ${userId}`)
+      console.log(`🔍 Starting tweet monitoring for user ${userId}`)
 
       // Get user data with more comprehensive checks
       const user = await prisma.user.findUnique({
@@ -344,11 +344,40 @@ export class TwitterMonitoringService {
 
       // Enhanced validation with specific error messages
       if (!user) {
-        console.warn(`User ${userId} not found in database`)
+        console.warn(`❌ User ${userId} not found in database`)
         return {
           success: false,
           tweetsFound: 0,
           error: 'User not found in database'
+        }
+      }
+
+      console.log(`👤 Processing user: ${user.name} (@${user.xUsername || 'no username'})`)
+
+      // Check if user has required Twitter credentials
+      if (!user.xUsername || !user.xUserId) {
+        console.warn(`❌ User ${user.name} missing Twitter credentials: username=${user.xUsername}, userId=${user.xUserId}`)
+
+        await prisma.tweetMonitoring.upsert({
+          where: { userId },
+          update: {
+            lastCheckAt: new Date(),
+            status: 'error',
+            errorMessage: 'Incomplete Twitter credentials - please re-authenticate with Twitter to refresh your credentials',
+          },
+          create: {
+            userId,
+            lastCheckAt: new Date(),
+            status: 'error',
+            errorMessage: 'Incomplete Twitter credentials - please re-authenticate with Twitter to refresh your credentials',
+            tweetsFound: 0,
+          },
+        })
+
+        return {
+          success: false,
+          tweetsFound: 0,
+          error: 'Incomplete Twitter credentials - please re-authenticate with Twitter to refresh your credentials'
         }
       }
 
@@ -443,6 +472,8 @@ export class TwitterMonitoringService {
       // Try API first if available
       if (this.twitterApi) {
         try {
+          console.log(`🔗 Attempting Twitter API search for @${user.xUsername}`)
+
           const tweetResponse = await this.searchUserTweets(
             user.xUsername,
             lastTweet?.tweetId || undefined
@@ -453,18 +484,38 @@ export class TwitterMonitoringService {
             searchMethod = 'api'
             console.log(`✅ API search successful: ${processedCount} tweets processed via ${searchMethod}`)
           } else {
-            throw new Error('API returned no data')
+            const errorMsg = tweetResponse ? 'API returned no tweets' : 'API returned null response'
+            console.warn(`⚠️ ${errorMsg} for @${user.xUsername}`)
+            throw new Error(errorMsg)
           }
         } catch (apiError) {
-          console.warn(`⚠️ API search failed for @${user.xUsername}:`, apiError)
+          const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error'
+          console.error(`❌ API search failed for @${user.xUsername}: ${errorMessage}`)
+
+          // Log specific error details for debugging
+          if (errorMessage.includes('429')) {
+            console.warn(`🚫 Rate limit hit for Twitter API`)
+          } else if (errorMessage.includes('401')) {
+            console.warn(`🔐 Authentication failed for Twitter API`)
+          } else if (errorMessage.includes('403')) {
+            console.warn(`🚫 Forbidden access to Twitter API`)
+          }
+
           // Continue to fallback method
         }
+      } else {
+        console.warn(`⚠️ Twitter API service not available, skipping to web scraping`)
       }
 
       // Fallback to web scraping if API failed or unavailable
       if (processedCount === 0) {
         try {
           console.log(`🕷️ Falling back to web scraping for @${user.xUsername}`)
+
+          // Check if web scraping is enabled
+          if (!this.webScraper) {
+            throw new Error('Web scraper service not initialized')
+          }
 
           const scrapedTweets = await this.searchUserTweetsWithFallback(
             user.xUsername,
@@ -476,10 +527,20 @@ export class TwitterMonitoringService {
             searchMethod = 'scraper'
             console.log(`✅ Web scraping successful: ${processedCount} tweets processed via ${searchMethod}`)
           } else {
-            console.log(`⚠️ No tweets found via web scraping for @${user.xUsername}`)
+            console.warn(`⚠️ No tweets found via web scraping for @${user.xUsername}`)
           }
         } catch (scrapingError) {
-          console.error(`❌ Web scraping failed for @${user.xUsername}:`, scrapingError)
+          const errorMessage = scrapingError instanceof Error ? scrapingError.message : 'Unknown scraping error'
+          console.error(`❌ Web scraping failed for @${user.xUsername}: ${errorMessage}`)
+
+          // Log specific scraping error details
+          if (errorMessage.includes('browser')) {
+            console.error(`🌐 Browser initialization failed - check Playwright installation`)
+          } else if (errorMessage.includes('timeout')) {
+            console.error(`⏰ Scraping timeout - target site may be slow or blocking`)
+          } else if (errorMessage.includes('navigation')) {
+            console.error(`🧭 Navigation failed - target page may be inaccessible`)
+          }
         }
       }
 

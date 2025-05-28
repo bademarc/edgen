@@ -60,8 +60,14 @@ export class TwitterApiService {
   constructor() {
     this.bearerToken = process.env.TWITTER_BEARER_TOKEN || ''
     if (!this.bearerToken) {
-      console.warn('Twitter Bearer Token not found. Twitter API features will be limited.')
+      console.warn('❌ Twitter Bearer Token not found. Twitter API features will be limited.')
       this.isHealthy = false
+    } else {
+      console.log('✅ Twitter Bearer Token configured')
+      // Validate token format
+      if (!this.bearerToken.startsWith('AAAAAAAAAAAAAAAAAAAAAA')) {
+        console.warn('⚠️ Twitter Bearer Token format may be incorrect')
+      }
     }
   }
 
