@@ -75,17 +75,29 @@ export class TweetTracker {
       const query = this.keywords.join(' OR ')
       console.log(`🔍 Scraping with twscrape: ${query}`)
 
-      const { stdout } = await execAsync(`twscrape search "${query}" --limit 50 --format json`)
+      const { stdout } = await execAsync(`twscrape search "${query}" --limit 50`)
 
       if (!stdout.trim()) {
         console.log('No output from twscrape')
         return []
       }
 
-      const tweets = JSON.parse(stdout)
+      // Parse twscrape output - it returns one JSON object per line
+      const lines = stdout.trim().split('\n').filter(line => line.trim())
+      const tweets: any[] = []
+
+      for (const line of lines) {
+        try {
+          const tweet = JSON.parse(line)
+          tweets.push(tweet)
+        } catch (error) {
+          console.log('Failed to parse twscrape line:', line.substring(0, 100))
+        }
+      }
+
       const filteredTweets = tweets.filter((tweet: any) =>
         !tweet.user?.protected && // Only public tweets
-        this.containsKeywords(tweet.text || tweet.full_text || '')
+        this.containsKeywords(tweet.rawContent || tweet.text || tweet.full_text || '')
       )
 
       console.log(`✅ twscrape found ${filteredTweets.length} valid tweets`)
