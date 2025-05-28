@@ -361,6 +361,144 @@ export class WebScraperService {
     return null
   }
 
+  /**
+   * Scrape tweets from Nitter search results
+   */
+  async scrapeNitterSearch(searchUrl: string): Promise<Array<{
+    id: string
+    text: string
+    user: {
+      id: string
+      username: string
+      name: string
+      protected?: boolean
+    }
+    public_metrics?: {
+      like_count: number
+      retweet_count: number
+      reply_count: number
+    }
+    created_at: string
+  }> | null> {
+    let page: Page | null = null
+    let retryCount = 0
+
+    while (retryCount < this.maxRetries) {
+      try {
+        console.log(`Scraping Nitter search (attempt ${retryCount + 1}): ${searchUrl}`)
+
+        page = await this.createPage()
+
+        // Navigate to Nitter search URL
+        await page.goto(searchUrl, {
+          waitUntil: 'networkidle',
+          timeout: 30000
+        })
+
+        // Wait for tweets to load
+        await page.waitForSelector('.timeline-item', { timeout: 15000 })
+
+        // Extract tweets
+        const tweets = await page.evaluate(() => {
+          const tweetElements = document.querySelectorAll('.timeline-item')
+          const extractedTweets: Array<{
+            id: string
+            text: string
+            user: {
+              id: string
+              username: string
+              name: string
+              protected?: boolean
+            }
+            public_metrics?: {
+              like_count: number
+              retweet_count: number
+              reply_count: number
+            }
+            created_at: string
+          }> = []
+
+          tweetElements.forEach((element) => {
+            try {
+              // Extract tweet ID from link
+              const tweetLink = element.querySelector('.tweet-link')?.getAttribute('href')
+              const tweetIdMatch = tweetLink?.match(/\/status\/(\d+)/)
+              if (!tweetIdMatch) return
+
+              const tweetId = tweetIdMatch[1]
+
+              // Extract tweet text
+              const tweetTextElement = element.querySelector('.tweet-content')
+              const tweetText = tweetTextElement?.textContent?.trim() || ''
+
+              // Extract user info
+              const usernameElement = element.querySelector('.username')
+              const displayNameElement = element.querySelector('.fullname')
+              const username = usernameElement?.textContent?.replace('@', '') || ''
+              const displayName = displayNameElement?.textContent?.trim() || username
+
+              // Extract engagement metrics
+              const statsElement = element.querySelector('.tweet-stats')
+              const likesElement = statsElement?.querySelector('.icon-heart')?.parentElement
+              const retweetsElement = statsElement?.querySelector('.icon-retweet')?.parentElement
+              const repliesElement = statsElement?.querySelector('.icon-comment')?.parentElement
+
+              const likes = parseInt(likesElement?.textContent?.trim() || '0') || 0
+              const retweets = parseInt(retweetsElement?.textContent?.trim() || '0') || 0
+              const replies = parseInt(repliesElement?.textContent?.trim() || '0') || 0
+
+              // Extract timestamp
+              const timeElement = element.querySelector('.tweet-date a')
+              const timeText = timeElement?.getAttribute('title') || new Date().toISOString()
+
+              if (tweetText && username) {
+                extractedTweets.push({
+                  id: tweetId,
+                  text: tweetText,
+                  user: {
+                    id: username,
+                    username: username,
+                    name: displayName,
+                    protected: false
+                  },
+                  public_metrics: {
+                    like_count: likes,
+                    retweet_count: retweets,
+                    reply_count: replies
+                  },
+                  created_at: timeText
+                })
+              }
+            } catch (error) {
+              console.error('Error extracting tweet from Nitter:', error)
+            }
+          })
+
+          return extractedTweets
+        })
+
+        console.log(`Successfully scraped ${tweets.length} tweets from Nitter`)
+        return tweets
+
+      } catch (error) {
+        console.error(`Nitter scraping attempt ${retryCount + 1} failed:`, error)
+        retryCount++
+
+        if (retryCount < this.maxRetries) {
+          console.log(`Retrying in ${this.retryDelay}ms...`)
+          await this.delay(this.retryDelay)
+        }
+      } finally {
+        if (page) {
+          await page.close()
+        }
+      }
+    }
+
+    console.error(`Failed to scrape Nitter after ${this.maxRetries} attempts`)
+    return null
+  }
+
   async scrapeEngagementMetrics(tweetUrl: string): Promise<ScrapedEngagementMetrics | null> {
     let page: Page | null = null
     let retryCount = 0

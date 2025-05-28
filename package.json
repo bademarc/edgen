@@ -24,6 +24,9 @@
     "oauth:test": "tsx scripts/test-oauth-config.ts",
     "auth:diagnose": "tsx scripts/diagnose-auth-issues.ts",
     "auth:test": "tsx scripts/test-auth-fixes.ts",
+    "tracking:setup": "pip install twscrape",
+    "tracking:test": "tsx scripts/test-enhanced-tracking.ts",
+    "tracking:migrate": "prisma migrate dev --name add_enhanced_tracking",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -45,6 +48,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.48.2",
+    "node-cron": "^3.0.3",
     "ws": "^8.14.2",
     "zod": "^3.22.4",
     "zustand": "^4.4.7"

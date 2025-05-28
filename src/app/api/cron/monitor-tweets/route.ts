@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TwitterMonitoringService } from '@/lib/twitter-monitoring'
+import { ensureServerInitialization } from '@/lib/server-init'
 
 export async function GET(request: NextRequest) {
   try {
+    // Ensure server initialization (including enhanced tracking)
+    await ensureServerInitialization()
+
     // Verify this is a legitimate cron request
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET || 'layeredge-cron-secret-2024-auto-monitoring'

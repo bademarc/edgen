@@ -151,3 +151,40 @@ model SystemConfig {
   value     String
   updatedAt DateTime @default(now()) @updatedAt
 }
+
+model UnclaimedTweet {
+  id              String   @id @default(cuid())
+  tweetId         String   @unique
+  content         String
+  authorUsername  String
+  authorId        String
+  likes           Int      @default(0)
+  retweets        Int      @default(0)
+  replies         Int      @default(0)
+  createdAt       DateTime
+  claimed         Boolean  @default(false)
+  claimedBy       String?
+  claimedAt       DateTime?
+  discoveredAt    DateTime @default(now())
+  source          String   @default("unknown") // twscrape, rss, scraper, etc.
+
+  @@index([authorUsername])
+  @@index([authorId])
+  @@index([claimed])
+  @@index([discoveredAt])
+}
+
+model TrackingLog {
+  id          String   @id @default(cuid())
+  method      String   // 'twscrape', 'rss', 'user_submit', 'bearer_api', 'oauth_api', 'scraper'
+  success     Boolean
+  tweetsFound Int
+  error       String?
+  timestamp   DateTime @default(now())
+  duration    Int?     // Duration in milliseconds
+  metadata    Json?    // Additional tracking data
+
+  @@index([method])
+  @@index([timestamp])
+  @@index([success])
+}

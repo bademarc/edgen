@@ -1,4 +1,5 @@
 import { TwitterApiService } from './twitter-api'
+import { TwitterUserApiService } from './twitter-user-api'
 import { prisma } from './db'
 import { validateTweetContent, calculatePoints } from './utils'
 import { getFallbackService, FallbackTweetData, FallbackService } from './fallback-service'
@@ -9,12 +10,13 @@ interface TwitterTimelineResponse {
     id: string
     text: string
     created_at: string
-    public_metrics: {
+    public_metrics?: {
       like_count: number
       retweet_count: number
       reply_count: number
+      quote_count?: number
     }
-    author_id: string
+    author_id?: string
   }>
   includes?: {
     users?: Array<{
@@ -27,6 +29,8 @@ interface TwitterTimelineResponse {
   meta?: {
     result_count: number
     next_token?: string
+    newest_id?: string
+    oldest_id?: string
   }
   errors?: Array<{
     title: string
@@ -37,6 +41,7 @@ interface TwitterTimelineResponse {
 
 export class TwitterMonitoringService {
   private twitterApi: TwitterApiService | null = null
+  private userApi: TwitterUserApiService
   private fallbackService: FallbackService
   private webScraper: WebScraperService
   private lastRateLimitTime: number = 0
@@ -49,6 +54,9 @@ export class TwitterMonitoringService {
       console.warn('Twitter API service unavailable, using fallback methods only:', error)
       this.twitterApi = null
     }
+
+    // Initialize user-specific API service
+    this.userApi = new TwitterUserApiService()
 
     // Initialize fallback service with scraping enabled
     this.fallbackService = getFallbackService({
@@ -140,7 +148,55 @@ export class TwitterMonitoringService {
   }
 
   /**
-   * Search for tweets from a specific user that contain LayerEdge mentions (API method)
+   * Search user timeline using their OAuth token (preferred method)
+   */
+  async searchUserTimelineWithToken(userId: string, sinceId?: string): Promise<{
+    success: boolean
+    data: TwitterTimelineResponse | null
+    error?: string
+    rateLimited?: boolean
+    tokenRefreshed?: boolean
+  }> {
+    try {
+      console.log(`🔑 Attempting user timeline search with OAuth token for user ${userId}`)
+
+      const result = await this.userApi.getUserTimeline(userId, sinceId, 100)
+
+      if (!result.success) {
+        return {
+          success: false,
+          data: null,
+          error: result.error,
+          rateLimited: result.rateLimited,
+          tokenRefreshed: result.tokenRefreshed
+        }
+      }
+
+      // Filter timeline for LayerEdge mentions
+      const filteredTimeline = this.userApi.filterTimelineForMentions(result.data!)
+
+      console.log(`✅ User timeline search successful: ${filteredTimeline.data?.length || 0} tweets with LayerEdge mentions`)
+
+      return {
+        success: true,
+        data: filteredTimeline,
+        tokenRefreshed: result.tokenRefreshed
+      }
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`❌ Error in user timeline search for ${userId}:`, errorMessage)
+
+      return {
+        success: false,
+        data: null,
+        error: errorMessage
+      }
+    }
+  }
+
+  /**
+   * Search for tweets from a specific user that contain LayerEdge mentions (Bearer Token API method)
    */
   async searchUserTweets(username: string, sinceId?: string): Promise<{
     success: boolean
@@ -274,12 +330,13 @@ export class TwitterMonitoringService {
           continue
         }
 
-        // Calculate points
+        // Calculate points (with fallback for missing metrics)
+        const metrics = tweet.public_metrics || { like_count: 0, retweet_count: 0, reply_count: 0 }
         const basePoints = 5
         const totalPoints = calculatePoints(
-          tweet.public_metrics.like_count,
-          tweet.public_metrics.retweet_count,
-          tweet.public_metrics.reply_count
+          metrics.like_count,
+          metrics.retweet_count,
+          metrics.reply_count
         )
 
         // Create tweet record
@@ -288,9 +345,9 @@ export class TwitterMonitoringService {
             url: tweetUrl,
             content: tweet.text,
             userId: userId,
-            likes: tweet.public_metrics.like_count,
-            retweets: tweet.public_metrics.retweet_count,
-            replies: tweet.public_metrics.reply_count,
+            likes: metrics.like_count,
+            retweets: metrics.retweet_count,
+            replies: metrics.reply_count,
             basePoints,
             bonusPoints: totalPoints - basePoints,
             totalPoints,
@@ -552,43 +609,76 @@ export class TwitterMonitoringService {
       const fallbackStatus = this.fallbackService.getStatus()
       console.log(`Fallback service status:`, fallbackStatus)
 
-      // Try API first if available
-      let apiSearchResult: { success: boolean; error?: string; rateLimited?: boolean } | null = null
+      // Try user-specific OAuth token first (preferred method)
+      let apiSearchResult: { success: boolean; error?: string; rateLimited?: boolean; tokenRefreshed?: boolean } | null = null
 
-      if (this.twitterApi) {
-        console.log(`🔗 Attempting Twitter API search for @${user.xUsername}`)
+      console.log(`� Attempting user timeline search with OAuth token for @${user.xUsername}`)
 
-        const searchResult = await this.searchUserTweets(
-          user.xUsername,
-          lastTweet?.tweetId || undefined
-        )
+      const userTimelineResult = await this.searchUserTimelineWithToken(
+        userId,
+        lastTweet?.tweetId || undefined
+      )
 
-        apiSearchResult = searchResult
+      apiSearchResult = userTimelineResult
 
-        if (searchResult.success && searchResult.data) {
-          if (searchResult.data.data && searchResult.data.data.length > 0) {
-            processedCount = await this.processDiscoveredTweets(userId, searchResult.data)
-            searchMethod = 'api'
-            console.log(`✅ API search successful: ${processedCount} tweets processed via ${searchMethod}`)
-          } else {
-            console.log(`✅ API search successful but no tweets found for @${user.xUsername}`)
-            // This is a successful search with zero results, not an error
-            searchMethod = 'api'
+      if (userTimelineResult.success && userTimelineResult.data) {
+        if (userTimelineResult.data.data && userTimelineResult.data.data.length > 0) {
+          processedCount = await this.processDiscoveredTweets(userId, userTimelineResult.data)
+          searchMethod = 'user-api'
+          console.log(`✅ User API search successful: ${processedCount} tweets processed via ${searchMethod}`)
+          if (userTimelineResult.tokenRefreshed) {
+            console.log(`🔄 User token was refreshed during the process`)
           }
         } else {
-          console.error(`❌ API search failed for @${user.xUsername}: ${searchResult.error}`)
-
-          // Log specific error details for debugging
-          if (searchResult.rateLimited) {
-            console.warn(`🚫 Rate limit hit for Twitter API search endpoint`)
-          } else if (searchResult.error?.includes('401')) {
-            console.warn(`🔐 Authentication failed for Twitter API`)
-          } else if (searchResult.error?.includes('403')) {
-            console.warn(`🚫 Forbidden access to Twitter API`)
-          }
+          console.log(`✅ User API search successful but no tweets found for @${user.xUsername}`)
+          // This is a successful search with zero results, not an error
+          searchMethod = 'user-api'
         }
       } else {
-        console.warn(`⚠️ Twitter API service not available, skipping to web scraping`)
+        console.error(`❌ User API search failed for @${user.xUsername}: ${userTimelineResult.error}`)
+
+        // Log specific error details for debugging
+        if (userTimelineResult.rateLimited) {
+          console.warn(`🚫 Rate limit hit for user API`)
+        } else if (userTimelineResult.error?.includes('401')) {
+          console.warn(`🔐 Authentication failed for user API`)
+        } else if (userTimelineResult.error?.includes('403')) {
+          console.warn(`🚫 Forbidden access to user API`)
+        } else if (userTimelineResult.error?.includes('No valid access token')) {
+          console.warn(`🔑 No valid OAuth token available for user`)
+        }
+
+        // Fallback to Bearer Token API if user token failed
+        if (this.twitterApi && processedCount === 0) {
+          console.log(`🔗 Falling back to Bearer Token API search for @${user.xUsername}`)
+
+          const searchResult = await this.searchUserTweets(
+            user.xUsername,
+            lastTweet?.tweetId || undefined
+          )
+
+          // Update apiSearchResult to reflect the fallback attempt
+          apiSearchResult = {
+            success: searchResult.success,
+            error: userTimelineResult.error + '; Bearer Token fallback: ' + (searchResult.error || 'success'),
+            rateLimited: searchResult.rateLimited || userTimelineResult.rateLimited
+          }
+
+          if (searchResult.success && searchResult.data) {
+            if (searchResult.data.data && searchResult.data.data.length > 0) {
+              processedCount = await this.processDiscoveredTweets(userId, searchResult.data)
+              searchMethod = 'bearer-api'
+              console.log(`✅ Bearer Token API search successful: ${processedCount} tweets processed via ${searchMethod}`)
+            } else {
+              console.log(`✅ Bearer Token API search successful but no tweets found for @${user.xUsername}`)
+              searchMethod = 'bearer-api'
+            }
+          } else {
+            console.error(`❌ Bearer Token API search also failed for @${user.xUsername}: ${searchResult.error}`)
+          }
+        } else if (!this.twitterApi) {
+          console.warn(`⚠️ Bearer Token API service not available for fallback`)
+        }
       }
 
       // Fallback to web scraping if API failed or unavailable

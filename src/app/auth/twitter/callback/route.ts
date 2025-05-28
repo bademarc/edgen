@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TwitterOAuthService } from '@/lib/twitter-oauth'
+import { getTokenEncryption } from '@/lib/token-encryption'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/db'
 
@@ -72,6 +73,15 @@ export async function GET(request: NextRequest) {
       name: twitterUser.name
     })
 
+    // Encrypt tokens for secure storage
+    const tokenEncryption = getTokenEncryption()
+    const encryptedAccessToken = tokenEncryption.encrypt(tokenResponse.access_token)
+    const encryptedRefreshToken = tokenResponse.refresh_token
+      ? tokenEncryption.encrypt(tokenResponse.refresh_token)
+      : null
+
+    console.log('Storing encrypted tokens for user:', twitterUser.username)
+
     // Create or update user in database
     const user = await prisma.user.upsert({
       where: { xUserId: twitterUser.id },
@@ -80,9 +90,9 @@ export async function GET(request: NextRequest) {
         xUsername: twitterUser.username,
         image: twitterUser.profile_image_url || null,
         autoMonitoringEnabled: true,
-        // Update token information
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token || null,
+        // Update encrypted token information
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         tokenExpiresAt: tokenResponse.expires_in
           ? new Date(Date.now() + tokenResponse.expires_in * 1000)
           : null
@@ -95,8 +105,8 @@ export async function GET(request: NextRequest) {
         image: twitterUser.profile_image_url || null,
         totalPoints: 0,
         autoMonitoringEnabled: true,
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token || null,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         tokenExpiresAt: tokenResponse.expires_in
           ? new Date(Date.now() + tokenResponse.expires_in * 1000)
           : null
