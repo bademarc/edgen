@@ -39,6 +39,8 @@ export class TwitterMonitoringService {
   private twitterApi: TwitterApiService | null = null
   private fallbackService: FallbackService
   private webScraper: WebScraperService
+  private lastRateLimitTime: number = 0
+  private rateLimitBackoffMs: number = 0
 
   constructor() {
     try {
@@ -58,6 +60,37 @@ export class TwitterMonitoringService {
     })
 
     this.webScraper = getWebScraperInstance()
+  }
+
+  /**
+   * Check if we should wait due to rate limiting
+   */
+  private async checkRateLimitBackoff(): Promise<void> {
+    const now = Date.now()
+
+    if (this.rateLimitBackoffMs > 0 && (now - this.lastRateLimitTime) < this.rateLimitBackoffMs) {
+      const remainingWait = this.rateLimitBackoffMs - (now - this.lastRateLimitTime)
+      console.log(`⏳ Rate limit backoff: waiting ${Math.round(remainingWait / 1000)}s before next request`)
+      await new Promise(resolve => setTimeout(resolve, remainingWait))
+    }
+  }
+
+  /**
+   * Handle rate limit response and set backoff
+   */
+  private handleRateLimit(resetTime?: string): void {
+    this.lastRateLimitTime = Date.now()
+
+    if (resetTime) {
+      // Use the reset time provided by Twitter API
+      const resetTimestamp = parseInt(resetTime) * 1000
+      this.rateLimitBackoffMs = Math.max(resetTimestamp - Date.now(), 60000) // At least 1 minute
+    } else {
+      // Exponential backoff: start with 1 minute, max 15 minutes
+      this.rateLimitBackoffMs = Math.min(this.rateLimitBackoffMs * 2 || 60000, 900000)
+    }
+
+    console.log(`🚫 Rate limit hit. Backing off for ${Math.round(this.rateLimitBackoffMs / 1000)}s`)
   }
 
   /**
@@ -109,8 +142,16 @@ export class TwitterMonitoringService {
   /**
    * Search for tweets from a specific user that contain LayerEdge mentions (API method)
    */
-  async searchUserTweets(username: string, sinceId?: string): Promise<TwitterTimelineResponse | null> {
+  async searchUserTweets(username: string, sinceId?: string): Promise<{
+    success: boolean
+    data: TwitterTimelineResponse | null
+    error?: string
+    rateLimited?: boolean
+  }> {
     try {
+      // Check if we need to wait due to previous rate limiting
+      await this.checkRateLimitBackoff()
+
       // Build search query for tweets from user containing @layeredge or $EDGEN
       const query = `from:${username} (@layeredge OR $EDGEN)`
 
@@ -120,7 +161,8 @@ export class TwitterMonitoringService {
         url += `&since_id=${sinceId}`
       }
 
-      console.log(`Searching for tweets from ${username} with LayerEdge mentions...`)
+      console.log(`🔍 Searching for tweets from @${username} with LayerEdge mentions...`)
+      console.log(`📝 Query: ${query}`)
 
       const response = await fetch(url, {
         headers: {
@@ -130,27 +172,68 @@ export class TwitterMonitoringService {
         signal: AbortSignal.timeout(15000)
       })
 
+      // Log rate limit headers for debugging
+      const rateLimitLimit = response.headers.get('x-rate-limit-limit')
+      const rateLimitRemaining = response.headers.get('x-rate-limit-remaining')
+      const rateLimitReset = response.headers.get('x-rate-limit-reset')
+
+      console.log(`📊 Rate limit status: ${rateLimitRemaining}/${rateLimitLimit} remaining, resets at ${rateLimitReset}`)
+
       if (!response.ok) {
         if (response.status === 429) {
-          console.warn('Twitter API rate limit reached for search')
-          return null
+          const resetTime = response.headers.get('x-rate-limit-reset')
+          console.warn(`🚫 Twitter API rate limit reached for search endpoint`)
+
+          // Handle the rate limit with backoff
+          this.handleRateLimit(resetTime || undefined)
+
+          return {
+            success: false,
+            data: null,
+            error: 'Rate limit exceeded for search endpoint',
+            rateLimited: true
+          }
         }
-        throw new Error(`Twitter API error: ${response.status} ${response.statusText}`)
+
+        const errorText = await response.text()
+        console.error(`❌ Twitter API error ${response.status}: ${errorText}`)
+
+        return {
+          success: false,
+          data: null,
+          error: `Twitter API error: ${response.status} ${response.statusText}`
+        }
       }
 
       const data = await response.json() as TwitterTimelineResponse
 
       if (data.errors && data.errors.length > 0) {
-        console.error('Twitter API search errors:', data.errors)
-        return null
+        console.error('❌ Twitter API search errors:', data.errors)
+        return {
+          success: false,
+          data: null,
+          error: `API errors: ${data.errors.map(e => e.title || e.detail || 'Unknown error').join(', ')}`
+        }
       }
 
-      console.log(`Found ${data.data?.length || 0} tweets from ${username} with LayerEdge mentions`)
-      return data
+      const tweetCount = data.data?.length || 0
+      console.log(`✅ Search completed: Found ${tweetCount} tweets from @${username} with LayerEdge mentions`)
+
+      return {
+        success: true,
+        data: data,
+        error: undefined
+      }
 
     } catch (error) {
-      console.error('Error searching user tweets:', error)
-      return null
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`❌ Error searching tweets for @${username}:`, errorMessage)
+
+      return {
+        success: false,
+        data: null,
+        error: errorMessage
+      }
     }
   }
 
@@ -470,38 +553,39 @@ export class TwitterMonitoringService {
       console.log(`Fallback service status:`, fallbackStatus)
 
       // Try API first if available
+      let apiSearchResult: { success: boolean; error?: string; rateLimited?: boolean } | null = null
+
       if (this.twitterApi) {
-        try {
-          console.log(`🔗 Attempting Twitter API search for @${user.xUsername}`)
+        console.log(`🔗 Attempting Twitter API search for @${user.xUsername}`)
 
-          const tweetResponse = await this.searchUserTweets(
-            user.xUsername,
-            lastTweet?.tweetId || undefined
-          )
+        const searchResult = await this.searchUserTweets(
+          user.xUsername,
+          lastTweet?.tweetId || undefined
+        )
 
-          if (tweetResponse && tweetResponse.data && tweetResponse.data.length > 0) {
-            processedCount = await this.processDiscoveredTweets(userId, tweetResponse)
+        apiSearchResult = searchResult
+
+        if (searchResult.success && searchResult.data) {
+          if (searchResult.data.data && searchResult.data.data.length > 0) {
+            processedCount = await this.processDiscoveredTweets(userId, searchResult.data)
             searchMethod = 'api'
             console.log(`✅ API search successful: ${processedCount} tweets processed via ${searchMethod}`)
           } else {
-            const errorMsg = tweetResponse ? 'API returned no tweets' : 'API returned null response'
-            console.warn(`⚠️ ${errorMsg} for @${user.xUsername}`)
-            throw new Error(errorMsg)
+            console.log(`✅ API search successful but no tweets found for @${user.xUsername}`)
+            // This is a successful search with zero results, not an error
+            searchMethod = 'api'
           }
-        } catch (apiError) {
-          const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error'
-          console.error(`❌ API search failed for @${user.xUsername}: ${errorMessage}`)
+        } else {
+          console.error(`❌ API search failed for @${user.xUsername}: ${searchResult.error}`)
 
           // Log specific error details for debugging
-          if (errorMessage.includes('429')) {
-            console.warn(`🚫 Rate limit hit for Twitter API`)
-          } else if (errorMessage.includes('401')) {
+          if (searchResult.rateLimited) {
+            console.warn(`🚫 Rate limit hit for Twitter API search endpoint`)
+          } else if (searchResult.error?.includes('401')) {
             console.warn(`🔐 Authentication failed for Twitter API`)
-          } else if (errorMessage.includes('403')) {
+          } else if (searchResult.error?.includes('403')) {
             console.warn(`🚫 Forbidden access to Twitter API`)
           }
-
-          // Continue to fallback method
         }
       } else {
         console.warn(`⚠️ Twitter API service not available, skipping to web scraping`)
@@ -544,22 +628,69 @@ export class TwitterMonitoringService {
         }
       }
 
-      // If both methods failed
+      // Determine final status based on what happened
       if (processedCount === 0) {
-        console.warn(`❌ All methods failed for user @${user.xUsername}`)
+        // Check if we had a successful API search but just no tweets found
+        if (apiSearchResult?.success && searchMethod === 'api') {
+          console.log(`✅ Monitoring completed successfully for @${user.xUsername} - no tweets found with LayerEdge mentions`)
+
+          await prisma.tweetMonitoring.upsert({
+            where: { userId },
+            update: {
+              lastCheckAt: new Date(),
+              status: 'active',
+              errorMessage: null,
+            },
+            create: {
+              userId,
+              lastCheckAt: new Date(),
+              status: 'active',
+              tweetsFound: 0,
+            },
+          })
+
+          // Update user's last check time
+          await prisma.user.update({
+            where: { id: userId },
+            data: {
+              lastTweetCheck: new Date(),
+              tweetCheckCount: {
+                increment: 1
+              }
+            }
+          })
+
+          return {
+            success: true,
+            tweetsFound: 0
+          }
+        }
+
+        // If we get here, both methods actually failed
+        let errorMessage = 'No monitoring methods available'
+
+        if (apiSearchResult?.rateLimited) {
+          errorMessage = 'Twitter API rate limited - will retry when limit resets'
+        } else if (apiSearchResult?.error && !this.webScraper) {
+          errorMessage = `Twitter API failed: ${apiSearchResult.error}. Web scraping unavailable.`
+        } else if (apiSearchResult?.error) {
+          errorMessage = 'Both Twitter API and web scraping failed - will retry next cycle'
+        }
+
+        console.warn(`❌ Monitoring failed for @${user.xUsername}: ${errorMessage}`)
 
         await prisma.tweetMonitoring.upsert({
           where: { userId },
           update: {
             lastCheckAt: new Date(),
             status: 'error',
-            errorMessage: 'Both API and web scraping failed - will retry next cycle',
+            errorMessage: errorMessage,
           },
           create: {
             userId,
             lastCheckAt: new Date(),
             status: 'error',
-            errorMessage: 'Both API and web scraping failed - will retry next cycle',
+            errorMessage: errorMessage,
             tweetsFound: 0,
           },
         })
@@ -567,7 +698,7 @@ export class TwitterMonitoringService {
         return {
           success: false,
           tweetsFound: 0,
-          error: 'Both API and web scraping failed - will retry next cycle'
+          error: errorMessage
         }
       }
 
@@ -716,7 +847,13 @@ export class TwitterMonitoringService {
         }
 
         // Add delay between users to respect rate limits and avoid overwhelming the API
-        await new Promise(resolve => setTimeout(resolve, 2000)) // Increased to 2 seconds
+        // Increase delay if we've hit rate limits recently
+        const baseDelay = 2000 // 2 seconds base delay
+        const rateLimitDelay = this.rateLimitBackoffMs > 0 ? 5000 : 0 // Extra 5s if rate limited
+        const totalDelay = baseDelay + rateLimitDelay
+
+        console.log(`⏳ Waiting ${totalDelay / 1000}s before processing next user...`)
+        await new Promise(resolve => setTimeout(resolve, totalDelay))
 
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
