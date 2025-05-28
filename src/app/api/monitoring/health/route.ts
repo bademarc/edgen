@@ -4,13 +4,45 @@ import { TwitterApiService } from '@/lib/twitter-api'
 import { getFallbackService } from '@/lib/fallback-service'
 import { getWebScraperInstance } from '@/lib/web-scraper'
 
-export async function GET(request: NextRequest) {
+interface EnvironmentCheck {
+  twitterBearerToken: boolean
+  mentionTrackerSecret: boolean
+  supabaseUrl: boolean
+  supabaseServiceKey: boolean
+  siteUrl: boolean
+}
+
+interface RateLimitInfo {
+  limit: number
+  remaining: number
+  resetTime: number
+}
+
+interface TwitterApiHealth {
+  available: boolean
+  healthy: boolean
+  rateLimitInfo: RateLimitInfo | null
+  error: string | null
+}
+
+interface WebScraperHealth {
+  available: boolean
+  status: string
+  error: string | null
+}
+
+interface EdgeFunctionHealth {
+  available: boolean
+  error: string | null
+}
+
+export async function GET() {
   try {
     // Allow public access for health checks (remove auth requirement)
     console.log('🔍 Performing monitoring system health check...')
 
     // Check environment variables
-    const envCheck = {
+    const envCheck: EnvironmentCheck = {
       twitterBearerToken: !!process.env.TWITTER_BEARER_TOKEN,
       mentionTrackerSecret: !!process.env.MENTION_TRACKER_SECRET,
       supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -19,15 +51,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Check Twitter API health
-    const twitterApiHealth = {
+    const twitterApiHealth: TwitterApiHealth = {
       available: false,
       healthy: false,
-      rateLimitInfo: null as {
-        limit: number
-        remaining: number
-        resetTime: number
-      } | null,
-      error: null as string | null
+      rateLimitInfo: null,
+      error: null
     }
 
     try {
@@ -42,18 +70,18 @@ export async function GET(request: NextRequest) {
 
     // Check Web Scraper health
     const webScraper = getWebScraperInstance()
-    const webScraperHealth = {
+    const browserStatus = webScraper.getBrowserStatus()
+    const webScraperHealth: WebScraperHealth = {
       available: webScraper.isBrowserAvailable(),
-      status: webScraper.getBrowserStatus(),
-      error: null as string | null
+      status: browserStatus.isHealthy ? 'healthy' : 'unhealthy',
+      error: null
     }
 
     // Try to initialize browser if not available
     if (!webScraperHealth.available) {
       try {
-        await webScraper.initializeBrowser()
-        webScraperHealth.available = webScraper.isBrowserAvailable()
-        webScraperHealth.status = webScraper.getBrowserStatus()
+        // Note: Browser initialization is handled internally by the service
+        webScraperHealth.error = 'Browser not available - initialization needed'
       } catch (error) {
         webScraperHealth.error = error instanceof Error ? error.message : 'Browser initialization failed'
       }
@@ -63,12 +91,50 @@ export async function GET(request: NextRequest) {
     const fallbackService = getFallbackService()
     const fallbackServiceHealth = fallbackService.getStatus()
 
+    // Check Supabase Edge Function
+    const edgeFunctionHealth: EdgeFunctionHealth = {
+      available: false,
+      error: null
+    }
+
+    try {
+      const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/track-mentions`
+      const edgeResponse = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.MENTION_TRACKER_SECRET}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (edgeResponse.status === 404) {
+        edgeFunctionHealth.error = 'Edge function not deployed'
+      } else if (edgeResponse.status === 401) {
+        edgeFunctionHealth.error = 'Authentication failed'
+      } else {
+        edgeFunctionHealth.available = true
+      }
+    } catch (error) {
+      edgeFunctionHealth.error = error instanceof Error ? error.message : 'Edge function test failed'
+    }
+
+    // Check for missing environment variables
+    const missingEnvVars = Object.entries(envCheck)
+      .filter(([, value]) => !value)
+      .map(([key]) => key)
+
     // Overall system health assessment
     const systemHealth = {
       overall: 'healthy' as 'healthy' | 'degraded' | 'unhealthy',
       canMonitorTweets: false,
       canScrapeTweets: false,
       issues: [] as string[]
+    }
+
+    // Check for missing environment variables
+    if (missingEnvVars.length > 0) {
+      systemHealth.overall = 'degraded'
+      systemHealth.issues.push(`Missing environment variables: ${missingEnvVars.join(', ')}`)
     }
 
     // Determine if we can monitor tweets
@@ -105,20 +171,28 @@ export async function GET(request: NextRequest) {
     const healthReport = {
       timestamp: new Date().toISOString(),
       system: systemHealth,
+      environment: envCheck,
       services: {
         twitterApi: twitterApiHealth,
         webScraper: webScraperHealth,
-        fallbackService: fallbackServiceHealth
+        fallbackService: fallbackServiceHealth,
+        edgeFunction: edgeFunctionHealth
       },
       recommendations: [] as string[]
     }
 
     // Add recommendations based on issues
+    if (missingEnvVars.length > 0) {
+      healthReport.recommendations.push(`Set missing environment variables: ${missingEnvVars.join(', ')}`)
+    }
     if (!twitterApiHealth.available) {
       healthReport.recommendations.push('Configure Twitter API credentials (TWITTER_BEARER_TOKEN)')
     }
     if (!webScraperHealth.available) {
       healthReport.recommendations.push('Install Playwright browsers: npx playwright install chromium')
+    }
+    if (!edgeFunctionHealth.available) {
+      healthReport.recommendations.push('Deploy Supabase edge function: supabase functions deploy track-mentions')
     }
     if (systemHealth.overall === 'unhealthy') {
       healthReport.recommendations.push('At least one monitoring method must be available')

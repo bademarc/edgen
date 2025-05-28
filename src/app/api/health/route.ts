@@ -1,13 +1,39 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { TwitterApiService } from '@/lib/twitter-api'
 import { getWebScraperInstance } from '@/lib/web-scraper'
 import { getFallbackService } from '@/lib/fallback-service'
+
+interface RateLimitInfo {
+  limit: number
+  remaining: number
+  resetTime: number
+}
+
+interface TwitterApiHealth {
+  available: boolean
+  healthy: boolean
+  rateLimitInfo: RateLimitInfo | null
+  error: string | null
+}
+
+interface WebScraperHealth {
+  available: boolean
+  status: string
+  error: string | null
+}
+
+interface EdgeFunctionHealth {
+  available: boolean
+  deployed: boolean
+  authenticated: boolean
+  error: string | null
+}
 
 /**
  * Public health check endpoint for monitoring system status
  * No authentication required - this is for external monitoring
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('🔍 Public health check requested')
 
@@ -21,11 +47,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Check Twitter API health
-    const twitterApiHealth = {
+    const twitterApiHealth: TwitterApiHealth = {
       available: false,
       healthy: false,
-      rateLimitInfo: null as any,
-      error: null as string | null
+      rateLimitInfo: null,
+      error: null
     }
 
     try {
@@ -38,22 +64,22 @@ export async function GET(request: NextRequest) {
     }
 
     // Check Web Scraper health
-    const webScraperHealth = {
+    const webScraperHealth: WebScraperHealth = {
       available: false,
       status: 'unknown',
-      error: null as string | null
+      error: null
     }
 
     try {
       const webScraper = getWebScraperInstance()
       webScraperHealth.available = webScraper.isBrowserAvailable()
-      webScraperHealth.status = webScraper.getBrowserStatus()
-      
+      const browserStatus = webScraper.getBrowserStatus()
+      webScraperHealth.status = browserStatus.isHealthy ? 'healthy' : 'unhealthy'
+
       // Try to initialize if not available
       if (!webScraperHealth.available) {
-        await webScraper.initializeBrowser()
-        webScraperHealth.available = webScraper.isBrowserAvailable()
-        webScraperHealth.status = webScraper.getBrowserStatus()
+        // Note: Browser initialization is handled internally by the service
+        webScraperHealth.error = 'Browser not available - initialization needed'
       }
     } catch (error) {
       webScraperHealth.error = error instanceof Error ? error.message : 'Browser initialization failed'
@@ -64,11 +90,11 @@ export async function GET(request: NextRequest) {
     const fallbackServiceHealth = fallbackService.getStatus()
 
     // Check Supabase Edge Function
-    const edgeFunctionHealth = {
+    const edgeFunctionHealth: EdgeFunctionHealth = {
       available: false,
       deployed: false,
       authenticated: false,
-      error: null as string | null
+      error: null
     }
 
     try {
@@ -80,7 +106,7 @@ export async function GET(request: NextRequest) {
           'Content-Type': 'application/json'
         }
       })
-      
+
       if (edgeResponse.status === 404) {
         edgeFunctionHealth.error = 'Edge function not deployed'
       } else if (edgeResponse.status === 401) {
@@ -132,8 +158,8 @@ export async function GET(request: NextRequest) {
 
     // Check for missing environment variables
     const missingEnvVars = Object.entries(envCheck)
-      .filter(([_, value]) => !value)
-      .map(([key, _]) => key)
+      .filter(([, value]) => !value)
+      .map(([key]) => key)
 
     if (missingEnvVars.length > 0) {
       systemHealth.status = 'unhealthy'
@@ -171,7 +197,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Set appropriate HTTP status based on health
-    const httpStatus = systemHealth.status === 'unhealthy' ? 503 : 
+    const httpStatus = systemHealth.status === 'unhealthy' ? 503 :
                       systemHealth.status === 'degraded' ? 200 : 200
 
     return NextResponse.json(healthReport, { status: httpStatus })
@@ -181,10 +207,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         timestamp: new Date().toISOString(),
-        system: { 
-          status: 'unhealthy', 
+        system: {
+          status: 'unhealthy',
           canTrackMentions: false,
-          issues: ['Health check system failure'] 
+          issues: ['Health check system failure']
         },
         error: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -196,7 +222,7 @@ export async function GET(request: NextRequest) {
 /**
  * Reset system health status (for recovery)
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     console.log('🔄 Resetting system health status...')
 
@@ -208,12 +234,8 @@ export async function POST(request: NextRequest) {
     const webScraper = getWebScraperInstance()
     webScraper.resetBrowserHealth()
 
-    // Try to reinitialize browser
-    try {
-      await webScraper.initializeBrowser()
-    } catch (error) {
-      console.warn('Browser reinitialization failed:', error)
-    }
+    // Note: Browser reinitialization is handled internally by the service
+    console.log('Browser health reset requested')
 
     console.log('✅ Health status reset completed')
 

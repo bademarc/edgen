@@ -2,7 +2,7 @@
 
 /**
  * Comprehensive fix script for LayerEdge mention tracking system
- * 
+ *
  * This script diagnoses and fixes issues with:
  * 1. Twitter API connectivity and authentication
  * 2. Web scraping fallback system
@@ -86,7 +86,7 @@ class MentionTrackingDiagnostic {
 
     try {
       await prisma.$connect()
-      
+
       // Test basic queries
       const userCount = await prisma.user.count()
       const tweetCount = await prisma.tweet.count()
@@ -176,10 +176,10 @@ class MentionTrackingDiagnostic {
 
     try {
       const webScraper = getWebScraperInstance()
-      
+
       if (!webScraper.isBrowserAvailable()) {
-        console.log('   🔄 Initializing browser...')
-        await webScraper.initializeBrowser()
+        console.log('   🔄 Browser not available - initialization needed')
+        // Note: Browser initialization is handled internally
       }
 
       const isAvailable = webScraper.isBrowserAvailable()
@@ -253,7 +253,7 @@ class MentionTrackingDiagnostic {
 
     try {
       const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/track-mentions`
-      
+
       const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: {
@@ -308,7 +308,7 @@ class MentionTrackingDiagnostic {
 
     // This would test the complete flow from tweet detection to point awarding
     // For now, we'll just verify the components are ready
-    
+
     const twitterApiWorking = this.results.some(r => r.component === 'Twitter API' && r.status === 'pass')
     const webScrapingWorking = this.results.some(r => r.component === 'Web Scraping' && r.status === 'pass')
     const databaseWorking = this.results.some(r => r.component === 'Database' && r.status === 'pass')
@@ -404,7 +404,7 @@ class MentionTrackingDiagnostic {
 async function main() {
   const diagnostic = new MentionTrackingDiagnostic()
   await diagnostic.runDiagnostics()
-  
+
   await prisma.$disconnect()
 }
 

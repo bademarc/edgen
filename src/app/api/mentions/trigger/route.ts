@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     // Allow both authenticated and unauthenticated requests for testing
     const isAuthenticated = authHeader === `Bearer ${expectedSecret}`
-    
+
     if (!isAuthenticated) {
       console.log('⚠️ Unauthenticated request - running in test mode with limited scope')
     }
@@ -65,22 +65,22 @@ export async function POST(request: NextRequest) {
         console.log(`🔍 Processing user: @${user.xUsername} (${user.name})`)
 
         const result = await monitoringService.monitorUserTweets(user.id)
-        
+
         results.push({
           userId: user.id,
           username: user.xUsername,
           name: user.name,
-          processed: result.processedCount,
-          method: result.searchMethod,
-          success: true
+          processed: result.tweetsFound,
+          method: 'api', // Default method
+          success: result.success
         })
 
-        totalProcessed += result.processedCount
-        console.log(`✅ Processed ${result.processedCount} tweets for @${user.xUsername}`)
+        totalProcessed += result.tweetsFound
+        console.log(`✅ Processed ${result.tweetsFound} tweets for @${user.xUsername}`)
 
       } catch (error) {
         console.error(`❌ Error processing user @${user.xUsername}:`, error)
-        
+
         results.push({
           userId: user.id,
           username: user.xUsername,
