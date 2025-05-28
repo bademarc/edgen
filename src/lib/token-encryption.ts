@@ -10,17 +10,22 @@ export class TokenEncryptionService {
   private readonly tagLength = 16
 
   private getEncryptionKey(): Buffer {
-    const key = process.env.TOKEN_ENCRYPTION_KEY
+    // Try TOKEN_ENCRYPTION_KEY first, then fall back to NEXTAUTH_SECRET
+    let key = process.env.TOKEN_ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET
+
     if (!key) {
-      throw new Error('TOKEN_ENCRYPTION_KEY environment variable is required')
+      // Generate a deterministic key from available environment variables as last resort
+      const fallbackSeed = process.env.NEXT_PUBLIC_SUPABASE_URL || 'layeredge-default-seed'
+      console.warn('⚠️ No TOKEN_ENCRYPTION_KEY or NEXTAUTH_SECRET found, using fallback key derivation')
+      key = fallbackSeed
     }
 
-    // Use the key directly if it's 32 bytes, otherwise derive it
-    if (key.length === 64) { // 32 bytes in hex
+    // Use the key directly if it's 32 bytes in hex, otherwise derive it
+    if (key.length === 64 && /^[0-9a-f]+$/i.test(key)) { // 32 bytes in hex
       return Buffer.from(key, 'hex')
     } else {
-      // Derive a key from the provided string
-      return crypto.scryptSync(key, 'layeredge-salt', this.keyLength)
+      // Derive a key from the provided string using a consistent salt
+      return crypto.scryptSync(key, 'layeredge-salt-v1', this.keyLength)
     }
   }
 
@@ -31,7 +36,9 @@ export class TokenEncryptionService {
     try {
       const key = this.getEncryptionKey()
       const iv = crypto.randomBytes(this.ivLength)
-      const cipher = crypto.createCipher(this.algorithm, key)
+
+      // Use createCipheriv with the generated IV (not deprecated createCipher)
+      const cipher = crypto.createCipheriv(this.algorithm, key, iv)
       cipher.setAAD(Buffer.from('layeredge-token'))
 
       let encrypted = cipher.update(token, 'utf8', 'hex')
@@ -44,6 +51,13 @@ export class TokenEncryptionService {
       return combined
     } catch (error) {
       console.error('Token encryption failed:', error)
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        tokenLength: token?.length,
+        hasKey: !!process.env.TOKEN_ENCRYPTION_KEY,
+        hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET
+      })
       throw new Error('Failed to encrypt token')
     }
   }

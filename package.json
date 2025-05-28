@@ -27,6 +27,8 @@
     "tracking:setup": "pip install twscrape",
     "tracking:test": "tsx scripts/test-enhanced-tracking.ts",
     "tracking:migrate": "prisma migrate dev --name add_enhanced_tracking",
+    "encryption:fix": "tsx scripts/fix-token-encryption.ts",
+    "encryption:test": "tsx scripts/fix-token-encryption.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
