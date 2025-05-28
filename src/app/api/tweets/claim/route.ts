@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the user is the author of the tweet
-    const isAuthor = 
+    const isAuthor =
       (user.xUsername && unclaimedTweet.authorUsername.toLowerCase() === user.xUsername.toLowerCase()) ||
       (user.xUserId && unclaimedTweet.authorId === user.xUserId)
 
@@ -216,9 +216,9 @@ export async function GET(request: NextRequest) {
           { claimed: false },
           {
             OR: [
-              user.xUsername ? { authorUsername: { equals: user.xUsername, mode: 'insensitive' } } : {},
-              user.xUserId ? { authorId: user.xUserId } : {},
-            ].filter(condition => Object.keys(condition).length > 0)
+              ...(user.xUsername ? [{ authorUsername: { equals: user.xUsername, mode: 'insensitive' as const } }] : []),
+              ...(user.xUserId ? [{ authorId: user.xUserId }] : []),
+            ]
           }
         ]
       },

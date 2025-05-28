@@ -1,44 +1,55 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import UnclaimedTweets from '@/components/UnclaimedTweets'
+import { motion } from 'framer-motion'
 import TrackingDashboard from '@/components/TrackingDashboard'
+import UnclaimedTweets from '@/components/UnclaimedTweets'
 
 export default function TestTrackingPage() {
   const [activeTab, setActiveTab] = useState('dashboard')
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="min-h-screen bg-background text-foreground p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Enhanced Tweet Tracking Test Page</h1>
-          <p className="text-gray-400">
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-3xl font-bold mb-2 text-foreground">Enhanced Tweet Tracking Test Page</h1>
+          <p className="text-muted-foreground">
             Test the enhanced tweet tracking system components and functionality
           </p>
+        </motion.div>
+
+        <div className="space-y-6">
+          {/* Tab Navigation */}
+          <div className="flex space-x-1 bg-background-secondary p-1 rounded-lg border border-border">
+            {[
+              { id: 'dashboard', label: 'Tracking Dashboard' },
+              { id: 'unclaimed', label: 'Unclaimed Tweets' },
+              { id: 'manual', label: 'Manual Tests' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'bg-layeredge-orange text-black'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'dashboard' && <TrackingDashboard />}
+          {activeTab === 'unclaimed' && <UnclaimedTweets />}
+          {activeTab === 'manual' && <ManualTestPanel />}
         </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="dashboard">Tracking Dashboard</TabsTrigger>
-            <TabsTrigger value="unclaimed">Unclaimed Tweets</TabsTrigger>
-            <TabsTrigger value="manual">Manual Tests</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard" className="space-y-6">
-            <TrackingDashboard />
-          </TabsContent>
-
-          <TabsContent value="unclaimed" className="space-y-6">
-            <UnclaimedTweets />
-          </TabsContent>
-
-          <TabsContent value="manual" className="space-y-6">
-            <ManualTestPanel />
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   )
@@ -46,7 +57,7 @@ export default function TestTrackingPage() {
 
 function ManualTestPanel() {
   const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<any>(null)
+  const [results, setResults] = useState<Record<string, unknown> | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const runManualTest = async (testType: string) => {
@@ -93,95 +104,105 @@ function ManualTestPanel() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Manual API Tests</CardTitle>
-          <CardDescription>
+      <motion.div
+        className="card-layeredge hover-glow"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-foreground mb-2">Manual API Tests</h2>
+          <p className="text-muted-foreground mb-6">
             Test the tracking system API endpoints manually
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button
-              onClick={() => runManualTest('status')}
-              disabled={loading}
-              variant="outline"
-            >
-              Test Status API
-            </Button>
-            <Button
-              onClick={() => runManualTest('discover')}
-              disabled={loading}
-              variant="outline"
-            >
-              Test Manual Discovery
-            </Button>
-            <Button
-              onClick={() => runManualTest('stats')}
-              disabled={loading}
-              variant="outline"
-            >
-              Test Statistics API
-            </Button>
+          </p>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                onClick={() => runManualTest('status')}
+                disabled={loading}
+                className="btn-layeredge-ghost px-4 py-2 rounded-lg"
+              >
+                Test Status API
+              </button>
+              <button
+                onClick={() => runManualTest('discover')}
+                disabled={loading}
+                className="btn-layeredge-ghost px-4 py-2 rounded-lg"
+              >
+                Test Manual Discovery
+              </button>
+              <button
+                onClick={() => runManualTest('stats')}
+                disabled={loading}
+                className="btn-layeredge-ghost px-4 py-2 rounded-lg"
+              >
+                Test Statistics API
+              </button>
+            </div>
+
+            {loading && (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-layeredge-orange mx-auto"></div>
+                <p className="mt-2 text-foreground">Running test...</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
+                <h4 className="font-medium text-red-400 mb-2">Error</h4>
+                <p className="text-red-300">{error}</p>
+              </div>
+            )}
+
+            {results && (
+              <div className="bg-background-secondary border border-border rounded-lg p-4">
+                <h4 className="font-medium text-green-400 mb-2">Results</h4>
+                <pre className="text-sm text-foreground overflow-auto max-h-96">
+                  {JSON.stringify(results, null, 2)}
+                </pre>
+              </div>
+            )}
           </div>
+        </div>
+      </motion.div>
 
-          {loading && (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-              <p className="mt-2">Running test...</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-900/50 border border-red-500 rounded-lg p-4">
-              <h4 className="font-medium text-red-400 mb-2">Error</h4>
-              <p className="text-red-300">{error}</p>
-            </div>
-          )}
-
-          {results && (
-            <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
-              <h4 className="font-medium text-green-400 mb-2">Results</h4>
-              <pre className="text-sm text-gray-300 overflow-auto max-h-96">
-                {JSON.stringify(results, null, 2)}
-              </pre>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Component Tests</CardTitle>
-          <CardDescription>
+      <motion.div
+        className="card-layeredge hover-glow"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-foreground mb-2">Component Tests</h2>
+          <p className="text-muted-foreground mb-6">
             Test individual components and their functionality
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-800 rounded-lg">
-                <h4 className="font-medium mb-2">UnclaimedTweets Component</h4>
-                <p className="text-sm text-gray-400 mb-2">
+              <div className="p-4 bg-background-secondary border border-border rounded-lg">
+                <h4 className="font-medium mb-2 text-foreground">UnclaimedTweets Component</h4>
+                <p className="text-sm text-muted-foreground mb-2">
                   Tests user interface for claiming retroactive tweets
                 </p>
                 <p className="text-xs text-green-400">
-                  ✅ Component loaded in "Unclaimed Tweets" tab
+                  ✅ Component loaded in &quot;Unclaimed Tweets&quot; tab
                 </p>
               </div>
-              <div className="p-4 bg-gray-800 rounded-lg">
-                <h4 className="font-medium mb-2">TrackingDashboard Component</h4>
-                <p className="text-sm text-gray-400 mb-2">
+              <div className="p-4 bg-background-secondary border border-border rounded-lg">
+                <h4 className="font-medium mb-2 text-foreground">TrackingDashboard Component</h4>
+                <p className="text-sm text-muted-foreground mb-2">
                   Tests admin monitoring and control interface
                 </p>
                 <p className="text-xs text-green-400">
-                  ✅ Component loaded in "Tracking Dashboard" tab
+                  ✅ Component loaded in &quot;Tracking Dashboard&quot; tab
                 </p>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
     </div>
   )
 }

@@ -15,12 +15,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { method = 'all', force = false } = body
+    const { method = 'all' } = body
 
     const tweetTracker = getTweetTrackerInstance()
     const startTime = Date.now()
 
-    let results: any = {}
+    const results: Record<string, { tweets: number; processed: number }> = {}
 
     try {
       if (method === 'all' || method === 'twscrape') {
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
       }
 
       const duration = Date.now() - startTime
-      const totalTweets = Object.values(results).reduce((sum: number, result: any) => sum + result.tweets, 0)
-      const totalProcessed = Object.values(results).reduce((sum: number, result: any) => sum + result.processed, 0)
+      const totalTweets = Object.values(results).reduce((sum: number, result) => sum + result.tweets, 0)
+      const totalProcessed = Object.values(results).reduce((sum: number, result) => sum + result.processed, 0)
 
       // Log the manual discovery
       await tweetTracker.logTrackingResult({
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     } catch (discoveryError) {
       const duration = Date.now() - startTime
-      
+
       // Log the failed discovery
       await tweetTracker.logTrackingResult({
         method: `manual-${method}`,

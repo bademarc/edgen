@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import cron from 'node-cron'
-import { validateTweetContent, calculatePoints } from './utils'
+import { calculatePoints } from './utils'
 import { TwitterApiService } from './twitter-api'
 import { getFallbackService } from './fallback-service'
 import { getWebScraperInstance } from './web-scraper'
@@ -40,8 +40,8 @@ export class TweetTracker {
   private trackedUsers: Set<string>
   private isRunning: boolean
   private twitterApi: TwitterApiService | null
-  private fallbackService: any
-  private webScraper: any
+  private fallbackService: ReturnType<typeof getFallbackService>
+  private webScraper: ReturnType<typeof getWebScraperInstance>
   private currentScraperIndex: number
   private scrapers: Array<{
     name: string
@@ -84,20 +84,20 @@ export class TweetTracker {
 
       // Parse twscrape output - it returns one JSON object per line
       const lines = stdout.trim().split('\n').filter(line => line.trim())
-      const tweets: any[] = []
+      const tweets: TweetData[] = []
 
       for (const line of lines) {
         try {
-          const tweet = JSON.parse(line)
+          const tweet = JSON.parse(line) as TweetData
           tweets.push(tweet)
-        } catch (error) {
+        } catch {
           console.log('Failed to parse twscrape line:', line.substring(0, 100))
         }
       }
 
-      const filteredTweets = tweets.filter((tweet: any) =>
+      const filteredTweets = tweets.filter((tweet: TweetData) =>
         !tweet.user?.protected && // Only public tweets
-        this.containsKeywords(tweet.rawContent || tweet.text || tweet.full_text || '')
+        this.containsKeywords(tweet.text || '')
       )
 
       console.log(`✅ twscrape found ${filteredTweets.length} valid tweets`)
@@ -126,12 +126,17 @@ export class TweetTracker {
       for (const feedUrl of feeds) {
         try {
           console.log(`Trying RSS feed: ${feedUrl}`)
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 10000)
+
           const response = await fetch(feedUrl, {
-            timeout: 10000,
+            signal: controller.signal,
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
           })
+
+          clearTimeout(timeoutId)
 
           if (!response.ok) {
             console.log(`RSS feed ${feedUrl} returned ${response.status}`)

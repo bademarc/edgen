@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTweetTrackerInstance } from '@/lib/tweet-tracker'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const tweetTracker = getTweetTrackerInstance()
-    
+
     // Get basic status
     const status = tweetTracker.getStatus()
-    
+
     // Get tracking statistics
     const stats = await tweetTracker.getTrackingStats(24) // Last 24 hours
-    
+
     return NextResponse.json({
       success: true,
       status: {

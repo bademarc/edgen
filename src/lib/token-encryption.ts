@@ -14,7 +14,7 @@ export class TokenEncryptionService {
     if (!key) {
       throw new Error('TOKEN_ENCRYPTION_KEY environment variable is required')
     }
-    
+
     // Use the key directly if it's 32 bytes, otherwise derive it
     if (key.length === 64) { // 32 bytes in hex
       return Buffer.from(key, 'hex')
@@ -36,9 +36,9 @@ export class TokenEncryptionService {
 
       let encrypted = cipher.update(token, 'utf8', 'hex')
       encrypted += cipher.final('hex')
-      
+
       const tag = cipher.getAuthTag()
-      
+
       // Combine iv + tag + encrypted data
       const combined = iv.toString('hex') + tag.toString('hex') + encrypted
       return combined
@@ -54,22 +54,22 @@ export class TokenEncryptionService {
   decrypt(encryptedToken: string): string {
     try {
       const key = this.getEncryptionKey()
-      
+
       // Extract iv, tag, and encrypted data
       const ivHex = encryptedToken.slice(0, this.ivLength * 2)
       const tagHex = encryptedToken.slice(this.ivLength * 2, (this.ivLength + this.tagLength) * 2)
       const encrypted = encryptedToken.slice((this.ivLength + this.tagLength) * 2)
-      
+
       const iv = Buffer.from(ivHex, 'hex')
       const tag = Buffer.from(tagHex, 'hex')
-      
-      const decipher = crypto.createDecipher(this.algorithm, key)
+
+      const decipher = crypto.createDecipheriv(this.algorithm, key, iv)
       decipher.setAAD(Buffer.from('layeredge-token'))
       decipher.setAuthTag(tag)
-      
+
       let decrypted = decipher.update(encrypted, 'hex', 'utf8')
       decrypted += decipher.final('utf8')
-      
+
       return decrypted
     } catch (error) {
       console.error('Token decryption failed:', error)

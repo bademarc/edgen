@@ -1,10 +1,15 @@
 'use client'
 
+import * as React from 'react'
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Loader2, ExternalLink, Trophy, Clock, User } from 'lucide-react'
+import { motion } from 'framer-motion'
+import {
+  ArrowTopRightOnSquareIcon,
+  TrophyIcon,
+  ClockIcon,
+  UserIcon,
+  ArrowPathIcon
+} from '@heroicons/react/24/outline'
 import { formatDistanceToNow } from 'date-fns'
 
 interface UnclaimedTweet {
@@ -44,7 +49,7 @@ export default function UnclaimedTweets() {
     try {
       setLoading(true)
       setError(null)
-      
+
       const response = await fetch('/api/tweets/claim')
       const data: UnclaimedTweetsResponse = await response.json()
 
@@ -81,7 +86,7 @@ export default function UnclaimedTweets() {
         // Remove the claimed tweet from the list
         setUnclaimedTweets(prev => prev.filter(tweet => tweet.tweetId !== tweetId))
         setTotalPotentialPoints(prev => prev - (unclaimedTweets.find(t => t.tweetId === tweetId)?.potentialPoints || 0))
-        
+
         // Show success message (you might want to use a toast notification)
         alert(`Successfully claimed tweet for ${data.pointsAwarded} points!`)
       } else {
@@ -107,133 +112,134 @@ export default function UnclaimedTweets() {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading unclaimed tweets...</span>
-        </CardContent>
-      </Card>
+      <div className="card-layeredge p-8">
+        <div className="flex items-center justify-center">
+          <ArrowPathIcon className="h-8 w-8 animate-spin text-layeredge-orange" />
+          <span className="ml-2 text-foreground">Loading unclaimed tweets...</span>
+        </div>
+      </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
+      <motion.div
+        className="card-layeredge hover-glow"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2 mb-2">
+            <TrophyIcon className="h-5 w-5 text-layeredge-orange" />
             Unclaimed Tweets
-          </CardTitle>
-          <CardDescription>
+          </h2>
+          <p className="text-muted-foreground mb-6">
             These are your tweets that were automatically discovered but not yet claimed.
             Claim them to earn points retroactively!
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-              <p className="text-red-800">{error}</p>
+            <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-4">
+              <p className="text-red-400">{error}</p>
             </div>
           )}
 
           {unclaimedTweets.length === 0 ? (
             <div className="text-center py-8">
-              <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No unclaimed tweets</h3>
-              <p className="text-gray-500">
+              <TrophyIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No unclaimed tweets</h3>
+              <p className="text-muted-foreground">
                 All your discovered tweets have been claimed, or none have been found yet.
               </p>
             </div>
           ) : (
             <>
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+              <div className="mb-6 p-4 bg-layeredge-blue/20 border border-layeredge-blue/30 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-blue-900">
+                    <h4 className="font-medium text-layeredge-blue">
                       {unclaimedTweets.length} unclaimed tweets found
                     </h4>
-                    <p className="text-blue-700">
+                    <p className="text-layeredge-blue/80">
                       Total potential points: {totalPotentialPoints}
                     </p>
                   </div>
-                  <Button onClick={fetchUnclaimedTweets} variant="outline" size="sm">
+                  <button onClick={fetchUnclaimedTweets} className="btn-layeredge-ghost px-3 py-1 text-sm">
                     Refresh
-                  </Button>
+                  </button>
                 </div>
               </div>
 
               <div className="space-y-4">
                 {unclaimedTweets.map((tweet) => (
-                  <Card key={tweet.id} className="border-l-4 border-l-blue-500">
-                    <CardContent className="p-4">
+                  <div key={tweet.id} className="card-layeredge border-l-4 border-l-blue-500">
+                    <div className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <User className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium">@{tweet.authorUsername}</span>
-                            <Badge 
-                              className={`text-white ${getSourceBadgeColor(tweet.source)}`}
-                              variant="secondary"
+                            <UserIcon className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-foreground">@{tweet.authorUsername}</span>
+                            <div
+                              className={`badge-layeredge text-white ${getSourceBadgeColor(tweet.source)}`}
                             >
                               {tweet.source}
-                            </Badge>
-                            <Badge variant="outline">
+                            </div>
+                            <div className="badge-layeredge-secondary">
                               {tweet.potentialPoints} points
-                            </Badge>
+                            </div>
                           </div>
-                          
-                          <p className="text-gray-900 mb-3 line-clamp-3">
+
+                          <p className="text-foreground mb-3 line-clamp-3">
                             {tweet.content}
                           </p>
-                          
-                          <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                             <span>❤️ {tweet.likes}</span>
                             <span>🔄 {tweet.retweets}</span>
                             <span>💬 {tweet.replies}</span>
                             <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
+                              <ClockIcon className="h-3 w-3" />
                               {formatDistanceToNow(new Date(tweet.createdAt), { addSuffix: true })}
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
-                            <Button
+                            <button
                               onClick={() => claimTweet(tweet.tweetId)}
                               disabled={claiming === tweet.tweetId}
-                              size="sm"
+                              className="btn-layeredge-primary px-4 py-2 rounded-lg text-sm font-medium hover-lift disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {claiming === tweet.tweetId ? (
                                 <>
-                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  <ArrowPathIcon className="h-4 w-4 animate-spin mr-2" />
                                   Claiming...
                                 </>
                               ) : (
                                 <>
-                                  <Trophy className="h-4 w-4 mr-2" />
+                                  <TrophyIcon className="h-4 w-4 mr-2" />
                                   Claim {tweet.potentialPoints} Points
                                 </>
                               )}
-                            </Button>
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
+                            </button>
+
+                            <button
+                              className="btn-layeredge-ghost px-4 py-2 rounded-lg text-sm font-medium hover-lift border border-border"
                               onClick={() => window.open(`https://x.com/i/web/status/${tweet.tweetId}`, '_blank')}
                             >
-                              <ExternalLink className="h-4 w-4 mr-2" />
+                              <ArrowTopRightOnSquareIcon className="h-4 w-4 mr-2" />
                               View Tweet
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
     </div>
   )
 }

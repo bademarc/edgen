@@ -1,10 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Loader2, Activity, Search, BarChart3, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { motion } from 'framer-motion'
+import {
+  ChartBarIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ArrowPathIcon,
+  MagnifyingGlassIcon,
+  CpuChipIcon
+} from '@heroicons/react/24/outline'
 
 interface TrackingStatus {
   isRunning: boolean
@@ -36,20 +42,12 @@ export default function TrackingDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => {
-    fetchStatus()
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchStatus, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       setError(null)
       if (!status) setLoading(true)
       else setRefreshing(true)
-      
+
       const response = await fetch('/api/tracking/status')
       const data: TrackingStatusResponse = await response.json()
 
@@ -65,7 +63,15 @@ export default function TrackingDashboard() {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [status])
+
+  useEffect(() => {
+    fetchStatus()
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchStatus, 30000)
+    return () => clearInterval(interval)
+  }, [fetchStatus])
 
   const formatUptime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
@@ -73,197 +79,209 @@ export default function TrackingDashboard() {
     return `${hours}h ${minutes}m`
   }
 
-  const getMethodSuccessRate = (method: any) => {
+  const getMethodSuccessRate = (method: { success: number; total: number }) => {
     if (method.total === 0) return 0
     return Math.round((method.success / method.total) * 100)
   }
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading tracking status...</span>
-        </CardContent>
-      </Card>
+      <div className="card-layeredge p-8">
+        <div className="flex items-center justify-center">
+          <ArrowPathIcon className="h-8 w-8 animate-spin text-layeredge-orange" />
+          <span className="ml-2 text-foreground">Loading tracking status...</span>
+        </div>
+      </div>
     )
   }
 
   if (error || !status) {
     return (
-      <Card>
-        <CardContent className="p-8">
-          <div className="text-center">
-            <XCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Status</h3>
-            <p className="text-gray-500 mb-4">{error || 'Unknown error occurred'}</p>
-            <Button onClick={fetchStatus}>Try Again</Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="card-layeredge p-8">
+        <div className="text-center">
+          <XCircleIcon className="h-12 w-12 mx-auto text-red-500 mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">Error Loading Status</h3>
+          <p className="text-muted-foreground mb-4">{error || 'Unknown error occurred'}</p>
+          <button onClick={fetchStatus} className="btn-layeredge-primary">
+            Try Again
+          </button>
+        </div>
+      </div>
     )
   }
 
   return (
     <div className="space-y-6">
       {/* System Status */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      <motion.div
+        className="card-layeredge hover-glow"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <CpuChipIcon className="h-5 w-5 text-layeredge-orange" />
                 Tweet Tracking System
-              </CardTitle>
-              <CardDescription>
+              </h2>
+              <p className="text-muted-foreground mt-1">
                 Enhanced multi-method tweet discovery and monitoring
-              </CardDescription>
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge 
-                variant={status.isRunning ? "default" : "destructive"}
-                className="flex items-center gap-1"
-              >
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                status.isRunning
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                  : 'bg-red-500/20 text-red-400 border border-red-500/30'
+              }`}>
                 {status.isRunning ? (
-                  <CheckCircle className="h-3 w-3" />
+                  <CheckCircleIcon className="h-3 w-3" />
                 ) : (
-                  <XCircle className="h-3 w-3" />
+                  <XCircleIcon className="h-3 w-3" />
                 )}
                 {status.isRunning ? 'Running' : 'Stopped'}
-              </Badge>
-              <Button 
-                onClick={fetchStatus} 
-                variant="outline" 
-                size="sm"
+              </span>
+              <button
+                onClick={fetchStatus}
+                className="btn-layeredge-ghost px-3 py-1 text-sm"
                 disabled={refreshing}
               >
                 {refreshing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
                 ) : (
                   'Refresh'
                 )}
-              </Button>
+              </button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{status.keywords.length}</div>
-              <div className="text-sm text-gray-500">Keywords</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="text-center p-4 bg-background-secondary rounded-lg border border-border">
+              <div className="text-2xl font-bold text-layeredge-blue">{status.keywords.length}</div>
+              <div className="text-sm text-muted-foreground">Keywords</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{status.currentMethod}</div>
-              <div className="text-sm text-gray-500">Current Method</div>
+            <div className="text-center p-4 bg-background-secondary rounded-lg border border-border">
+              <div className="text-2xl font-bold text-green-400">{status.currentMethod}</div>
+              <div className="text-sm text-muted-foreground">Current Method</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{status.trackedUsers}</div>
-              <div className="text-sm text-gray-500">Tracked Users</div>
+            <div className="text-center p-4 bg-background-secondary rounded-lg border border-border">
+              <div className="text-2xl font-bold text-purple-400">{status.trackedUsers}</div>
+              <div className="text-sm text-muted-foreground">Tracked Users</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{formatUptime(status.uptime)}</div>
-              <div className="text-sm text-gray-500">Uptime</div>
+            <div className="text-center p-4 bg-background-secondary rounded-lg border border-border">
+              <div className="text-2xl font-bold text-layeredge-orange">{formatUptime(status.uptime)}</div>
+              <div className="text-sm text-muted-foreground">Uptime</div>
             </div>
           </div>
-          
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <h4 className="font-medium mb-2">Monitored Keywords:</h4>
+
+          <div className="p-4 bg-background-secondary rounded-lg border border-border">
+            <h4 className="font-medium mb-3 text-foreground">Monitored Keywords:</h4>
             <div className="flex flex-wrap gap-2">
               {status.keywords.map((keyword, index) => (
-                <Badge key={index} variant="outline">
+                <span key={index} className="px-2 py-1 bg-muted text-muted-foreground rounded text-sm border border-border">
                   {keyword}
-                </Badge>
+                </span>
               ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Total Tweets
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
-              {status.stats.totalTweets}
-            </div>
-            <p className="text-sm text-gray-500">Last 24 hours</p>
-          </CardContent>
-        </Card>
+        <motion.div
+          className="card-layeredge hover-glow p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <h3 className="text-lg font-medium text-foreground flex items-center gap-2 mb-4">
+            <ChartBarIcon className="h-4 w-4 text-layeredge-blue" />
+            Total Tweets
+          </h3>
+          <div className="text-3xl font-bold text-layeredge-blue">
+            {status.stats.totalTweets}
+          </div>
+          <p className="text-sm text-muted-foreground">Last 24 hours</p>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Claimed Tweets
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              {status.stats.claimedTweets}
-            </div>
-            <p className="text-sm text-gray-500">Automatically processed</p>
-          </CardContent>
-        </Card>
+        <motion.div
+          className="card-layeredge hover-glow p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <h3 className="text-lg font-medium text-foreground flex items-center gap-2 mb-4">
+            <CheckCircleIcon className="h-4 w-4 text-green-400" />
+            Claimed Tweets
+          </h3>
+          <div className="text-3xl font-bold text-green-400">
+            {status.stats.claimedTweets}
+          </div>
+          <p className="text-sm text-muted-foreground">Automatically processed</p>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              Unclaimed Tweets
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
-              {status.stats.unclaimedTweets}
-            </div>
-            <p className="text-sm text-gray-500">Awaiting user claim</p>
-          </CardContent>
-        </Card>
+        <motion.div
+          className="card-layeredge hover-glow p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <h3 className="text-lg font-medium text-foreground flex items-center gap-2 mb-4">
+            <MagnifyingGlassIcon className="h-4 w-4 text-layeredge-orange" />
+            Unclaimed Tweets
+          </h3>
+          <div className="text-3xl font-bold text-layeredge-orange">
+            {status.stats.unclaimedTweets}
+          </div>
+          <p className="text-sm text-muted-foreground">Awaiting user claim</p>
+        </motion.div>
       </div>
 
       {/* Method Performance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
+      <motion.div
+        className="card-layeredge hover-glow"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      >
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2 mb-4">
+            <ChartBarIcon className="h-5 w-5 text-layeredge-orange" />
             Method Performance
-          </CardTitle>
-          <CardDescription>
+          </h2>
+          <p className="text-muted-foreground mb-6">
             Success rates for different tweet discovery methods
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+
           {status.stats.methodStats.length === 0 ? (
             <div className="text-center py-8">
-              <Clock className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No data yet</h3>
-              <p className="text-gray-500">
+              <ClockIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No data yet</h3>
+              <p className="text-muted-foreground">
                 Method performance data will appear after the system runs for a while.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               {status.stats.methodStats.map((method, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={index} className="flex items-center justify-between p-4 bg-background-secondary rounded-lg border border-border">
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline">{method.method}</Badge>
-                    <span className="text-sm text-gray-600">
+                    <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-sm border border-border">
+                      {method.method}
+                    </span>
+                    <span className="text-sm text-foreground">
                       {method.success} tweets found in {method.total} attempts
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium">
+                    <div className="text-sm font-medium text-foreground">
                       {getMethodSuccessRate(method)}% success
                     </div>
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
+                    <div className="w-20 bg-muted rounded-full h-2">
+                      <div
+                        className="bg-layeredge-blue h-2 rounded-full transition-all duration-300"
                         style={{ width: `${getMethodSuccessRate(method)}%` }}
                       ></div>
                     </div>
@@ -272,11 +290,11 @@ export default function TrackingDashboard() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
 
       {/* Last Updated */}
-      <div className="text-center text-sm text-gray-500">
+      <div className="text-center text-sm text-muted-foreground">
         Last updated: {new Date(status.timestamp).toLocaleString()}
       </div>
     </div>
