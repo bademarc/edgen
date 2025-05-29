@@ -19,6 +19,7 @@ export function ModernBackground({ count = 5000 }) {
     inSphere(particles, { radius: 1.5 })
   }, [particles])
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   useFrame((state, _delta) => {
     if (!ref.current) return
 

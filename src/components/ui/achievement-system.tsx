@@ -243,7 +243,9 @@ function AchievementCard({ achievement, onShare }: { achievement: Achievement, o
   )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function AchievementSystem({ className, _userStats }: AchievementSystemProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [achievements, _setAchievements] = useState<Achievement[]>(mockAchievements)
   const [filter, setFilter] = useState<'all' | 'unlocked' | 'locked'>('all')
   const [category, setCategory] = useState<'all' | Achievement['category']>('all')

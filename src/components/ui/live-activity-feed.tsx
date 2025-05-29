@@ -91,6 +91,7 @@ function generateMockActivity(): ActivityItem {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ActivityIcon({ type, _achievement }: { type: ActivityItem['type'], _achievement?: ActivityItem['achievement'] }) {
   switch (type) {
     case 'tweet':
@@ -128,6 +129,7 @@ function formatTimeAgo(date: Date) {
 
 export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedProps) {
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_isLive, _setIsLive] = useState(true)
 
   // Initialize with some mock data
