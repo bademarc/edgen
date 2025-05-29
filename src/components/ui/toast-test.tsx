@@ -29,7 +29,7 @@ export function ToastTest() {
       name: 'Welcome Message',
       icon: UserIcon,
       action: () => layeredgeToast.welcome('CryptoEnthusiast'),
-      variant: 'triple' as const
+      variant: 'layeredge' as const
     },
     {
       name: 'Rank Up',
@@ -79,7 +79,7 @@ export function ToastTest() {
             </Button>
           ))}
         </div>
-        
+
         <div className="mt-6 pt-4 border-t border-border">
           <Button
             variant="outline"

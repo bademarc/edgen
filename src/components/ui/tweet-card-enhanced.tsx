@@ -40,7 +40,7 @@ interface TweetCardEnhancedProps {
   isUpdating?: boolean
   onUpdateEngagement?: (tweetId: string) => Promise<void>
   showUpdateButton?: boolean
-  variant?: 'default' | 'layeredge' | 'elevated' | 'glass' | 'neuro'
+  variant?: 'default' | 'layeredge' | 'elevated' | 'glass' | 'interactive'
 }
 
 export function TweetCardEnhanced({

@@ -47,10 +47,10 @@ function useAnimatedCounter(end: number, duration: number = 2000, start: number 
       const animate = (timestamp: number) => {
         if (!startTime) startTime = timestamp
         const progress = Math.min((timestamp - startTime) / duration, 1)
-        
+
         const easeOutQuart = 1 - Math.pow(1 - progress, 4)
         const currentCount = Math.floor(easeOutQuart * (end - start) + start)
-        
+
         setCount(currentCount)
 
         if (progress < 1) {
@@ -71,7 +71,7 @@ function FloatingBitcoin({ delay = 0 }: { delay?: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 100, rotate: 0 }}
-      animate={{ 
+      animate={{
         opacity: [0, 0.6, 0],
         y: [100, -100],
         rotate: [0, 360],
@@ -206,7 +206,7 @@ export function HeroEnhanced({ className }: HeroEnhancedProps) {
           {/* CTA Buttons */}
           <motion.div variants={itemVariants} className="mb-16">
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button variant="triple" size="xl" className="group relative overflow-hidden">
+              <Button variant="layeredge" size="xl" className="group relative overflow-hidden">
                 <span className="relative z-10">Join Community</span>
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"

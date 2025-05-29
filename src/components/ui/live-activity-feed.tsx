@@ -197,7 +197,7 @@ export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedP
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
-                      <ActivityIcon type={activity.type} achievement={activity.achievement} />
+                      <ActivityIcon type={activity.type} _achievement={activity.achievement} />
                       <span className="text-sm font-medium text-foreground truncate">
                         {activity.user.name}
                       </span>

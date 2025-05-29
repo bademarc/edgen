@@ -29,7 +29,9 @@ const labelVariants = cva(
 
 export interface LabelProps
   extends React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>,
-    VariantProps<typeof labelVariants> {}
+    VariantProps<typeof labelVariants> {
+  children?: React.ReactNode
+}
 
 const Label = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
