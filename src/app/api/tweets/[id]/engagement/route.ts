@@ -102,7 +102,7 @@ export async function POST(
     }
 
     // Calculate new points
-    const newTotalPoints = calculatePoints(likes, retweets, replies)
+    const newTotalPoints = calculatePoints({ likes, retweets, comments: replies })
     const pointsDifference = newTotalPoints - tweet.totalPoints
 
     // Update tweet in database

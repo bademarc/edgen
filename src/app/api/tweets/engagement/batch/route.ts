@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     for (const tweet of validTweets) {
       const engagementResult = engagementResults.find(result => result.url === tweet.url)
-      
+
       if (!engagementResult?.metrics) {
         console.warn(`Failed to fetch engagement metrics for tweet ${tweet.id}`)
         continue
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Calculate new points
-      const newTotalPoints = calculatePoints(likes, retweets, replies)
+      const newTotalPoints = calculatePoints({ likes, retweets, comments: replies })
       const pointsDifference = newTotalPoints - tweet.totalPoints
 
       // Update tweet in database

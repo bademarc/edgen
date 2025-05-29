@@ -367,7 +367,7 @@ export class TweetTracker {
   async awardPoints(userId: string, tweetData: TweetData, source: string): Promise<number> {
     const basePoints = 5
     const metrics = tweetData.public_metrics || { like_count: 0, retweet_count: 0, reply_count: 0 }
-    const totalPoints = calculatePoints(metrics.like_count, metrics.retweet_count, metrics.reply_count)
+    const totalPoints = calculatePoints({ likes: metrics.like_count, retweets: metrics.retweet_count, comments: metrics.reply_count })
 
     const tweetUrl = `https://x.com/i/web/status/${tweetData.id}`
 
@@ -491,7 +491,7 @@ export class TweetTracker {
    */
   calculatePoints(tweetData: TweetData): number {
     const metrics = tweetData.public_metrics || { like_count: 0, retweet_count: 0, reply_count: 0 }
-    return calculatePoints(metrics.like_count, metrics.retweet_count, metrics.reply_count)
+    return calculatePoints({ likes: metrics.like_count, retweets: metrics.retweet_count, comments: metrics.reply_count })
   }
 
   /**

@@ -90,11 +90,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate points
-    const totalPoints = calculatePoints(
-      unclaimedTweet.likes,
-      unclaimedTweet.retweets,
-      unclaimedTweet.replies
-    )
+    const totalPoints = calculatePoints({
+      likes: unclaimedTweet.likes,
+      retweets: unclaimedTweet.retweets,
+      comments: unclaimedTweet.replies
+    })
 
     // Start transaction to claim the tweet
     const result = await prisma.$transaction(async (tx) => {
@@ -231,7 +231,7 @@ export async function GET(request: NextRequest) {
     // Calculate potential points for each tweet
     const tweetsWithPoints = unclaimedTweets.map(tweet => ({
       ...tweet,
-      potentialPoints: calculatePoints(tweet.likes, tweet.retweets, tweet.replies),
+      potentialPoints: calculatePoints({ likes: tweet.likes, retweets: tweet.retweets, comments: tweet.replies }),
     }))
 
     return NextResponse.json({

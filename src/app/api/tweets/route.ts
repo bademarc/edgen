@@ -171,11 +171,11 @@ export async function POST(request: NextRequest) {
     console.log('Content validation passed!')
 
     const basePoints = 5
-    const totalPoints = calculatePoints(
-      tweetData.likes,
-      tweetData.retweets,
-      tweetData.replies
-    )
+    const totalPoints = calculatePoints({
+      likes: tweetData.likes,
+      retweets: tweetData.retweets,
+      comments: tweetData.replies
+    })
 
     // Create tweet record
     const tweet = await prisma.tweet.create({

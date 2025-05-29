@@ -333,11 +333,11 @@ export class TwitterMonitoringService {
         // Calculate points (with fallback for missing metrics)
         const metrics = tweet.public_metrics || { like_count: 0, retweet_count: 0, reply_count: 0 }
         const basePoints = 5
-        const totalPoints = calculatePoints(
-          metrics.like_count,
-          metrics.retweet_count,
-          metrics.reply_count
-        )
+        const totalPoints = calculatePoints({
+          likes: metrics.like_count,
+          retweets: metrics.retweet_count,
+          comments: metrics.reply_count
+        })
 
         // Create tweet record
         const newTweet = await prisma.tweet.create({
@@ -416,7 +416,7 @@ export class TwitterMonitoringService {
 
         // Calculate points
         const basePoints = 5
-        const bonusPoints = calculatePoints(tweet.likes, tweet.retweets, tweet.replies) - basePoints
+        const bonusPoints = calculatePoints({ likes: tweet.likes, retweets: tweet.retweets, comments: tweet.replies }) - basePoints
         const totalPoints = basePoints + bonusPoints
 
         // Save tweet to database
