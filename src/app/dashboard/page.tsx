@@ -4,22 +4,20 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/components/AuthProvider'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
 import {
-  SparklesIcon,
-  TrophyIcon,
-  ChatBubbleLeftRightIcon,
-  CalendarIcon,
-  ArrowTrendingUpIcon,
-  ArrowRightIcon,
-  ArrowPathIcon,
-  HeartIcon,
-  ArrowPathRoundedSquareIcon,
-  ChatBubbleLeftIcon
-} from '@heroicons/react/24/outline'
-import { formatNumber, formatDate } from '@/lib/utils'
-import { useRealTimeEngagement } from '@/hooks/useRealTimeEngagement'
-import { MonitoringStatus } from '@/components/MonitoringStatus'
+  Shield,
+  TrendingUp,
+  Activity,
+  Target,
+  Calendar
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+
 
 interface DashboardStats {
   totalPoints: number
@@ -52,21 +50,6 @@ export default function DashboardPage() {
   const [recentTweets, setRecentTweets] = useState<RecentTweet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Real-time engagement updates
-  const {
-    updatedTweets,
-    isUpdating,
-    lastUpdateTime,
-    updateCount,
-    error: engagementError,
-    forceUpdate,
-    retryCount
-  } = useRealTimeEngagement({
-    tweets: recentTweets,
-    enabled: recentTweets.length > 0,
-    updateInterval: 30000, // 30 seconds
-  })
 
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return
@@ -111,19 +94,27 @@ export default function DashboardPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-1/4 mb-8"></div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-card border border-border rounded-lg p-6">
-                  <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
-                  <div className="h-8 bg-muted rounded w-3/4"></div>
-                </div>
-              ))}
+      <div className="min-h-screen bg-background">
+        <div className="py-12">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="space-y-8">
+              <Skeleton className="h-8 w-1/4" />
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i} variant="professional">
+                    <CardContent className="pt-6">
+                      <Skeleton className="h-4 w-1/2 mb-4" />
+                      <Skeleton className="h-8 w-3/4" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Card variant="professional">
+                <CardContent className="pt-6">
+                  <Skeleton className="h-64 w-full" />
+                </CardContent>
+              </Card>
             </div>
-            <div className="h-64 bg-muted rounded"></div>
           </div>
         </div>
       </div>
@@ -136,271 +127,187 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground mb-4">Error Loading Dashboard</h1>
-            <p className="text-muted-foreground mb-6">{error}</p>
-            <button
-              onClick={fetchDashboardData}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
-              Try Again
-            </button>
+      <div className="min-h-screen bg-background">
+        <div className="py-12">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl mx-auto">
+              <Alert variant="destructive">
+                <AlertTitle>Error Loading Dashboard</AlertTitle>
+                <AlertDescription className="mt-2">
+                  {error}
+                </AlertDescription>
+              </Alert>
+              <div className="text-center mt-6">
+                <Button
+                  variant="layeredge"
+                  onClick={fetchDashboardData}
+                >
+                  Try Again
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
+  // Calculate trust score and tier
+  const trustScore = stats?.totalPoints || 0
+  const getTier = (score: number) => {
+    if (score >= 9000) return { name: "Diamond", color: "text-primary", progress: 100 }
+    if (score >= 7000) return { name: "Platinum", color: "text-gray-300", progress: ((score - 7000) / 2000) * 100 }
+    if (score >= 5000) return { name: "Gold", color: "text-yellow-400", progress: ((score - 5000) / 2000) * 100 }
+    if (score >= 3000) return { name: "Silver", color: "text-gray-400", progress: ((score - 3000) / 2000) * 100 }
+    return { name: "Bronze", color: "text-amber-600", progress: (score / 3000) * 100 }
+  }
+
+  const currentTier = getTier(trustScore)
+
   return (
-    <div className="min-h-screen py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, {user.name || user.xUsername}!
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Here&apos;s your community engagement overview
-          </p>
-        </motion.div>
+    <div className="min-h-screen bg-background">
+      <div className="py-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-8"
+          >
+            <h1 className="text-3xl font-bold text-foreground">Welcome back, {user.name || user.xUsername}</h1>
+            <p className="text-muted-foreground mt-2">Track your LayerEdge community engagement and points</p>
+          </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8"
-        >
-          <div className="card-layeredge p-6 hover-lift">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="p-3 rounded-xl bg-layeredge-orange/10">
-                  <SparklesIcon className="h-8 w-8 text-layeredge-orange" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total Points</p>
-                <p className="text-2xl font-bold text-layeredge-gradient">
-                  {stats ? formatNumber(stats.totalPoints) : '0'}
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <Card variant="professional">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Trust Score</CardTitle>
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{trustScore.toLocaleString()}</div>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Badge variant="layeredge" className="text-xs">{currentTier.name}</Badge>
+                    <span className="text-xs text-muted-foreground">Tier</span>
+                  </div>
+                  <Progress value={currentTier.progress} className="mt-3" />
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <div className="card-layeredge p-6 hover-lift">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="p-3 rounded-xl bg-layeredge-blue/10">
-                  <TrophyIcon className="h-8 w-8 text-layeredge-blue" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Rank</p>
-                <p className="text-2xl font-bold text-gradient-blue">
-                  #{stats?.rank || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="card-layeredge p-6 hover-lift">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="p-3 rounded-xl bg-success/10">
-                  <ChatBubbleLeftRightIcon className="h-8 w-8 text-success" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Tweets Submitted</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {stats?.tweetsSubmitted || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="card-layeredge p-6 hover-lift">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="p-3 rounded-xl bg-success/10">
-                  <ArrowTrendingUpIcon className="h-8 w-8 text-success" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">This Week</p>
-                <p className="text-2xl font-bold text-success">
-                  +{stats?.thisWeekPoints || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Automatic Monitoring Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-8"
-        >
-          <div className="card-layeredge-elevated p-6 bg-gradient-to-r from-layeredge-orange/5 to-layeredge-blue/5">
-            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-layeredge-orange/10">
-                <SparklesIcon className="h-5 w-5 text-layeredge-orange" />
-              </div>
-              Automatic Tweet Monitoring
-            </h2>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-muted-foreground mb-2">
-                    We automatically track your tweets that mention @layeredge or $EDGEN and award points based on engagement.
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Card variant="professional">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Network Rank</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">#{stats?.rank || 'N/A'}</div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Among all contributors
                   </p>
-                </div>
-                <Link
-                  href="/leaderboard"
-                  className="btn-layeredge-secondary px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover-lift"
-                >
-                  <TrophyIcon className="h-5 w-5" />
-                  View Leaderboard
-                </Link>
-              </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-              {/* Monitoring Status */}
-              <MonitoringStatus />
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <Card variant="professional">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Contributions</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats?.tweetsSubmitted || 0}</div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Total submissions
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Card variant="professional">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">This Week</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">+{stats?.thisWeekPoints || 0}</div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Points earned
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
-        </motion.div>
 
-        {/* Recent Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <div className="card-layeredge p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-layeredge-blue/10">
-                  <ChatBubbleLeftRightIcon className="h-5 w-5 text-layeredge-blue" />
-                </div>
-                Recent Submissions
-              </h2>
-              <div className="flex items-center space-x-3">
-                {lastUpdateTime && (
-                  <div className="text-xs text-muted-foreground">
-                    Last updated: {lastUpdateTime.toLocaleTimeString()}
+          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+          >
+            <Card variant="professional">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Recent Contributions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recentTweets.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentTweets.slice(0, 3).map((tweet) => (
+                      <div key={tweet.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(tweet.createdAt).toLocaleDateString()}
+                          </p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>❤️ {tweet.likes}</span>
+                            <span>🔄 {tweet.retweets}</span>
+                            <span>💬 {tweet.replies}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant="points">+{tweet.totalPoints} points</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No contributions yet</p>
+                    <Button variant="outline" className="mt-4" asChild>
+                      <a href="/submit">Make Your First Contribution</a>
+                    </Button>
                   </div>
                 )}
-                {updateCount > 0 && (
-                  <div className="text-xs text-layeredge-blue">
-                    {updateCount} updates
-                  </div>
-                )}
-                <button
-                  onClick={forceUpdate}
-                  disabled={isUpdating}
-                  className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
-                  title="Update engagement metrics"
-                >
-                  <ArrowPathIcon className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
-            </div>
-
-            {engagementError && (
-              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <p className="text-sm text-destructive">
-                  Error updating engagement metrics: {engagementError}
-                  {retryCount > 0 && ` (Retry ${retryCount}/3)`}
-                </p>
-              </div>
-            )}
-
-            {updatedTweets.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
-                  <ChatBubbleLeftRightIcon className="h-12 w-12 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">No tweets found yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Start tweeting about @layeredge or $EDGEN and we&apos;ll automatically track them for you!
-                </p>
-                <div className="text-sm text-muted-foreground bg-muted/20 rounded-lg p-4 max-w-md mx-auto">
-                  <p className="font-medium mb-2">How it works:</p>
-                  <ul className="text-left space-y-1">
-                    <li>• Tweet about @layeredge or mention $EDGEN</li>
-                    <li>• We automatically detect and track your tweets</li>
-                    <li>• Earn points based on likes, retweets, and replies</li>
-                  </ul>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {updatedTweets.map((tweet, index) => (
-                  <motion.div
-                    key={tweet.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
-                    className="card-layeredge-interactive p-4 hover-lift"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <CalendarIcon className="h-4 w-4" />
-                        <span>{formatDate(tweet.createdAt)}</span>
-                      </div>
-                      <div className="badge-layeredge-primary">
-                        <SparklesIcon className="h-3 w-3 mr-1" />
-                        {tweet.totalPoints} points
-                      </div>
-                    </div>
-
-                    <p className="text-foreground mb-3 line-clamp-2">
-                      {tweet.content}
-                    </p>
-
-                    <div className="divider-layeredge my-3"></div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 text-sm">
-                        <div className="flex items-center space-x-2 text-red-400 hover:text-red-300 transition-colors group">
-                          <HeartIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                          <span className="font-medium">{formatNumber(tweet.likes)}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors group">
-                          <ArrowPathRoundedSquareIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                          <span className="font-medium">{formatNumber(tweet.retweets)}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors group">
-                          <ChatBubbleLeftIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                          <span className="font-medium">{formatNumber(tweet.replies)}</span>
-                        </div>
-                      </div>
-                      <a
-                        href={tweet.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-layeredge-orange hover:text-layeredge-orange-light text-sm font-medium transition-colors flex items-center gap-1 hover-lift"
-                      >
-                        View Tweet
-                        <ArrowRightIcon className="h-4 w-4" />
-                      </a>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </div>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     </div>
   )
 }
+

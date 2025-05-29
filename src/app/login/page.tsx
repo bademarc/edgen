@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { useAuth } from '@/components/AuthProvider'
 import {
   ShieldCheckIcon,
@@ -97,7 +98,17 @@ function LoginContent() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <Image
+            src="/icon/-AlLx9IW_400x400.png"
+            alt="LayerEdge Logo"
+            width={64}
+            height={64}
+            className="w-16 h-16 rounded-xl"
+          />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     )
   }
@@ -129,8 +140,14 @@ function LoginContent() {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-6">
-            <span className="text-2xl font-bold text-white">LE</span>
+          <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-6 p-2">
+            <Image
+              src="/icon/-AlLx9IW_400x400.png"
+              alt="LayerEdge Logo"
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-full"
+            />
           </div>
           <h2 className="text-3xl font-bold text-foreground">
             Join the LayerEdge Community
@@ -254,7 +271,17 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <Image
+            src="/icon/-AlLx9IW_400x400.png"
+            alt="LayerEdge Logo"
+            width={64}
+            height={64}
+            className="w-16 h-16 rounded-xl"
+          />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     }>
       <LoginContent />

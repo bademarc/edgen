@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
+import { ThemeProvider } from 'next-themes'
 import { AuthProvider } from './AuthProvider'
 
 interface ProvidersProps {
@@ -9,8 +10,15 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <AuthProvider>
-      {children}
-    </AuthProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={true}
+      disableTransitionOnChange={false}
+    >
+      <AuthProvider>
+        {children}
+      </AuthProvider>
+    </ThemeProvider>
   )
 }

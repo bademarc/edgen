@@ -34,7 +34,21 @@ const nextConfig = {
       ...config.resolve.alias,
     };
 
+    // Ensure framer-motion is properly handled
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+
     return config;
+  },
+  // Optimize chunk splitting for better performance
+  experimental: {
+    optimizePackageImports: ['framer-motion', 'lucide-react'],
   },
 };
 

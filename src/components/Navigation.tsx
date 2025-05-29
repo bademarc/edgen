@@ -4,217 +4,241 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from './AuthProvider'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Button } from "@/components/ui/button"
 import {
-  Bars3Icon,
-  XMarkIcon,
-  HomeIcon,
-  TrophyIcon,
-  InformationCircleIcon,
-  QuestionMarkCircleIcon,
-  ChartBarIcon,
-  ChatBubbleLeftRightIcon
-} from '@heroicons/react/24/outline'
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu"
+import { Menu, X } from "lucide-react"
 import { cn } from '@/lib/utils'
-
-const navigation = [
-  { name: 'Home', href: '/', icon: HomeIcon },
-  { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon, requiresAuth: true },
-  { name: 'Recent Submissions', href: '/recent', icon: ChatBubbleLeftRightIcon },
-  { name: 'Leaderboard', href: '/leaderboard', icon: TrophyIcon },
-  { name: 'About', href: '/about', icon: InformationCircleIcon },
-  { name: 'FAQ', href: '/faq', icon: QuestionMarkCircleIcon },
-]
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, isLoading, signInWithTwitter, signOut } = useAuth()
 
-  const filteredNavigation = navigation.filter(item =>
-    !item.requiresAuth || (item.requiresAuth && user)
-  )
-
   return (
-    <nav className="sticky top-0 z-50 bg-card/90 backdrop-blur-xl border-b border-border/50 shadow-lg">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-3 hover-lift group">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-layeredge-orange to-layeredge-orange-light flex items-center justify-center shadow-lg hover-glow group-hover:scale-105 transition-all duration-300">
-                <span className="text-sm font-bold text-black">LE</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-foreground group-hover:text-layeredge-orange transition-colors">
-                  LayerEdge
-                </span>
-                <span className="text-sm text-layeredge-gradient font-semibold -mt-1">
-                  $Edgen Community
-                </span>
-              </div>
-            </Link>
-          </div>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <Link href="/" className="flex items-center space-x-2">
+          <Image
+            src="/icon/-AlLx9IW_400x400.png"
+            alt="LayerEdge Logo"
+            width={32}
+            height={32}
+            className="w-8 h-8 rounded-lg"
+          />
+          <span className="font-bold text-xl">LayerEdge</span>
+        </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-2">
-              {filteredNavigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover-lift',
-                    'text-muted-foreground hover:text-layeredge-orange hover:bg-layeredge-orange/10 border border-transparent hover:border-layeredge-orange/20'
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.name}</span>
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center space-x-6">
+          <NavigationMenu>
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <NavigationMenuTrigger>Community</NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+                    <li className="row-span-3">
+                      <NavigationMenuLink asChild>
+                        <a
+                          className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
+                          href="/dashboard"
+                        >
+                          <div className="mb-2 mt-4 text-lg font-medium">Community Platform</div>
+                          <p className="text-sm leading-tight text-muted-foreground">
+                            Earn points for X/Twitter engagement with LayerEdge content
+                          </p>
+                        </a>
+                      </NavigationMenuLink>
+                    </li>
+                    <ListItem href="/leaderboard" title="Leaderboard">
+                      See top community contributors
+                    </ListItem>
+                    <ListItem href="/recent" title="Recent Activity">
+                      Latest community engagement
+                    </ListItem>
+                    <ListItem href="/submit" title="Submit Tweet">
+                      Submit your LayerEdge tweets
+                    </ListItem>
+                  </ul>
+                </NavigationMenuContent>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/about" legacyBehavior passHref>
+                  <NavigationMenuLink
+                    className={cn(
+                      "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                    )}
+                  >
+                    About
+                  </NavigationMenuLink>
                 </Link>
-              ))}
-            </div>
-          </div>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/faq" legacyBehavior passHref>
+                  <NavigationMenuLink
+                    className={cn(
+                      "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                    )}
+                  >
+                    FAQ
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
 
           {/* Auth Button */}
-          <div className="hidden md:block">
-            {isLoading ? (
-              <div className="h-10 w-24 skeleton-layeredge rounded-lg" />
-            ) : user ? (
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-3 card-layeredge px-4 py-2">
-                  {user.image && (
-                    <div className="relative">
-                      <Image
-                        src={user.image}
-                        alt={user.name || 'User'}
-                        width={32}
-                        height={32}
-                        className="h-8 w-8 rounded-full ring-2 ring-border hover:ring-layeredge-orange transition-all duration-300"
-                      />
-                      <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-success rounded-full border-2 border-card"></div>
-                    </div>
-                  )}
-                  <div className="text-sm">
-                    <p className="text-foreground font-medium">
-                      {user.name || user.xUsername}
+          {isLoading ? (
+            <div className="h-10 w-24 bg-muted animate-pulse rounded-lg" />
+          ) : user ? (
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 bg-card border rounded-lg px-4 py-2">
+                {user.image && (
+                  <Image
+                    src={user.image}
+                    alt={user.name || 'User'}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded-full"
+                  />
+                )}
+                <div className="text-sm">
+                  <p className="font-medium">
+                    {user.name || user.xUsername}
+                  </p>
+                  {user.totalPoints !== undefined && (
+                    <p className="text-xs text-muted-foreground">
+                      {user.totalPoints} points
                     </p>
-                    {user.totalPoints !== undefined && (
-                      <div className="badge-layeredge-primary text-xs">
-                        {user.totalPoints} points
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => signOut()}
-                  className="btn-layeredge-ghost px-4 py-2 rounded-lg text-sm font-medium hover-lift"
-                >
-                  Sign out
-                </button>
               </div>
-            ) : (
-              <button
-                onClick={() => signInWithTwitter()}
-                className="btn-layeredge-primary px-6 py-2 rounded-lg text-sm font-semibold hover-lift"
-              >
-                Sign in with X
-              </button>
-            )}
-          </div>
-
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:text-layeredge-orange hover:bg-layeredge-orange/10 transition-all duration-300 border border-transparent hover:border-layeredge-orange/20"
-            >
-              {mobileMenuOpen ? (
-                <XMarkIcon className="h-6 w-6" />
-              ) : (
-                <Bars3Icon className="h-6 w-6" />
-              )}
-            </button>
-          </div>
+              <Button variant="ghost" onClick={() => signOut()}>
+                Sign out
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => signInWithTwitter()}>
+              Sign in with X
+            </Button>
+          )}
         </div>
-      </div>
 
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-card/95 backdrop-blur-xl border-t border-border/50"
-          >
-            <div className="px-4 pt-4 pb-6 space-y-2">
-              {filteredNavigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium text-muted-foreground hover:text-layeredge-orange hover:bg-layeredge-orange/10 transition-all duration-300 border border-transparent hover:border-layeredge-orange/20"
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.name}</span>
-                </Link>
-              ))}
+        {/* Mobile Menu Button */}
+        <button className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
+      </nav>
 
-              {/* Mobile Auth */}
-              <div className="pt-4 mt-4 border-t border-border/50">
-                {user ? (
-                  <div className="space-y-3">
-                    <div className="card-layeredge p-4">
-                      <div className="flex items-center space-x-3">
-                        {user.image && (
-                          <div className="relative">
-                            <Image
-                              src={user.image}
-                              alt={user.name || 'User'}
-                              width={40}
-                              height={40}
-                              className="h-10 w-10 rounded-full ring-2 ring-border"
-                            />
-                            <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-success rounded-full border-2 border-card"></div>
-                          </div>
-                        )}
-                        <div className="text-sm">
-                          <p className="text-foreground font-medium">
-                            {user.name || user.xUsername}
+      {/* Mobile Navigation */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t">
+          <div className="container mx-auto px-4 py-4 space-y-3">
+            <Link href="/dashboard" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              Dashboard
+            </Link>
+            <Link href="/leaderboard" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              Leaderboard
+            </Link>
+            <Link href="/recent" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              Recent Activity
+            </Link>
+            <Link href="/about" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              About
+            </Link>
+            <Link href="/faq" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              FAQ
+            </Link>
+
+            {/* Mobile Auth */}
+            <div className="pt-4 border-t">
+              {user ? (
+                <div className="space-y-3">
+                  <div className="bg-card border rounded-lg p-4">
+                    <div className="flex items-center space-x-3">
+                      {user.image && (
+                        <Image
+                          src={user.image}
+                          alt={user.name || 'User'}
+                          width={40}
+                          height={40}
+                          className="h-10 w-10 rounded-full"
+                        />
+                      )}
+                      <div className="text-sm">
+                        <p className="font-medium">
+                          {user.name || user.xUsername}
+                        </p>
+                        {user.totalPoints !== undefined && (
+                          <p className="text-xs text-muted-foreground">
+                            {user.totalPoints} points
                           </p>
-                          {user.totalPoints !== undefined && (
-                            <div className="badge-layeredge-primary text-xs mt-1">
-                              {user.totalPoints} points
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        signOut()
-                        setMobileMenuOpen(false)
-                      }}
-                      className="w-full btn-layeredge-ghost px-4 py-3 rounded-lg text-base font-medium"
-                    >
-                      Sign out
-                    </button>
                   </div>
-                ) : (
-                  <button
+                  <Button
+                    variant="ghost"
+                    className="w-full"
                     onClick={() => {
-                      signInWithTwitter()
+                      signOut()
                       setMobileMenuOpen(false)
                     }}
-                    className="w-full btn-layeredge-primary px-4 py-3 rounded-lg text-base font-semibold"
                   >
-                    Sign in with X
-                  </button>
-                )}
-              </div>
+                    Sign out
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    signInWithTwitter()
+                    setMobileMenuOpen(false)
+                  }}
+                >
+                  Sign in with X
+                </Button>
+              )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </nav>
+          </div>
+        </div>
+      )}
+    </header>
+  )
+}
+
+const ListItem = ({
+  className,
+  title,
+  children,
+  href,
+  ...props
+}: {
+  className?: string
+  title: string
+  children: React.ReactNode
+  href: string
+}) => {
+  return (
+    <li>
+      <NavigationMenuLink asChild>
+        <a
+          href={href}
+          className={cn(
+            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            className,
+          )}
+          {...props}
+        >
+          <div className="text-sm font-medium leading-none">{title}</div>
+          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">{children}</p>
+        </a>
+      </NavigationMenuLink>
+    </li>
   )
 }

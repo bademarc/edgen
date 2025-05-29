@@ -62,11 +62,11 @@ export default function AboutPage() {
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
             About{' '}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              LayerEdge
+              EDGEN
             </span>
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted-foreground max-w-3xl mx-auto">
-            LayerEdge is revolutionizing the blockchain infrastructure landscape with our innovative
+            LayerEdge is revolutionizing the blockchain infrastructure landscape with innovative
             $Edgen token ecosystem. Join our community and be part of the future of decentralized technology.
           </p>
         </motion.div>
@@ -80,7 +80,7 @@ export default function AboutPage() {
           className="mb-20"
         >
           <div className="bg-card border border-border rounded-lg p-8">
-            <h2 className="text-3xl font-bold text-foreground mb-6">What is LayerEdge?</h2>
+            <h2 className="text-3xl font-bold text-foreground mb-6">What is EDGEN?</h2>
             <div className="prose prose-lg text-muted-foreground max-w-none">
               <p className="mb-4">
                 LayerEdge is a next-generation blockchain infrastructure platform designed to provide
@@ -227,7 +227,7 @@ export default function AboutPage() {
           </p>
           <div className="flex items-center justify-center gap-6">
             <a
-              href="https://x.com/i/communities/1890107751621363"
+              href="https://x.com/i/communities/1890107751621357663"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-semibold transition-colors"
