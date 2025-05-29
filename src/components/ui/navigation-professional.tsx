@@ -4,10 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '../AuthProvider'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Bars3Icon,
-  XMarkIcon,
   HomeIcon,
   TrophyIcon,
   InformationCircleIcon,

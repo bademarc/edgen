@@ -15,7 +15,6 @@ import {
   ChartBarIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
-import { cn } from '@/lib/utils'
 import { Button } from './button'
 import { Badge } from './badge'
 import { Card } from './card'

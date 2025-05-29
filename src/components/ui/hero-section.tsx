@@ -14,7 +14,6 @@ import { Button } from './button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Badge } from './badge'
 import { useAuth } from '../AuthProvider'
-import { useCounterAnimation } from '../../hooks/useCounterAnimation'
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls, PerspectiveCamera } from "@react-three/drei"
 import { Suspense } from "react"

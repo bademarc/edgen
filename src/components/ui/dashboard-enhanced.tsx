@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   SparklesIcon,
@@ -12,9 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
-import { Badge } from './badge'
 import { Progress } from './progress'
-import { Alert, AlertDescription, AlertTitle } from './alert'
 import { Input } from './input'
 import { Label } from './label'
 import { TweetCardEnhanced } from './tweet-card-enhanced'
@@ -216,7 +214,7 @@ export function DashboardEnhanced({
               </Button>
             </div>
           </CardHeader>
-          
+
           {showSubmitForm && (
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">

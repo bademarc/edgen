@@ -1,19 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from './card'
 import { Badge } from './badge'
 import { Progress } from './progress'
 import { Button } from './button'
 import { Separator } from './separator'
-import { 
-  TrophyIcon, 
-  SparklesIcon, 
+import {
+  TrophyIcon,
+  SparklesIcon,
   LockClosedIcon,
   ShareIcon,
-  CheckIcon,
-  StarIcon
+  CheckIcon
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 
@@ -179,8 +178,8 @@ function AchievementCard({ achievement, onShare }: { achievement: Achievement, o
                   {achievement.name}
                 </CardTitle>
                 <div className="flex items-center space-x-2 mt-1">
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     size="sm"
                     className={cn(
                       "capitalize",
@@ -244,18 +243,18 @@ function AchievementCard({ achievement, onShare }: { achievement: Achievement, o
   )
 }
 
-export function AchievementSystem({ className, userStats }: AchievementSystemProps) {
-  const [achievements, setAchievements] = useState<Achievement[]>(mockAchievements)
+export function AchievementSystem({ className, _userStats }: AchievementSystemProps) {
+  const [achievements, _setAchievements] = useState<Achievement[]>(mockAchievements)
   const [filter, setFilter] = useState<'all' | 'unlocked' | 'locked'>('all')
   const [category, setCategory] = useState<'all' | Achievement['category']>('all')
 
   const filteredAchievements = achievements.filter(achievement => {
-    const matchesFilter = filter === 'all' || 
+    const matchesFilter = filter === 'all' ||
       (filter === 'unlocked' && achievement.unlocked) ||
       (filter === 'locked' && !achievement.unlocked)
-    
+
     const matchesCategory = category === 'all' || achievement.category === category
-    
+
     return matchesFilter && matchesCategory
   })
 
@@ -264,7 +263,7 @@ export function AchievementSystem({ className, userStats }: AchievementSystemPro
 
   const handleShare = (achievement: Achievement) => {
     const text = `🎉 Just unlocked the "${achievement.name}" achievement on LayerEdge! ${achievement.icon}\n\n${achievement.description}\n\n+${achievement.points} points earned! 🚀\n\n#LayerEdge #Bitcoin #Achievement`
-    
+
     if (navigator.share) {
       navigator.share({
         title: `Achievement Unlocked: ${achievement.name}`,

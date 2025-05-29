@@ -6,10 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from './avatar'
 import { Badge } from './badge'
 import { Card, CardContent } from './card'
 import { Separator } from './separator'
-import { 
-  SparklesIcon, 
-  HeartIcon, 
-  ArrowPathRoundedSquareIcon, 
+import {
+  SparklesIcon,
+  HeartIcon,
+  ArrowPathRoundedSquareIcon,
   ChatBubbleLeftIcon,
   TrophyIcon,
   UserIcon,
@@ -91,7 +91,7 @@ function generateMockActivity(): ActivityItem {
   }
 }
 
-function ActivityIcon({ type, achievement }: { type: ActivityItem['type'], achievement?: ActivityItem['achievement'] }) {
+function ActivityIcon({ type, _achievement }: { type: ActivityItem['type'], _achievement?: ActivityItem['achievement'] }) {
   switch (type) {
     case 'tweet':
       return <ChatBubbleLeftIcon className="h-4 w-4 text-layeredge-blue" />
@@ -119,7 +119,7 @@ function getRarityColor(rarity: string) {
 function formatTimeAgo(date: Date) {
   const now = new Date()
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  
+
   if (diffInSeconds < 60) return `${diffInSeconds}s ago`
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
@@ -128,7 +128,7 @@ function formatTimeAgo(date: Date) {
 
 export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedProps) {
   const [activities, setActivities] = useState<ActivityItem[]>([])
-  const [isLive, setIsLive] = useState(true)
+  const [_isLive, _setIsLive] = useState(true)
 
   // Initialize with some mock data
   useEffect(() => {
@@ -139,7 +139,7 @@ export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedP
 
   // Simulate live updates
   useEffect(() => {
-    if (!isLive) return
+    if (!_isLive) return
 
     const interval = setInterval(() => {
       const newActivity = generateMockActivity()
@@ -147,7 +147,7 @@ export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedP
     }, Math.random() * 10000 + 5000) // Random interval between 5-15 seconds
 
     return () => clearInterval(interval)
-  }, [isLive, maxItems])
+  }, [_isLive, maxItems])
 
   return (
     <Card className={cn("w-full max-w-md", className)}>
@@ -216,10 +216,10 @@ export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedP
                             +{activity.points}
                           </Badge>
                         )}
-                        
+
                         {activity.achievement && (
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             size="sm"
                             className={cn("border-current", getRarityColor(activity.achievement.rarity))}
                           >
