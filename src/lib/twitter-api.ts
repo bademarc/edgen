@@ -1,4 +1,5 @@
 import { extractTweetId } from './utils'
+import { getCacheService } from './cache'
 
 interface TwitterTweetData {
   id: string
@@ -56,6 +57,7 @@ export class TwitterApiService {
   private isHealthy: boolean = true
   private lastHealthCheck: number = 0
   private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
+  private cache = getCacheService()
 
   constructor() {
     this.bearerToken = process.env.TWITTER_BEARER_TOKEN || ''

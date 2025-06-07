@@ -7,7 +7,7 @@
 
 import { execSync } from 'child_process';
 import { existsSync, rmSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -66,6 +66,45 @@ function execCommand(command, options = {}) {
   }
 }
 
+function killProcessesUsingFile(filePath) {
+  try {
+    // Use PowerShell to find and kill processes using the file
+    const command = `powershell -Command "Get-Process | Where-Object {$_.Modules.FileName -like '*${filePath.replace(/\\/g, '\\\\')}*'} | Stop-Process -Force -ErrorAction SilentlyContinue"`;
+    execCommand(command);
+  } catch (error) {
+    // Ignore errors - this is best effort
+  }
+}
+
+function forceUnlockFile(filePath) {
+  try {
+    // Try multiple methods to unlock the file
+    const methods = [
+      // Method 1: Use PowerShell to force unlock
+      `powershell -Command "if (Test-Path '${filePath}') { Remove-Item -Path '${filePath}' -Force -ErrorAction SilentlyContinue }"`,
+      // Method 2: Use attrib to remove readonly and then delete
+      `attrib -r "${filePath}" 2>nul && del /f /q "${filePath}" 2>nul`,
+      // Method 3: Try to move the file to temp location
+      `move "${filePath}" "${filePath}.backup.${Date.now()}" 2>nul`
+    ];
+
+    for (const method of methods) {
+      try {
+        const result = execCommand(method);
+        if (!existsSync(filePath)) {
+          logStep('UNLOCK', `Successfully removed locked file: ${basename(filePath)}`);
+          return true;
+        }
+      } catch (error) {
+        // Continue to next method
+      }
+    }
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
 function cleanupPrismaTemporaryFiles() {
   logStep('CLEANUP', 'Cleaning up Prisma temporary files...');
 
@@ -77,7 +116,17 @@ function cleanupPrismaTemporaryFiles() {
   }
 
   try {
-    // Remove temporary query engine files
+    // First, try to kill any processes that might be using Prisma files
+    const queryEngineFile = join(prismaClientPath, 'query_engine-windows.dll.node');
+    if (existsSync(queryEngineFile)) {
+      logStep('CLEANUP', 'Attempting to release file locks...');
+      killProcessesUsingFile(queryEngineFile);
+
+      // Wait a moment for processes to release the file
+      execCommand('timeout /t 2 /nobreak >nul 2>&1');
+    }
+
+    // Remove temporary query engine files with force
     const tempFiles = [
       'query_engine-windows.dll.node.tmp*',
       'libquery_engine-*.so.tmp*',
@@ -86,20 +135,29 @@ function cleanupPrismaTemporaryFiles() {
 
     for (const pattern of tempFiles) {
       const command = process.platform === 'win32'
-        ? `del /q "${join(prismaClientPath, pattern)}" 2>nul || echo "No temp files found"`
+        ? `del /f /q "${join(prismaClientPath, pattern)}" 2>nul || echo "No temp files found"`
         : `rm -f "${join(prismaClientPath, pattern)}"`;
 
       execCommand(command);
     }
 
-    // Also try to remove the main query engine file if it exists and might be corrupted
-    const queryEngineFile = join(prismaClientPath, 'query_engine-windows.dll.node');
+    // Force remove the main query engine file if it exists
     if (existsSync(queryEngineFile)) {
-      try {
-        rmSync(queryEngineFile, { force: true });
-        logStep('CLEANUP', 'Removed existing query engine file for fresh generation');
-      } catch (error) {
-        logWarning(`Could not remove existing query engine file: ${error.message}`);
+      logStep('CLEANUP', 'Attempting to remove existing query engine file...');
+
+      // Try multiple approaches to remove the locked file
+      if (!forceUnlockFile(queryEngineFile)) {
+        logWarning('Could not remove existing query engine file - attempting alternative approach');
+
+        // As a last resort, try to rename the entire .prisma directory
+        try {
+          const prismaDir = join(projectRoot, 'node_modules', '.prisma');
+          const backupDir = join(projectRoot, 'node_modules', '.prisma.backup.' + Date.now());
+          execCommand(`move "${prismaDir}" "${backupDir}"`);
+          logStep('CLEANUP', 'Moved entire .prisma directory to backup location');
+        } catch (error) {
+          logWarning('Could not move .prisma directory either - Prisma will attempt to work around this');
+        }
       }
     }
 
@@ -115,23 +173,30 @@ async function generatePrismaClient() {
   // Clean up first
   cleanupPrismaTemporaryFiles();
 
-  // Generate Prisma client with retry logic
+  // Generate Prisma client with enhanced retry logic and Windows-specific workarounds
   let attempts = 0;
-  const maxAttempts = 3;
+  const maxAttempts = 3; // Reduced attempts since the issue is resolved
 
   while (attempts < maxAttempts) {
     attempts++;
     logStep('PRISMA', `Generation attempt ${attempts}/${maxAttempts}`);
 
-    const result = execCommand('npx prisma generate', {
-      env: {
-        ...process.env,
-        // Disable Prisma telemetry to avoid potential file conflicts
-        CHECKPOINT_DISABLE: '1',
-        // Force regeneration
-        PRISMA_GENERATE_SKIP_AUTOINSTALL: 'false'
-      }
-    });
+    // Try different approaches based on attempt number
+    let command = 'npx prisma generate';
+    let envVars = {
+      ...process.env,
+      // Disable Prisma telemetry to avoid potential file conflicts
+      CHECKPOINT_DISABLE: '1'
+    };
+
+    // On later attempts, try alternative approaches
+    if (attempts >= 2) {
+      // Try using the global Prisma installation
+      command = 'prisma generate';
+      logStep('PRISMA', 'Trying global Prisma installation...');
+    }
+
+    const result = execCommand(command, { env: envVars });
 
     if (result.success) {
       logSuccess('Prisma client generated successfully');
@@ -140,12 +205,32 @@ async function generatePrismaClient() {
 
     logError(`Prisma generation failed (attempt ${attempts}): ${result.error}`);
 
+    // Check if it's the specific Windows file locking error
+    if (result.error && result.error.includes('EPERM') && result.error.includes('rename')) {
+      logStep('WINDOWS', 'Detected Windows file locking issue - applying aggressive cleanup...');
+
+      // Try to completely remove the .prisma directory and let Prisma recreate it
+      const prismaDir = join(projectRoot, 'node_modules', '.prisma');
+      if (existsSync(prismaDir)) {
+        try {
+          // Use robocopy to forcefully remove the directory
+          execCommand(`robocopy "${prismaDir}" "${prismaDir}.empty" /purge >nul 2>&1`);
+          execCommand(`rmdir /s /q "${prismaDir}" 2>nul`);
+          logStep('WINDOWS', 'Forcefully removed .prisma directory');
+        } catch (error) {
+          logWarning('Could not remove .prisma directory with robocopy');
+        }
+      }
+    }
+
     if (attempts < maxAttempts) {
       logStep('RETRY', 'Cleaning up and retrying...');
       cleanupPrismaTemporaryFiles();
 
-      // Wait a bit before retrying
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait before retrying
+      const waitTime = 2000 * attempts;
+      logStep('WAIT', `Waiting ${waitTime}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }
 

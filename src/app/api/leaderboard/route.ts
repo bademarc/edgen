@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getFreeTierService } from '@/lib/free-tier-service'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '10')
 
-    // Get top users by total points
+    // Use free tier optimized service
+    const freeTierService = getFreeTierService()
+
+    // Check if we're in free tier mode
+    const isFreeTier = process.env.OPTIMIZE_FOR_FREE_TIER === 'true'
+
+    if (isFreeTier) {
+      console.log('📋 Using FREE TIER leaderboard service')
+      const leaderboard = await freeTierService.getLeaderboard(limit)
+
+      return NextResponse.json({
+        users: leaderboard,
+        cached: true,
+        freeTier: true
+      })
+    }
+
+    // Fallback to original method
     const users = await prisma.user.findMany({
       where: {
         totalPoints: {

@@ -149,6 +149,42 @@ For detailed database setup information, see [SUPABASE_SETUP.md](./SUPABASE_SETU
 
 For development purposes, the app uses a mock authentication system. Click "Sign in with X" to authenticate as a demo user. In production, this would be replaced with real X OAuth.
 
+## 🪟 Windows-Specific Setup
+
+### Prisma Client Generation Issues
+
+If you encounter file permission errors during Prisma client generation on Windows (EPERM errors when renaming .dll.node files), use these solutions:
+
+#### Quick Fix
+```bash
+# Use the Windows-specific Prisma generation script
+npm run db:generate:windows
+```
+
+#### Alternative PowerShell Fix
+```bash
+# Use PowerShell-based solution
+npm run db:generate:windows-ps
+```
+
+#### Manual Troubleshooting
+1. **Close all IDEs and editors** that might be locking files
+2. **Run as Administrator** if permission issues persist
+3. **Temporarily disable antivirus** software during build
+4. **Clean and reinstall** dependencies:
+   ```bash
+   npm run clean
+   npm install --legacy-peer-deps
+   ```
+
+#### Common Windows Issues
+- **File Locking**: Windows locks .dll files more aggressively than other platforms
+- **Antivirus Interference**: Real-time scanning can prevent file operations
+- **Long Path Names**: Ensure your project path isn't too deep
+- **Permission Issues**: Some operations require administrator privileges
+
+The build system includes automatic retry logic and multiple fallback strategies specifically designed for Windows environments.
+
 ## 🎨 Design System
 
 ### Colors

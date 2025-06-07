@@ -15,6 +15,8 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
+    "db:generate:windows": "scripts\\prisma-windows-fix.bat",
+    "db:generate:windows-ps": "powershell -ExecutionPolicy Bypass -File scripts\\prisma-windows-fix.ps1",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "prisma migrate deploy",
     "db:verify": "tsx scripts/verify-database.ts",
@@ -29,6 +31,8 @@
     "tracking:migrate": "prisma migrate dev --name add_enhanced_tracking",
     "encryption:fix": "tsx scripts/fix-token-encryption.ts",
     "encryption:test": "tsx scripts/fix-token-encryption.ts",
+    "free-tier:setup": "tsx scripts/setup-free-tier.ts",
+    "free-tier:status": "curl -s http://localhost:3000/api/free-tier/status | jq",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -52,6 +56,7 @@
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
     "@types/node-cron": "^3.0.11",
+    "@upstash/redis": "^1.35.0",
     "axios": "^1.6.2",
     "cheerio": "^1.0.0",
     "class-variance-authority": "^0.7.1",
@@ -59,6 +64,7 @@
     "date-fns": "^3.0.0",
     "dotenv": "^16.5.0",
     "framer-motion": "^11.11.17",
+    "ioredis": "^5.3.2",
     "lucide-react": "^0.511.0",
     "maath": "^0.10.8",
     "next": "15.3.2",
