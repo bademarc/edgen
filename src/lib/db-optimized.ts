@@ -39,10 +39,10 @@ class DatabaseService {
   // Cached leaderboard query
   async getLeaderboard(limit: number = 100, useCache: boolean = true): Promise<any[]> {
     const cacheKey = `leaderboard:${limit}`
-    
+
     if (useCache) {
       const cached = await this.cache.getLeaderboard()
-      if (cached) {
+      if (cached && Array.isArray(cached)) {
         console.log('📋 Returning cached leaderboard')
         return cached.slice(0, limit)
       }
@@ -50,7 +50,7 @@ class DatabaseService {
 
     console.log('🔍 Fetching fresh leaderboard from database')
     const readDb = this.getConnection('read')
-    
+
     const users = await readDb.user.findMany({
       where: {
         totalPoints: { gt: 0 },
@@ -98,7 +98,7 @@ class DatabaseService {
 
     console.log(`🔍 Fetching user ${userId} from database`)
     const readDb = this.getConnection('read')
-    
+
     const user = await readDb.user.findUnique({
       where: { id: userId },
       include: {
@@ -127,7 +127,7 @@ class DatabaseService {
   // Batch user updates for better performance
   async batchUpdateUserPoints(updates: Array<{ userId: string; points: number }>): Promise<void> {
     const writeDb = this.getConnection('write')
-    
+
     // Use transaction for consistency
     await writeDb.$transaction(async (tx) => {
       const promises = updates.map(({ userId, points }) =>
@@ -136,16 +136,16 @@ class DatabaseService {
           data: { totalPoints: { increment: points } },
         })
       )
-      
+
       await Promise.all(promises)
     })
 
     // Invalidate cache for updated users
-    const cachePromises = updates.map(({ userId }) => 
+    const cachePromises = updates.map(({ userId }) =>
       this.cache.del(`user:${userId}`)
     )
     await Promise.all(cachePromises)
-    
+
     // Invalidate leaderboard cache
     await this.cache.del('leaderboard:top100')
   }
@@ -153,7 +153,7 @@ class DatabaseService {
   // Optimized tweet creation with caching
   async createTweet(tweetData: any): Promise<any> {
     const writeDb = this.getConnection('write')
-    
+
     const tweet = await writeDb.tweet.create({
       data: tweetData,
       include: {
@@ -186,7 +186,7 @@ class DatabaseService {
   async getAnalytics(timeframe: 'day' | 'week' | 'month' = 'day'): Promise<any> {
     const analyticsDb = this.getConnection('analytics')
     const cacheKey = `analytics:${timeframe}`
-    
+
     // Check cache first
     const cached = await this.cache.get(cacheKey)
     if (cached) {

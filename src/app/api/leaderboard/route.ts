@@ -69,7 +69,11 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(leaderboard)
+    return NextResponse.json({
+      users: leaderboard,
+      cached: false,
+      freeTier: false
+    })
   } catch (error) {
     console.error('Error fetching leaderboard:', error)
     return NextResponse.json(

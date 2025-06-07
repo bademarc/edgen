@@ -31,7 +31,28 @@ export default function LeaderboardPage() {
         throw new Error('Failed to fetch leaderboard')
       }
       const data = await response.json()
-      setLeaderboard(data)
+
+      // Handle different API response formats
+      let leaderboardData: LeaderboardUser[]
+
+      if (Array.isArray(data)) {
+        // Direct array response (fallback mode)
+        leaderboardData = data
+      } else if (data && Array.isArray(data.users)) {
+        // Object response with users array (free tier mode)
+        leaderboardData = data.users
+      } else {
+        // Unexpected response format
+        console.error('Unexpected API response format:', data)
+        throw new Error('Invalid leaderboard data format received')
+      }
+
+      // Ensure we have valid data
+      if (!Array.isArray(leaderboardData)) {
+        throw new Error('Leaderboard data is not an array')
+      }
+
+      setLeaderboard(leaderboardData)
     } catch (err) {
       console.error('Error fetching leaderboard:', err)
       setError(err instanceof Error ? err.message : 'Failed to load leaderboard')
@@ -154,7 +175,7 @@ export default function LeaderboardPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
         >
-          {leaderboard.slice(0, 3).map((user, index) => (
+          {Array.isArray(leaderboard) ? leaderboard.slice(0, 3).map((user, index) => (
             <motion.div
               key={user.id}
               initial={{ opacity: 0, scale: 0.8 }}
@@ -208,7 +229,7 @@ export default function LeaderboardPage() {
                 </div>
               </div>
             </motion.div>
-          ))}
+          )) : null}
         </motion.div>
 
         {/* Rest of Leaderboard */}
@@ -218,7 +239,7 @@ export default function LeaderboardPage() {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="space-y-4"
         >
-          {leaderboard.slice(3).map((user, index) => (
+          {Array.isArray(leaderboard) ? leaderboard.slice(3).map((user, index) => (
             <motion.div
               key={user.id}
               initial={{ opacity: 0, x: -20 }}
@@ -269,7 +290,7 @@ export default function LeaderboardPage() {
                 </div>
               </div>
             </motion.div>
-          ))}
+          )) : null}
         </motion.div>
       </div>
     </div>
