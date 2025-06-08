@@ -53,7 +53,18 @@ if [ "$NODE_ENV" = "production" ]; then
     # Verify installation after attempt
     echo "🔍 Verifying browser installation..."
     if [ -d "$PLAYWRIGHT_CACHE_DIR" ]; then
+        echo "   Browser files found:"
         find "$PLAYWRIGHT_CACHE_DIR" -name "*chrome*" -type f 2>/dev/null | head -5
+
+        # PRIORITY FIX: Test browser executable
+        CHROME_EXEC=$(find "$PLAYWRIGHT_CACHE_DIR" -name "chrome" -type f -executable 2>/dev/null | head -1)
+        if [ -n "$CHROME_EXEC" ]; then
+            echo "✅ Chrome executable found: $CHROME_EXEC"
+            # Test if browser can start (quick test)
+            timeout 10s "$CHROME_EXEC" --version 2>/dev/null && echo "✅ Browser test successful" || echo "⚠️ Browser test failed"
+        else
+            echo "❌ No executable Chrome found"
+        fi
     fi
 
     # Check environment variables

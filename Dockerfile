@@ -116,8 +116,16 @@ ENV HOSTNAME "0.0.0.0"
 # PRIORITY FIX: Set Playwright environment variables for production
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/nextjs/.cache/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-# Fix: Use proper browser executable path
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/home/nextjs/.cache/ms-playwright/chromium-1169/chrome-linux/chrome
+
+# PRIORITY FIX: Verify browser installation and set dynamic path
+RUN echo "Verifying Playwright browser installation..." && \
+    ls -la /home/nextjs/.cache/ms-playwright/ && \
+    find /home/nextjs/.cache/ms-playwright -name "chrome" -type f -executable | head -1 > /tmp/chrome_path.txt && \
+    cat /tmp/chrome_path.txt && \
+    test -s /tmp/chrome_path.txt || (echo "ERROR: Chrome executable not found!" && exit 1)
+
+# Set dynamic browser path based on actual installation
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/home/nextjs/.cache/ms-playwright/chromium-*/chrome-linux/chrome
 
 # Use startup script to run the application
 # server.js is created by next build from the standalone output

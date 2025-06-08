@@ -35,6 +35,7 @@ export interface FallbackServiceConfig {
   enableScweet?: boolean
   scweetServiceUrl?: string
   enableTwikit?: boolean
+  scweetServiceUrls?: string[] // PRIORITY FIX: Multiple service URLs for network resilience
 }
 
 export class FallbackService {
@@ -67,6 +68,12 @@ export class FallbackService {
       enableScweet: true,
       scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://scweet-service:8001',
       enableTwikit: true, // PRIORITY FIX: Enable Twikit fallback
+      // PRIORITY FIX: Multiple service URLs for network resilience
+      scweetServiceUrls: [
+        process.env.SCWEET_SERVICE_URL || 'http://scweet-service:8001',
+        'http://localhost:8001', // Fallback for local development
+        'http://127.0.0.1:8001'   // Additional fallback
+      ],
       ...config
     }
 
@@ -147,74 +154,83 @@ export class FallbackService {
       return null
     }
 
-    try {
-      console.log(`Attempting to fetch tweet data via Scweet service at ${this.scweetServiceUrl}...`)
+    // PRIORITY FIX: Try multiple service URLs for network resilience
+    const serviceUrls = this.config.scweetServiceUrls || [this.scweetServiceUrl]
 
-      // PRIORITY FIX: Add connection retry logic for network issues
-      let lastError: Error | null = null
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          const response = await fetch(`${this.scweetServiceUrl}/tweet`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              tweet_url: tweetUrl,
-              include_engagement: true,
-              include_user_info: true
-            }),
-            signal: AbortSignal.timeout(this.config.apiTimeoutMs)
-          })
+    for (const serviceUrl of serviceUrls) {
+      try {
+        console.log(`Attempting to fetch tweet data via Scweet service at ${serviceUrl}...`)
 
-          if (!response.ok) {
-            throw new Error(`Scweet service error: ${response.status}`)
-          }
+        // PRIORITY FIX: Add connection retry logic for network issues
+        let lastError: Error | null = null
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            const response = await fetch(`${serviceUrl}/tweet`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                tweet_url: tweetUrl,
+                include_engagement: true,
+                include_user_info: true
+              }),
+              signal: AbortSignal.timeout(this.config.apiTimeoutMs)
+            })
 
-          const data = await response.json()
+            if (!response.ok) {
+              throw new Error(`Scweet service error: ${response.status}`)
+            }
 
-          const fallbackData: FallbackTweetData = {
-            id: data.tweet_id,
-            content: data.content,
-            likes: data.engagement.likes,
-            retweets: data.engagement.retweets,
-            replies: data.engagement.replies,
-            author: {
-              id: data.author.username,
-              username: data.author.username,
-              name: data.author.display_name,
-              profileImage: undefined
-            },
-            createdAt: new Date(data.created_at),
-            source: 'scweet' as const,
-            isFromLayerEdgeCommunity: data.is_from_layeredge_community
-          }
+            const data = await response.json()
 
-          console.log('Successfully fetched tweet data via Scweet service')
-          return fallbackData
+            const fallbackData: FallbackTweetData = {
+              id: data.tweet_id,
+              content: data.content,
+              likes: data.engagement.likes,
+              retweets: data.engagement.retweets,
+              replies: data.engagement.replies,
+              author: {
+                id: data.author.username,
+                username: data.author.username,
+                name: data.author.display_name,
+                profileImage: undefined
+              },
+              createdAt: new Date(data.created_at),
+              source: 'scweet' as const,
+              isFromLayerEdgeCommunity: data.is_from_layeredge_community
+            }
 
-        } catch (error) {
-          lastError = error as Error
-          console.warn(`Scweet service attempt ${attempt} failed:`, error)
+            console.log(`Successfully fetched tweet data via Scweet service at ${serviceUrl}`)
+            return fallbackData
 
-          // PRIORITY FIX: Handle network resolution errors specifically
-          if (error instanceof TypeError && error.message.includes('fetch failed')) {
-            console.error(`Network resolution failed for ${this.scweetServiceUrl} - attempt ${attempt}/3`)
-            if (attempt < 3) {
-              await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // Exponential backoff
-              continue
+          } catch (error) {
+            lastError = error as Error
+            console.warn(`Scweet service attempt ${attempt} failed for ${serviceUrl}:`, error)
+
+            // PRIORITY FIX: Handle network resolution errors specifically
+            if (error instanceof TypeError && error.message.includes('fetch failed')) {
+              console.error(`Network resolution failed for ${serviceUrl} - attempt ${attempt}/3`)
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // Exponential backoff
+                continue
+              }
+            }
+
+            if (attempt === 3) {
+              break // Try next service URL
             }
           }
-
-          if (attempt === 3) {
-            throw lastError
-          }
         }
+
+        console.error(`All attempts failed for ${serviceUrl}, trying next URL...`)
+      } catch (error) {
+        console.error(`Scweet service failed for ${serviceUrl}:`, error)
       }
-    } catch (error) {
-      console.error('Scweet service failed after all retries:', error)
-      return null
     }
+
+    console.error('Scweet service failed for all URLs after all retries')
+    return null
   }
 
   private async tryScweetEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
@@ -264,51 +280,83 @@ export class FallbackService {
       return null
     }
 
-    try {
-      console.log('Attempting to fetch tweet data via Twikit service...')
+    // PRIORITY FIX: Try multiple service URLs for Twikit network resilience
+    const serviceUrls = this.config.scweetServiceUrls || [this.scweetServiceUrl]
 
-      const response = await fetch(`${this.scweetServiceUrl}/twikit/tweet`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tweet_url: tweetUrl,
-          include_engagement: true,
-          include_user_info: true
-        }),
-        signal: AbortSignal.timeout(this.config.apiTimeoutMs)
-      })
+    for (const serviceUrl of serviceUrls) {
+      try {
+        console.log(`Attempting to fetch tweet data via Twikit service at ${serviceUrl}...`)
 
-      if (!response.ok) {
-        throw new Error(`Twikit service error: ${response.status}`)
+        // PRIORITY FIX: Add connection retry logic for Twikit network issues
+        let lastError: Error | null = null
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            const response = await fetch(`${serviceUrl}/twikit/tweet`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                tweet_url: tweetUrl,
+                include_engagement: true,
+                include_user_info: true
+              }),
+              signal: AbortSignal.timeout(this.config.apiTimeoutMs)
+            })
+
+            if (!response.ok) {
+              throw new Error(`Twikit service error: ${response.status}`)
+            }
+
+            const data = await response.json()
+
+            const fallbackData: FallbackTweetData = {
+              id: data.tweet_id,
+              content: data.content,
+              likes: data.engagement.likes,
+              retweets: data.engagement.retweets,
+              replies: data.engagement.replies,
+              author: {
+                id: data.author.username,
+                username: data.author.username,
+                name: data.author.display_name,
+                profileImage: undefined
+              },
+              createdAt: new Date(data.created_at),
+              source: 'twikit' as const,
+              isFromLayerEdgeCommunity: data.is_from_layeredge_community
+            }
+
+            console.log(`Successfully fetched tweet data via Twikit service at ${serviceUrl}`)
+            return fallbackData
+
+          } catch (error) {
+            lastError = error as Error
+            console.warn(`Twikit service attempt ${attempt} failed for ${serviceUrl}:`, error)
+
+            // PRIORITY FIX: Handle network resolution errors specifically for Twikit
+            if (error instanceof TypeError && error.message.includes('fetch failed')) {
+              console.error(`Twikit network resolution failed for ${serviceUrl} - attempt ${attempt}/3`)
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // Exponential backoff
+                continue
+              }
+            }
+
+            if (attempt === 3) {
+              break // Try next service URL
+            }
+          }
+        }
+
+        console.error(`All Twikit attempts failed for ${serviceUrl}, trying next URL...`)
+      } catch (error) {
+        console.error(`Twikit service failed for ${serviceUrl}:`, error)
       }
-
-      const data = await response.json()
-
-      const fallbackData: FallbackTweetData = {
-        id: data.tweet_id,
-        content: data.content,
-        likes: data.engagement.likes,
-        retweets: data.engagement.retweets,
-        replies: data.engagement.replies,
-        author: {
-          id: data.author.username,
-          username: data.author.username,
-          name: data.author.display_name,
-          profileImage: undefined
-        },
-        createdAt: new Date(data.created_at),
-        source: 'twikit' as const,
-        isFromLayerEdgeCommunity: data.is_from_layeredge_community
-      }
-
-      console.log('Successfully fetched tweet data via Twikit service')
-      return fallbackData
-    } catch (error) {
-      console.error('Twikit service failed:', error)
-      return null
     }
+
+    console.error('Twikit service failed for all URLs after all retries')
+    return null
   }
 
   private async tryTwikitEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
@@ -514,7 +562,28 @@ export class FallbackService {
   }>> {
     console.log(`Fetching batch engagement metrics for ${tweetUrls.length} tweets`)
 
-    // Try API first if conditions are met
+    // PRIORITY FIX: Try Scweet FIRST for batch operations (consistent with single operations)
+    console.log('Attempting batch fetch via Official Scweet v3.0+...')
+    try {
+      const scweetResults = await Promise.all(
+        tweetUrls.map(async (url) => {
+          const metrics = await this.tryScweetEngagement(url)
+          return { url, metrics }
+        })
+      )
+
+      const successfulResults = scweetResults.filter(result => result.metrics !== null)
+      const successRate = successfulResults.length / scweetResults.length
+
+      if (successRate > 0.3) { // If more than 30% successful via Scweet
+        console.log(`✅ Batch fetch via Official Scweet successful: ${successfulResults.length}/${scweetResults.length}`)
+        return scweetResults
+      }
+    } catch (error) {
+      console.error('Batch Scweet fetch failed:', error)
+    }
+
+    // Try API second if conditions are met and Scweet had low success rate
     if (this.shouldUseApi()) {
       try {
         console.log('Attempting batch fetch via Twitter API...')

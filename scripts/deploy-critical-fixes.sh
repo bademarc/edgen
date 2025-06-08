@@ -59,10 +59,10 @@ ENABLE_TWIKIT=true
 PLAYWRIGHT_BROWSERS_PATH=/home/nextjs/.cache/ms-playwright
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Twikit Configuration (Priority 4 Fix)
-TWIKIT_USERNAME=${TWIKIT_USERNAME:-}
-TWIKIT_EMAIL=${TWIKIT_EMAIL:-}
-TWIKIT_PASSWORD=${TWIKIT_PASSWORD:-}
+# Twikit Configuration (Priority 4 Fix) - X/Twitter Credentials
+TWIKIT_USERNAME=nxrsultxn
+TWIKIT_EMAIL=nnnatlusrun@gmail.com
+TWIKIT_PASSWORD=nuriknurik22
 TWIKIT_LANGUAGE=en-US
 TWIKIT_TIMEOUT=30
 
@@ -203,6 +203,33 @@ else
     echo "📋 Network information:"
     docker network ls
     docker-compose ps
+
+    # Try to fix networking issues
+    echo "🔧 Attempting to fix networking..."
+    docker-compose down
+    docker network prune -f
+    sleep 5
+    docker-compose up -d
+    sleep 30
+
+    # Test again
+    if docker-compose exec layeredge-app curl -f http://scweet-service:8001/health &> /dev/null; then
+        echo "✅ Networking fixed after restart"
+    else
+        echo "❌ Networking still has issues"
+    fi
+fi
+
+# Step 8.5: Run comprehensive diagnostic
+echo ""
+echo "8️⃣.5 Running comprehensive system diagnostic..."
+if command -v node &> /dev/null; then
+    echo "🧪 Running system failure diagnosis..."
+    node scripts/diagnose-system-failures.js || {
+        echo "⚠️ Diagnostic found issues - check output above"
+    }
+else
+    echo "⚠️ Node.js not available for diagnostic"
 fi
 
 # Step 9: Final status report
