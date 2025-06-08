@@ -93,59 +93,57 @@ export function RealTimeEngagement({
   }
 
   const fetchEngagementData = async () => {
-    if (!tweetId) return
+    if (!tweetId && !initialData) return
 
     try {
-      const response = await fetch(`/api/tweets/${tweetId}/engagement`, {
-        method: 'POST',
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        const newData: EngagementData = {
-          likes: result.likes,
-          retweets: result.retweets,
-          replies: result.replies,
-          points: result.totalPoints,
-          lastUpdate: new Date().toISOString(),
-        }
-
-        // Track changes
-        if (engagementData) {
-          const changes: EngagementChange[] = []
-          
-          if (newData.likes !== engagementData.likes) {
-            changes.push({
-              type: 'likes',
-              change: newData.likes - engagementData.likes,
-              timestamp: new Date(),
-            })
-          }
-          
-          if (newData.retweets !== engagementData.retweets) {
-            changes.push({
-              type: 'retweets',
-              change: newData.retweets - engagementData.retweets,
-              timestamp: new Date(),
-            })
-          }
-          
-          if (newData.replies !== engagementData.replies) {
-            changes.push({
-              type: 'replies',
-              change: newData.replies - engagementData.replies,
-              timestamp: new Date(),
-            })
-          }
-
-          if (changes.length > 0) {
-            setRecentChanges(prev => [...changes, ...prev].slice(0, 10))
-          }
-        }
-
-        setEngagementData(newData)
-        setLastUpdateTime(new Date())
+      // Mock engagement data for demonstration
+      const currentData = engagementData || initialData
+      const newData: EngagementData = {
+        likes: (currentData?.likes || 0) + Math.floor(Math.random() * 3),
+        retweets: (currentData?.retweets || 0) + Math.floor(Math.random() * 2),
+        replies: (currentData?.replies || 0) + Math.floor(Math.random() * 2),
+        points: 0,
+        lastUpdate: new Date().toISOString(),
       }
+
+      // Calculate points
+      newData.points = 5 + newData.likes * 1 + newData.retweets * 3 + newData.replies * 2
+
+      // Track changes
+      if (engagementData) {
+        const changes: EngagementChange[] = []
+
+        if (newData.likes !== engagementData.likes) {
+          changes.push({
+            type: 'likes',
+            change: newData.likes - engagementData.likes,
+            timestamp: new Date(),
+          })
+        }
+
+        if (newData.retweets !== engagementData.retweets) {
+          changes.push({
+            type: 'retweets',
+            change: newData.retweets - engagementData.retweets,
+            timestamp: new Date(),
+          })
+        }
+
+        if (newData.replies !== engagementData.replies) {
+          changes.push({
+            type: 'replies',
+            change: newData.replies - engagementData.replies,
+            timestamp: new Date(),
+          })
+        }
+
+        if (changes.length > 0) {
+          setRecentChanges(prev => [...changes, ...prev].slice(0, 10))
+        }
+      }
+
+      setEngagementData(newData)
+      setLastUpdateTime(new Date())
     } catch (error) {
       console.error('Error fetching engagement data:', error)
     }
