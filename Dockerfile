@@ -75,16 +75,21 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=deps /root/.cache/ms-playwright /home/nextjs/.cache/ms-playwright
 RUN chown -R nextjs:nodejs /home/nextjs/.cache
 
-COPY --from=builder /app/public ./public
+# CRITICAL: Copy public directory (static assets like images, manifest, etc.)
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Set the correct permission for prerender cache
-RUN mkdir .next
+RUN mkdir -p .next
 RUN chown nextjs:nodejs .next
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Ensure proper permissions for all static assets
+RUN chown -R nextjs:nodejs ./public
+RUN chown -R nextjs:nodejs ./.next
 
 # Copy node_modules with Playwright
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules

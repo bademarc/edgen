@@ -1,0 +1,23 @@
+{
+  "name": "LayerEdge Community Platform",
+  "short_name": "LayerEdge",
+  "description": "Earn points for engaging with LayerEdge content on X/Twitter. Connect, compete, and climb the leaderboard!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#f7931a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon/-AlLx9IW_400x400.png",
+      "sizes": "400x400",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "scope": "/",
+  "id": "layeredge-community"
+}
