@@ -36,7 +36,7 @@ export class TwitterOAuthService {
 
   constructor() {
     // Always use production URL for OAuth
-    const siteUrl = process.env.NODE_ENV === 'production' 
+    const siteUrl = process.env.NODE_ENV === 'production'
       ? 'https://edgen.koyeb.app'
       : (process.env.NEXT_PUBLIC_SITE_URL || 'https://edgen.koyeb.app')
 
@@ -96,10 +96,11 @@ export class TwitterOAuthService {
    */
   async exchangeCodeForToken(code: string, codeVerifier: string): Promise<TokenResponse> {
     const tokenUrl = 'https://api.twitter.com/2/oauth2/token'
-    
-    // Create Basic Auth header
+
+    // Create Basic Auth header - ensure proper encoding
     const credentials = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64')
-    
+
+    // Twitter OAuth 2.0 requires these specific parameters
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       code: code,
@@ -112,9 +113,12 @@ export class TwitterOAuthService {
       url: tokenUrl,
       redirectUri: this.config.redirectUri,
       clientId: this.config.clientId,
+      clientSecretLength: this.config.clientSecret.length,
+      clientSecretPreview: this.config.clientSecret.substring(0, 10) + '...' + this.config.clientSecret.slice(-10),
       codeLength: code.length,
       codeVerifierLength: codeVerifier.length,
-      hasClientSecret: !!this.config.clientSecret
+      hasClientSecret: !!this.config.clientSecret,
+      authHeaderPreview: `Basic ${credentials.substring(0, 20)}...`
     })
 
     try {
@@ -123,13 +127,14 @@ export class TwitterOAuthService {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Authorization': `Basic ${credentials}`,
+          'Accept': 'application/json',
           'User-Agent': 'LayerEdge/1.0'
         },
         body: body.toString()
       })
 
       const responseText = await response.text()
-      
+
       console.log('Token exchange response:', {
         status: response.status,
         statusText: response.statusText,
@@ -143,7 +148,13 @@ export class TwitterOAuthService {
           statusText: response.statusText,
           body: responseText
         })
-        
+
+        // If Basic Auth failed, try with client credentials in body
+        if (response.status === 401 && responseText.includes('unauthorized_client')) {
+          console.log('Retrying token exchange with client credentials in body...')
+          return this.exchangeCodeForTokenAlternative(code, codeVerifier)
+        }
+
         // Parse error response if possible
         try {
           const errorData = JSON.parse(responseText)
@@ -154,7 +165,7 @@ export class TwitterOAuthService {
       }
 
       const tokenData = JSON.parse(responseText)
-      
+
       console.log('Token exchange successful:', {
         tokenType: tokenData.token_type,
         hasAccessToken: !!tokenData.access_token,
@@ -166,6 +177,82 @@ export class TwitterOAuthService {
       return tokenData
     } catch (error) {
       console.error('Token exchange error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Alternative token exchange method with client credentials in body
+   */
+  private async exchangeCodeForTokenAlternative(code: string, codeVerifier: string): Promise<TokenResponse> {
+    const tokenUrl = 'https://api.twitter.com/2/oauth2/token'
+
+    // Include client credentials in the request body instead of Authorization header
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: this.config.redirectUri,
+      code_verifier: codeVerifier,
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret
+    })
+
+    console.log('Alternative token exchange request (credentials in body):', {
+      url: tokenUrl,
+      redirectUri: this.config.redirectUri,
+      clientId: this.config.clientId,
+      hasClientSecret: !!this.config.clientSecret,
+      method: 'credentials_in_body'
+    })
+
+    try {
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
+          'User-Agent': 'LayerEdge/1.0'
+        },
+        body: body.toString()
+      })
+
+      const responseText = await response.text()
+
+      console.log('Alternative token exchange response:', {
+        status: response.status,
+        statusText: response.statusText,
+        bodyPreview: responseText.substring(0, 200)
+      })
+
+      if (!response.ok) {
+        console.error('Alternative token exchange also failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText
+        })
+
+        // Parse error response if possible
+        try {
+          const errorData = JSON.parse(responseText)
+          throw new Error(`Alternative token exchange failed: ${response.status} ${response.statusText}. Error: ${errorData.error_description || errorData.error || 'Unknown error'}`)
+        } catch (parseError) {
+          throw new Error(`Alternative token exchange failed: ${response.status} ${response.statusText}. Response: ${responseText}`)
+        }
+      }
+
+      const tokenData = JSON.parse(responseText)
+
+      console.log('Alternative token exchange successful:', {
+        tokenType: tokenData.token_type,
+        hasAccessToken: !!tokenData.access_token,
+        hasRefreshToken: !!tokenData.refresh_token,
+        expiresIn: tokenData.expires_in,
+        scope: tokenData.scope
+      })
+
+      return tokenData
+    } catch (error) {
+      console.error('Alternative token exchange error:', error)
       throw error
     }
   }
@@ -187,7 +274,7 @@ export class TwitterOAuthService {
       })
 
       const responseText = await response.text()
-      
+
       console.log('User info response:', {
         status: response.status,
         statusText: response.statusText,
@@ -204,7 +291,7 @@ export class TwitterOAuthService {
       }
 
       const userData = JSON.parse(responseText)
-      
+
       console.log('User info successful:', {
         userId: userData.data?.id,
         username: userData.data?.username,
