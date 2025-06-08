@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TwitterMonitoringService } from '@/lib/twitter-monitoring'
+import { RSSMonitoringService } from '@/lib/rss-monitoring'
 import { ensureServerInitialization } from '@/lib/server-init'
+import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,49 +30,138 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('Starting scheduled tweet monitoring job...')
-
-    const monitoringService = new TwitterMonitoringService()
+    console.log('🚀 Starting optimized monitoring job (RSS-first strategy)...')
     const startTime = Date.now()
 
-    const result = await monitoringService.monitorAllUsers()
+    // Phase 1: RSS Monitoring (Primary method - 90% of monitoring)
+    console.log('📡 Phase 1: RSS monitoring for LayerEdge mentions...')
+    const rssService = new RSSMonitoringService()
+    const rssResults = await rssService.monitorAllFeeds()
+
+    console.log(`📊 RSS Results: ${rssResults.newTweets} new tweets from ${rssResults.totalTweets} total`)
+
+    // Phase 2: Selective API Monitoring (Secondary method - 10% of monitoring)
+    console.log('🔑 Phase 2: Selective API monitoring for critical users...')
+
+    // Only monitor high-engagement users with API to conserve quota
+    const criticalUsers = await prisma.user.findMany({
+      where: {
+        AND: [
+          { autoMonitoringEnabled: true },
+          { xUserId: { not: null } },
+          { xUsername: { not: null } },
+          {
+            OR: [
+              { totalPoints: { gte: 500 } }, // High-engagement users
+              { lastTweetCheck: { lt: new Date(Date.now() - 12 * 60 * 60 * 1000) } } // Users not checked in 12 hours
+            ]
+          }
+        ]
+      },
+      orderBy: [
+        { totalPoints: 'desc' },
+        { lastTweetCheck: 'asc' }
+      ],
+      take: 3 // Maximum 3 users per run to conserve API quota
+    })
+
+    let apiResults = {
+      totalUsers: 0,
+      successfulUsers: 0,
+      totalTweetsFound: 0,
+      errors: [] as any[],
+      skipped: true
+    }
+
+    if (criticalUsers.length > 0) {
+      console.log(`🎯 API monitoring for ${criticalUsers.length} critical users`)
+      const twitterService = new TwitterMonitoringService()
+
+      // Monitor specific users with API
+      const specificResults = await twitterService.monitorSpecificUsers(criticalUsers)
+      apiResults = {
+        ...specificResults,
+        skipped: false
+      }
+    } else {
+      console.log('⏭️ No critical users need API monitoring at this time')
+    }
 
     const duration = Date.now() - startTime
 
-    console.log(`Scheduled monitoring completed in ${duration}ms:`, {
-      totalUsers: result.totalUsers,
-      successfulUsers: result.successfulUsers,
-      totalTweetsFound: result.totalTweetsFound,
-      errorCount: result.errors.length
-    })
-
-    // Log any errors for debugging
-    if (result.errors.length > 0) {
-      console.error('Monitoring errors:', result.errors.slice(0, 5)) // Log first 5 errors
+    // Update system monitoring status
+    try {
+      await prisma.tweetMonitoring.upsert({
+        where: { userId: 'system' },
+        update: {
+          status: (rssResults.errors.length > 0 || apiResults.errors.length > 0) ? 'warning' : 'active',
+          lastCheckAt: new Date(),
+          tweetsFound: rssResults.newTweets + apiResults.totalTweetsFound,
+          errorMessage: rssResults.errors.length > 0 ? `RSS errors: ${rssResults.errors.length}` : null
+        },
+        create: {
+          userId: 'system',
+          status: (rssResults.errors.length > 0 || apiResults.errors.length > 0) ? 'warning' : 'active',
+          lastCheckAt: new Date(),
+          tweetsFound: rssResults.newTweets + apiResults.totalTweetsFound,
+          errorMessage: rssResults.errors.length > 0 ? `RSS errors: ${rssResults.errors.length}` : null
+        }
+      })
+    } catch (dbError) {
+      console.warn('Failed to update monitoring status:', dbError)
     }
+
+    console.log(`✅ Optimized monitoring completed in ${duration}ms:`, {
+      rss: {
+        newTweets: rssResults.newTweets,
+        totalProcessed: rssResults.totalTweets,
+        feedErrors: rssResults.errors.length
+      },
+      api: {
+        usersMonitored: apiResults.totalUsers,
+        successfulUsers: apiResults.successfulUsers,
+        tweetsFound: apiResults.totalTweetsFound,
+        errors: apiResults.errors.length,
+        skipped: apiResults.skipped
+      },
+      total: {
+        newTweets: rssResults.newTweets + apiResults.totalTweetsFound,
+        duration: `${duration}ms`
+      }
+    })
 
     return NextResponse.json({
       success: true,
-      message: 'Scheduled tweet monitoring completed',
-      results: {
-        totalUsers: result.totalUsers,
-        successfulUsers: result.successfulUsers,
-        totalTweetsFound: result.totalTweetsFound,
-        errorCount: result.errors.length,
-        duration: `${duration}ms`,
-        errors: result.errors.slice(0, 3) // Include first 3 errors in response
+      strategy: 'rss-first-optimized',
+      rss: {
+        newTweets: rssResults.newTweets,
+        totalProcessed: rssResults.totalTweets,
+        feedResults: rssResults.feedResults,
+        errors: rssResults.errors
+      },
+      api: {
+        usersMonitored: apiResults.totalUsers,
+        successfulUsers: apiResults.successfulUsers,
+        tweetsFound: apiResults.totalTweetsFound,
+        errors: apiResults.errors,
+        skipped: apiResults.skipped
+      },
+      summary: {
+        totalNewTweets: rssResults.newTweets + apiResults.totalTweetsFound,
+        apiCallsSaved: `~${90}%`, // Estimated API usage reduction
+        duration: `${duration}ms`
       },
       timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    console.error('Error in scheduled monitoring job:', error)
+    console.error('❌ Optimized monitoring job failed:', error)
 
     return NextResponse.json(
       {
-        success: false,
-        error: 'Internal server error during scheduled monitoring',
+        error: 'Monitoring job failed',
         details: error instanceof Error ? error.message : 'Unknown error',
+        strategy: 'rss-first-optimized',
         timestamp: new Date().toISOString()
       },
       { status: 500 }
