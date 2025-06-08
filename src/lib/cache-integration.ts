@@ -112,6 +112,91 @@ export class EnhancedCacheService {
   resetStats(): void {
     this.tiered.resetStats()
   }
+
+  /**
+   * Test Redis connection health
+   */
+  async testRedisConnection(): Promise<{
+    success: boolean
+    error?: string
+    responseTime?: number
+  }> {
+    const startTime = Date.now()
+
+    try {
+      // Test basic Redis operations
+      const testKey = 'health-check-' + Date.now()
+      const testValue = 'ok'
+
+      await this.legacyCache.set(testKey, testValue, 10)
+      const retrieved = await this.legacyCache.get(testKey)
+      await this.legacyCache.delete(testKey)
+
+      const responseTime = Date.now() - startTime
+
+      if (retrieved !== testValue) {
+        throw new Error('Redis get/set test failed - value mismatch')
+      }
+
+      return {
+        success: true,
+        responseTime
+      }
+    } catch (error) {
+      const responseTime = Date.now() - startTime
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        responseTime
+      }
+    }
+  }
+
+  /**
+   * Test tiered cache functionality
+   */
+  async testTieredCache(): Promise<{
+    success: boolean
+    l1Working: boolean
+    l2Working: boolean
+    error?: string
+  }> {
+    try {
+      const testKey = 'tiered-test-' + Date.now()
+      const testValue = { test: true, timestamp: Date.now() }
+
+      // Test L1 + L2 set
+      await this.tiered.set(testKey, testValue, 60)
+
+      // Test retrieval
+      const retrieved = await this.tiered.get(testKey)
+
+      // Test L1 cache specifically
+      const stats = this.tiered.getStats()
+      const l1Working = stats.l1Size > 0
+
+      // Test Redis connection
+      const redisTest = await this.testRedisConnection()
+      const l2Working = redisTest.success
+
+      // Cleanup
+      await this.tiered.delete(testKey)
+
+      return {
+        success: retrieved?.test === true,
+        l1Working,
+        l2Working
+      }
+    } catch (error) {
+      return {
+        success: false,
+        l1Working: false,
+        l2Working: false,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
 }
 
 // Export singleton instance
@@ -129,11 +214,11 @@ export function getEnhancedCacheService(): EnhancedCacheService {
  */
 export async function migrateCacheKeys(): Promise<void> {
   console.log('🔄 Migrating cache keys to optimized TTL values...')
-  
+
   try {
     // Warm cache with popular data
     await enhancedCache.warmCache()
-    
+
     console.log('✅ Cache migration completed successfully')
   } catch (error) {
     console.error('❌ Cache migration failed:', error)
@@ -176,7 +261,7 @@ export class CacheMonitor {
 
   private logCacheStats(): void {
     const stats = enhancedCache.getStats()
-    
+
     console.log('📊 Cache Performance Stats:', {
       l1Size: stats.l1Size,
       hitRate: `${stats.hitRate.toFixed(1)}%`,
@@ -210,7 +295,7 @@ export class CacheWarmer {
    */
   static async warmUserCache(userIds: string[]): Promise<void> {
     console.log(`🔥 Warming user cache for ${userIds.length} users...`)
-    
+
     const promises = userIds.map(async (userId) => {
       try {
         await enhancedCache.getUser(userId)
@@ -228,7 +313,7 @@ export class CacheWarmer {
    */
   static async warmTweetCache(tweetIds: string[]): Promise<void> {
     console.log(`🔥 Warming tweet cache for ${tweetIds.length} tweets...`)
-    
+
     const promises = tweetIds.map(async (tweetId) => {
       try {
         await enhancedCache.getTweetEngagement(tweetId)
@@ -246,7 +331,7 @@ export class CacheWarmer {
    */
   static async warmLeaderboardCache(): Promise<void> {
     console.log('🔥 Warming leaderboard cache...')
-    
+
     try {
       await enhancedCache.getLeaderboard()
       console.log('✅ Leaderboard cache warming completed')
@@ -266,17 +351,17 @@ export const cacheMonitor = CacheMonitor.getInstance()
  */
 export async function initializeEnhancedCaching(): Promise<void> {
   console.log('🚀 Initializing enhanced caching system...')
-  
+
   try {
     // Start cache monitoring
     cacheMonitor.startMonitoring(60000) // Monitor every minute
-    
+
     // Migrate existing cache keys
     await migrateCacheKeys()
-    
+
     // Warm cache with popular data
     await CacheWarmer.warmLeaderboardCache()
-    
+
     console.log('✅ Enhanced caching system initialized successfully')
   } catch (error) {
     console.error('❌ Failed to initialize enhanced caching system:', error)

@@ -164,13 +164,20 @@ export class RSSMonitoringService {
   }
 
   /**
-   * Fetch and parse RSS feed
+   * Fetch and parse RSS feed with enhanced error handling
    */
   private async fetchAndParseFeed(feedUrl: string): Promise<RSSItem[]> {
+    // Test feed health first
+    const isHealthy = await this.testFeedHealth(feedUrl)
+    if (!isHealthy) {
+      throw new Error(`Feed health check failed for ${feedUrl}`)
+    }
+
     const response = await fetch(feedUrl, {
       headers: {
         'User-Agent': 'LayerEdge Community Bot 1.0 (https://edgen.koyeb.app)',
-        'Accept': 'application/rss+xml, application/xml, text/xml'
+        'Accept': 'application/rss+xml, application/xml, text/xml',
+        'Cache-Control': 'no-cache'
       },
       signal: AbortSignal.timeout(15000)
     })
@@ -180,7 +187,32 @@ export class RSSMonitoringService {
     }
 
     const xmlText = await response.text()
+
+    // Validate XML content
+    if (!xmlText.includes('<rss') && !xmlText.includes('<feed')) {
+      throw new Error('Response does not contain valid RSS/XML structure')
+    }
+
     return this.parseRSSXML(xmlText)
+  }
+
+  /**
+   * Test feed health before processing
+   */
+  private async testFeedHealth(feedUrl: string): Promise<boolean> {
+    try {
+      const response = await fetch(feedUrl, {
+        method: 'HEAD',
+        headers: {
+          'User-Agent': 'LayerEdge Community Bot 1.0 (https://edgen.koyeb.app)'
+        },
+        signal: AbortSignal.timeout(5000)
+      })
+      return response.ok
+    } catch (error) {
+      console.warn(`Feed health check failed for ${feedUrl}:`, error)
+      return false
+    }
   }
 
   /**
@@ -410,11 +442,46 @@ export class RSSMonitoringService {
   }
 
   /**
-   * Handle feed errors
+   * Handle feed errors with smart rotation
    */
   private async handleFeedError(feed: RSSFeed): Promise<void> {
-    // Could implement logic to temporarily disable feeds that fail repeatedly
     console.warn(`Feed ${feed.name} encountered an error`)
+
+    // Track error count (in production, this would be stored in database)
+    const errorKey = `feed_errors_${feed.name}`
+    const currentErrors = this.getErrorCount(errorKey)
+
+    if (currentErrors >= 3) {
+      console.warn(`🚨 Feed ${feed.name} has failed ${currentErrors} times, temporarily disabling`)
+      feed.active = false
+
+      // Re-enable after 30 minutes
+      setTimeout(() => {
+        feed.active = true
+        this.resetErrorCount(errorKey)
+        console.log(`🔄 Re-enabled feed ${feed.name} after cooldown period`)
+      }, 30 * 60 * 1000)
+    } else {
+      this.incrementErrorCount(errorKey)
+    }
+  }
+
+  /**
+   * Simple error counting (in-memory for now)
+   */
+  private errorCounts = new Map<string, number>()
+
+  private getErrorCount(key: string): number {
+    return this.errorCounts.get(key) || 0
+  }
+
+  private incrementErrorCount(key: string): void {
+    const current = this.getErrorCount(key)
+    this.errorCounts.set(key, current + 1)
+  }
+
+  private resetErrorCount(key: string): void {
+    this.errorCounts.delete(key)
   }
 
   /**

@@ -89,8 +89,23 @@ export async function GET(request: NextRequest) {
 
     const duration = Date.now() - startTime
 
-    // Update system monitoring status
+    // Update system monitoring status with safe user validation
     try {
+      // Ensure system user exists
+      const systemUser = await prisma.user.findUnique({ where: { id: 'system' } })
+      if (!systemUser) {
+        console.warn('System user not found, creating...')
+        await prisma.user.create({
+          data: {
+            id: 'system',
+            name: 'System Monitor',
+            email: 'system@layeredge.app',
+            totalPoints: 0,
+            autoMonitoringEnabled: false
+          }
+        })
+      }
+
       await prisma.tweetMonitoring.upsert({
         where: { userId: 'system' },
         update: {

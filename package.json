@@ -38,7 +38,7 @@
   "dependencies": {
     "@headlessui/react": "^2.0.0",
     "@heroicons/react": "^2.0.18",
-    "@hookform/resolvers": "^3.3.2",
+    "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^5.7.1",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.3.2",
@@ -74,12 +74,12 @@
     "prisma": "^5.7.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-hook-form": "^7.48.2",
+    "react-hook-form": "^7.57.0",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.3.0",
     "three": "^0.176.0",
     "ws": "^8.14.2",
-    "zod": "^3.22.4",
+    "zod": "^3.25.56",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
