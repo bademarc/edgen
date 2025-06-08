@@ -33,6 +33,12 @@
     "encryption:test": "tsx scripts/fix-token-encryption.ts",
     "free-tier:setup": "tsx scripts/setup-free-tier.ts",
     "free-tier:status": "curl -s http://localhost:3000/api/free-tier/status | jq",
+    "scweet:install": "bash scripts/install-official-scweet.sh",
+    "scweet:test": "python3 scripts/test-official-scweet.py",
+    "scweet:service": "python3 src/lib/scweet-service.py",
+    "test:integration": "node scripts/test-scweet-integration.js",
+    "docker:scweet": "docker-compose up scweet-service",
+    "docker:all": "docker-compose up",
     "postinstall": "prisma generate"
   },
   "dependencies": {

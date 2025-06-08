@@ -1,16 +1,25 @@
-# Multi-stage Docker build for Scweet integration
+# Official Scweet v3.0+ Docker build for LayerEdge
 FROM python:3.11-slim as python-base
 
-# Install system dependencies for Chromium and Python
+# Install system dependencies for Official Scweet v3.0+ with Nodriver
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     unzip \
     curl \
     xvfb \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chromium
+# Install Google Chrome (required for Nodriver in Official Scweet v3.0+)
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
     && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
     && apt-get update \
@@ -20,20 +29,26 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
 # Set up Python environment
 WORKDIR /app
 
-# Copy Python requirements
+# Copy Python requirements for Official Scweet
 COPY requirements.scweet.txt .
 
-# Install Python dependencies
+# Install Official Scweet v3.0+ and dependencies
 RUN pip install --no-cache-dir -r requirements.scweet.txt
+
+# Install Official Scweet directly from GitHub (ensures latest v3.0+)
+RUN pip install --no-cache-dir git+https://github.com/Altimis/Scweet.git@master
 
 # Copy Scweet service files
 COPY src/services/scweet/ ./scweet/
 COPY src/lib/scweet-service.py ./
 
-# Set environment variables for headless operation
+# Set environment variables for Official Scweet v3.0+ with Nodriver
 ENV DISPLAY=:99
 ENV CHROME_BIN=/usr/bin/google-chrome
 ENV CHROME_PATH=/usr/bin/google-chrome
+ENV PYTHONPATH=/app
+ENV SCWEET_HEADLESS=true
+ENV SCWEET_DISABLE_IMAGES=true
 
 # Create non-root user for security
 RUN useradd -m -u 1000 scweet && chown -R scweet:scweet /app

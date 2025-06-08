@@ -1,6 +1,6 @@
 /**
- * Scweet Integration Monitoring Service
- * Tracks performance, success rates, and health metrics
+ * Official Scweet v3.0+ Integration Monitoring Service
+ * Tracks performance, success rates, and health metrics for Official Altimis/Scweet
  */
 
 interface ScweetMetrics {
@@ -18,7 +18,7 @@ interface PerformanceLog {
   operation: 'tweet_data' | 'engagement' | 'user_info'
   success: boolean
   responseTime: number
-  source: 'api' | 'scweet' | 'scraper'
+  source: 'api' | 'scweet' | 'scraper'  // 'scweet' = Official Scweet v3.0+
   error?: string
 }
 

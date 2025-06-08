@@ -73,18 +73,18 @@ async def lifespan(app: FastAPI):
         redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
         redis_client = redis.from_url(redis_url, decode_responses=True)
         
-        # Initialize Scweet
+        # Initialize Official Scweet v3.0+
         from Scweet.scweet import Scweet
         scweet_instance = Scweet(
-            proxy=None,
-            cookies=None,
-            cookies_path='/tmp/cookies',
-            user_agent=None,
-            disable_images=True,
-            env_path='.env',
-            n_splits=-1,
+            proxy=None,  # No proxy for now
+            cookies=None,  # Nodriver handles cookies automatically
+            cookies_directory='/tmp/cookies',  # Official parameter name
+            user_agent=None,  # Use default
+            disable_images=True,  # Faster scraping
+            env_path='.env',  # Twitter credentials file
+            n_splits=-1,  # No date splitting for single tweets
             concurrency=3,  # Lower for Koyeb resource limits
-            headless=True,
+            headless=True,  # Required for server deployment
             scroll_ratio=50  # Reduced for faster scraping
         )
         
@@ -170,43 +170,60 @@ async def get_tweet_data(request: TweetRequest):
             logger.info(f"Returning cached data for tweet {tweet_id}")
             return TweetResponse(**cached_data)
         
-        # Scrape tweet data
+        # Use Official Scweet v3.0+ API to scrape tweet data
         logger.info(f"Scraping tweet data for {request.tweet_url}")
-        
-        # Use Scweet to get tweet data
-        # Note: This is a simplified implementation - you may need to adapt based on Scweet v3 API
+
+        # Official Scweet scrape() method for getting tweets from specific user
         results = scweet_instance.scrape(
             since=(datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
             until=datetime.now().strftime("%Y-%m-%d"),
-            from_account=username,
-            limit=50,
-            display_type="Latest"
+            words=None,  # No keyword filtering
+            to_account=None,
+            from_account=username,  # Target specific user
+            lang=None,  # Any language
+            limit=50,  # Limit results
+            display_type="Latest",  # Get latest tweets
+            resume=False,
+            filter_replies=False,
+            proximity=False,
+            geocode=None,
+            minreplies=None,
+            minlikes=None,
+            minretweets=None,
+            save_dir=None,  # Don't save to file
+            custom_csv_name=None
         )
-        
-        # Find the specific tweet
+
+        # Find the specific tweet by ID
         tweet_data = None
         for tweet in results:
-            if tweet.get('tweetId') == tweet_id:
+            # Official Scweet returns tweets with 'tweetId' field
+            if str(tweet.get('tweetId', '')).endswith(tweet_id):
                 tweet_data = tweet
                 break
-        
+
         if not tweet_data:
-            raise HTTPException(status_code=404, detail="Tweet not found")
+            raise HTTPException(status_code=404, detail="Tweet not found in recent tweets")
         
-        # Get user info if requested
+        # Get user info using Official Scweet get_user_information() method
         user_info = {}
         if request.include_user_info:
-            user_data = scweet_instance.get_user_information(
-                handles=[username],
-                login=False
-            )
-            if user_data and username in user_data:
-                user_info = user_data[username]
+            try:
+                # Official Scweet get_user_information() method
+                user_data = scweet_instance.get_user_information(
+                    handles=[username],
+                    login=False  # Try without login first
+                )
+                if user_data and username in user_data:
+                    user_info = user_data[username]
+            except Exception as e:
+                logger.warning(f"Failed to get user info for {username}: {e}")
+                # Continue without user info
         
-        # Format response
+        # Format response using Official Scweet data structure
         response_data = {
             "tweet_id": tweet_id,
-            "content": tweet_data.get('Text', ''),
+            "content": tweet_data.get('Text', ''),  # Official Scweet field name
             "author": {
                 "username": username,
                 "display_name": user_info.get('name', username),
@@ -215,11 +232,11 @@ async def get_tweet_data(request: TweetRequest):
                 "following_count": user_info.get('following', 0)
             },
             "engagement": {
-                "likes": int(tweet_data.get('Likes', 0)),
-                "retweets": int(tweet_data.get('Retweets', 0)),
-                "replies": int(tweet_data.get('Replies', 0))
+                "likes": int(tweet_data.get('Likes', 0)),      # Official Scweet field name
+                "retweets": int(tweet_data.get('Retweets', 0)), # Official Scweet field name
+                "replies": int(tweet_data.get('Replies', 0))   # Official Scweet field name
             },
-            "created_at": tweet_data.get('Timestamp', datetime.utcnow().isoformat()),
+            "created_at": tweet_data.get('Timestamp', datetime.utcnow().isoformat()), # Official Scweet field name
             "source": "scweet",
             "is_from_layeredge_community": check_layeredge_community(tweet_data.get('Text', ''))
         }
@@ -283,15 +300,15 @@ async def get_user_info(request: UserInfoRequest):
         if cached_data:
             return UserInfoResponse(**cached_data)
         
-        # Get user data
+        # Use Official Scweet get_user_information() method
         user_data = scweet_instance.get_user_information(
             handles=[request.username],
-            login=False
+            login=False  # Try without login first for public profiles
         )
-        
+
         if not user_data or request.username not in user_data:
-            raise HTTPException(status_code=404, detail="User not found")
-        
+            raise HTTPException(status_code=404, detail="User not found or profile is private")
+
         user_info = user_data[request.username]
         
         response_data = {

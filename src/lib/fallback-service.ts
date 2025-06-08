@@ -14,7 +14,7 @@ export interface FallbackTweetData {
     profileImage?: string
   }
   createdAt: Date
-  source: 'api' | 'scraper'
+  source: 'api' | 'scweet' | 'scraper'  // Added 'scweet' for Official Scweet v3.0+
   isFromLayerEdgeCommunity: boolean
 }
 
@@ -22,7 +22,7 @@ export interface FallbackEngagementMetrics {
   likes: number
   retweets: number
   replies: number
-  source: 'api' | 'scraper'
+  source: 'api' | 'scweet' | 'scraper'  // Added 'scweet' for Official Scweet v3.0+
   timestamp: Date
 }
 

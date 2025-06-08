@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Test script for Scweet integration with LayerEdge platform
- * Tests the complete fallback chain: Twitter API -> Scweet -> Web Scraping
+ * Test script for Official Scweet v3.0+ integration with LayerEdge platform
+ * Tests the complete fallback chain: Twitter API -> Official Scweet -> Web Scraping
+ * Uses Official Altimis/Scweet repository methods and API structure
  */
 
 const { getFallbackService } = require('../src/lib/fallback-service')
 
 async function testScweetIntegration() {
-  console.log('🧪 Testing Scweet Integration for LayerEdge Platform\n')
+  console.log('🧪 Testing Official Scweet v3.0+ Integration for LayerEdge Platform\n')
 
   // Test URLs - replace with actual LayerEdge community tweets
   const testTweets = [
@@ -15,13 +16,13 @@ async function testScweetIntegration() {
     'https://x.com/user/status/1234567891',       // Replace with real tweet
   ]
 
-  // Initialize fallback service with Scweet enabled
+  // Initialize fallback service with Official Scweet v3.0+ enabled
   const fallbackService = getFallbackService({
     enableScraping: true,
-    preferApi: false,  // Test Scweet first
+    preferApi: false,  // Test Official Scweet first
     enableScweet: true,
     scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://localhost:8001',
-    apiTimeoutMs: 10000
+    apiTimeoutMs: 15000  // Longer timeout for Official Scweet operations
   })
 
   console.log('📊 Fallback Service Status:')
@@ -108,25 +109,25 @@ async function testScweetHealth() {
   const scweetUrl = process.env.SCWEET_SERVICE_URL || 'http://localhost:8001'
   
   try {
-    console.log(`🏥 Testing Scweet service health at ${scweetUrl}`)
-    
+    console.log(`🏥 Testing Official Scweet v3.0+ service health at ${scweetUrl}`)
+
     const response = await fetch(`${scweetUrl}/health`)
     const health = await response.json()
-    
+
     if (response.ok) {
-      console.log('✅ Scweet service is healthy!')
+      console.log('✅ Official Scweet v3.0+ service is healthy!')
       console.log(`   Status: ${health.status}`)
       console.log(`   Service: ${health.service}`)
       console.log(`   Scweet Ready: ${health.scweet_ready}`)
       console.log(`   Timestamp: ${health.timestamp}`)
       return true
     } else {
-      console.log('❌ Scweet service health check failed')
+      console.log('❌ Official Scweet service health check failed')
       return false
     }
   } catch (error) {
-    console.log(`❌ Cannot connect to Scweet service: ${error.message}`)
-    console.log('💡 Make sure the Scweet service is running:')
+    console.log(`❌ Cannot connect to Official Scweet service: ${error.message}`)
+    console.log('💡 Make sure the Official Scweet v3.0+ service is running:')
     console.log('   docker-compose up scweet-service')
     console.log('   or')
     console.log('   python src/lib/scweet-service.py')
@@ -136,21 +137,22 @@ async function testScweetHealth() {
 
 // Main execution
 async function main() {
-  console.log('🚀 LayerEdge Scweet Integration Test Suite')
+  console.log('🚀 LayerEdge Official Scweet v3.0+ Integration Test Suite')
+  console.log('📦 Using Official Altimis/Scweet Repository')
   console.log('=' .repeat(60))
-  
-  // Check if Scweet service is available
+
+  // Check if Official Scweet service is available
   const isScweetHealthy = await testScweetHealth()
   console.log()
-  
+
   if (isScweetHealthy) {
     await testScweetIntegration()
   } else {
-    console.log('⚠️ Skipping integration tests due to Scweet service unavailability')
-    console.log('🔧 Please start the Scweet service and try again')
+    console.log('⚠️ Skipping integration tests due to Official Scweet service unavailability')
+    console.log('🔧 Please start the Official Scweet v3.0+ service and try again')
   }
-  
-  console.log('🏁 Test suite completed!')
+
+  console.log('🏁 Official Scweet integration test suite completed!')
 }
 
 // Handle command line execution
