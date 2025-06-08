@@ -17,6 +17,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { SubmitTweetCTA } from '@/components/ui/submit-tweet-cta'
 
 
 interface DashboardStats {
@@ -260,11 +261,21 @@ export default function DashboardPage() {
             </motion.div>
           </div>
 
-          {/* Recent Activity */}
+          {/* Submit Tweet CTA */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
+            className="mb-8"
+          >
+            <SubmitTweetCTA variant="prominent" />
+          </motion.div>
+
+          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
           >
             <Card variant="professional">
               <CardHeader>
@@ -296,10 +307,8 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground">No contributions yet</p>
-                    <Button variant="outline" className="mt-4" asChild>
-                      <a href="/submit">Make Your First Contribution</a>
-                    </Button>
+                    <p className="text-muted-foreground mb-4">No contributions yet</p>
+                    <SubmitTweetCTA variant="compact" />
                   </div>
                 )}
               </CardContent>

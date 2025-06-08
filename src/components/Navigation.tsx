@@ -142,6 +142,9 @@ export function Navigation() {
             <Link href="/dashboard" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
               Dashboard
             </Link>
+            <Link href="/submit" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              Submit Tweet
+            </Link>
             <Link href="/leaderboard" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
               Leaderboard
             </Link>
