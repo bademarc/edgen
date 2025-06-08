@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/auth-utils'
 import { prisma } from '@/lib/db'
-import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent } from '@/lib/utils'
+import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent, verifyTweetAuthor, extractUsernameFromTweetUrl } from '@/lib/utils'
 import { getFallbackService } from '@/lib/fallback-service'
 
 export async function GET(request: NextRequest) {
@@ -71,8 +71,26 @@ export async function POST(request: NextRequest) {
 
     if (!isLayerEdgeCommunityUrl(tweetUrl)) {
       return NextResponse.json(
-        { error: 'Tweet must be from the LayerEdge community' },
+        { error: 'Please enter a valid X (Twitter) URL' },
         { status: 400 }
+      )
+    }
+
+    // Get authenticated user's Twitter username for verification
+    const authenticatedUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        xUsername: true,
+        xUserId: true,
+        name: true
+      }
+    })
+
+    if (!authenticatedUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
       )
     }
 
@@ -137,17 +155,32 @@ export async function POST(request: NextRequest) {
 
     console.log(`Successfully fetched tweet data via ${tweetData.source}. Content: "${tweetData.content.substring(0, 100)}..."`)
     console.log(`Tweet metrics - Likes: ${tweetData.likes}, Retweets: ${tweetData.retweets}, Replies: ${tweetData.replies}`)
+    console.log(`Tweet author: ${tweetData.author.username}, Authenticated user: ${authenticatedUser.xUsername}`)
 
-    // Verify tweet is from LayerEdge community (already checked by fallback service)
-    if (!tweetData.isFromLayerEdgeCommunity) {
+    // SECURITY CHECK: Verify the tweet author matches the authenticated user
+    const isAuthorVerified = verifyTweetAuthor(tweetData.author.username, authenticatedUser.xUsername)
+
+    // Additional verification using URL username extraction
+    const urlUsername = extractUsernameFromTweetUrl(tweetUrl)
+    const isUrlUsernameValid = urlUsername ? verifyTweetAuthor(urlUsername, authenticatedUser.xUsername) : false
+
+    if (!isAuthorVerified && !isUrlUsernameValid) {
+      console.log(`SECURITY VIOLATION: User ${authenticatedUser.xUsername} attempted to submit tweet by ${tweetData.author.username}`)
       return NextResponse.json(
         {
-          error: 'Tweet must be from the LayerEdge community',
-          source: tweetData.source,
-          fallbackStatus: fallbackService.getStatus()
+          error: 'You can only submit your own tweets. This tweet was authored by a different user.',
+          errorType: 'UNAUTHORIZED_TWEET_SUBMISSION',
+          tweetAuthor: tweetData.author.username,
+          authenticatedUser: authenticatedUser.xUsername,
+          securityViolation: true
         },
-        { status: 400 }
+        { status: 403 }
       )
+    }
+
+    // Verify tweet is from LayerEdge community (relaxed check - content validation is more important)
+    if (!tweetData.isFromLayerEdgeCommunity) {
+      console.log(`Warning: Tweet may not be from LayerEdge community, but proceeding with content validation`)
     }
 
     // Validate tweet content for required keywords

@@ -66,10 +66,17 @@ export function isValidTweetUrl(url: string): boolean {
 // Legacy alias for backward compatibility
 export const isValidTwitterUrl = isValidTweetUrl
 
-// LayerEdge community URL validation
+// LayerEdge community URL validation - Enhanced to accept all valid tweet URLs
 export function isLayerEdgeCommunityUrl(url: string): boolean {
-  return url.includes('x.com/i/communities/1890107751621357663') ||
-         url.includes('twitter.com/i/communities/1890107751621357663')
+  // Accept direct community URLs
+  if (url.includes('x.com/i/communities/1890107751621357663') ||
+      url.includes('twitter.com/i/communities/1890107751621357663')) {
+    return true
+  }
+
+  // Accept regular tweet URLs - community verification will be done server-side
+  // This allows tweets posted in the community but accessed via regular URLs
+  return isValidTweetUrl(url)
 }
 
 // Points calculation
@@ -82,6 +89,26 @@ export function calculatePoints(engagement: { likes: number; retweets: number; c
 export function validateTweetContent(content: string): boolean {
   const lowerContent = content.toLowerCase()
   return lowerContent.includes('@layeredge') || lowerContent.includes('$edgen')
+}
+
+// Username verification for security
+export function verifyTweetAuthor(tweetAuthorUsername: string, authenticatedUsername: string | null): boolean {
+  if (!authenticatedUsername || !tweetAuthorUsername) {
+    return false
+  }
+
+  // Case-insensitive comparison, remove @ symbols if present
+  const cleanTweetAuthor = tweetAuthorUsername.toLowerCase().replace('@', '')
+  const cleanAuthUser = authenticatedUsername.toLowerCase().replace('@', '')
+
+  return cleanTweetAuthor === cleanAuthUser
+}
+
+// Extract username from tweet URL for additional verification
+export function extractUsernameFromTweetUrl(url: string): string | null {
+  // Match patterns like: https://x.com/username/status/123 or https://twitter.com/username/status/123
+  const match = url.match(/(?:x\.com|twitter\.com)\/([^\/]+)\/status\/\d+/)
+  return match ? match[1] : null
 }
 
 // Animation utilities

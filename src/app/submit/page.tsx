@@ -21,7 +21,7 @@ import {
   ClockIcon,
   ShareIcon
 } from '@heroicons/react/24/outline'
-import { isValidTwitterUrl, isLayerEdgeCommunityUrl } from '@/lib/utils'
+import { isValidTwitterUrl, isLayerEdgeCommunityUrl, extractUsernameFromTweetUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -178,8 +178,14 @@ export default function SubmitPage() {
           router.push('/dashboard')
         }, 5000) // Increased delay to show engagement tracking
       } else {
-        // Check if this is a content validation error
-        if (result.contentValidationFailed) {
+        // Enhanced error handling for security violations
+        if (result.errorType === 'UNAUTHORIZED_TWEET_SUBMISSION') {
+          setSubmitStatus('error')
+          setErrorMessage(`Security Error: You can only submit your own tweets. This tweet was authored by @${result.tweetAuthor}.`)
+          toast.error('Unauthorized Submission', {
+            description: `You can only submit your own tweets. This tweet was authored by @${result.tweetAuthor}.`,
+          })
+        } else if (result.contentValidationFailed) {
           setSubmitStatus('content-validation-failed')
           toast.error('Content validation failed', {
             description: 'Tweet must contain @layeredge or $EDGEN',
@@ -402,6 +408,18 @@ export default function SubmitPage() {
                               <div className="mt-2 p-2 bg-background/50 rounded border text-xs font-mono break-all">
                                 {tweetUrl}
                               </div>
+                              {(() => {
+                                const urlUsername = extractUsernameFromTweetUrl(tweetUrl)
+                                if (urlUsername) {
+                                  return (
+                                    <div className="mt-2 text-xs">
+                                      <span className="text-muted-foreground">Tweet author: </span>
+                                      <span className="font-medium">@{urlUsername}</span>
+                                    </div>
+                                  )
+                                }
+                                return null
+                              })()}
                             </AlertDescription>
                           </Alert>
                         </motion.div>
