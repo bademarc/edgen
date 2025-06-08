@@ -5,6 +5,7 @@ import { Providers } from "@/components/Providers";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/ui/footer";
 import { Toaster } from "@/components/ui/sonner";
+import { EdgenHelperChatbot } from "@/components/edgen-helper-chatbot";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -55,6 +56,7 @@ export default function RootLayout({
             <Footer />
           </div>
           <Toaster />
+          <EdgenHelperChatbot />
         </Providers>
       </body>
     </html>
