@@ -34,6 +34,7 @@ export interface FallbackServiceConfig {
   rateLimitCooldownMs: number
   enableScweet?: boolean
   scweetServiceUrl?: string
+  enableTwikit?: boolean
 }
 
 export class FallbackService {
@@ -65,6 +66,7 @@ export class FallbackService {
       rateLimitCooldownMs: 15 * 60 * 1000, // 15 minutes
       enableScweet: true,
       scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://scweet-service:8001',
+      enableTwikit: true, // PRIORITY FIX: Enable Twikit fallback
       ...config
     }
 
@@ -75,14 +77,15 @@ export class FallbackService {
   }
 
   private shouldUseApi(): boolean {
-    // Don't use API if it's not available
-    if (!this.twitterApi) {
+    // PRIORITY FIX: Don't use API if not preferred (Scweet prioritization)
+    if (!this.config.preferApi) {
+      console.log('Twitter API disabled - using Scweet prioritization')
       return false
     }
 
-    // Don't use API if scraping is disabled
-    if (!this.config.enableScraping) {
-      return true
+    // Don't use API if it's not available
+    if (!this.twitterApi) {
+      return false
     }
 
     // Don't use API if we're currently rate limited
@@ -99,7 +102,7 @@ export class FallbackService {
       }
     }
 
-    // Use API if preferred and not experiencing failures
+    // Use API only if preferred and not experiencing failures
     if (this.config.preferApi && this.apiFailureCount < 3) {
       return true
     }
@@ -113,7 +116,7 @@ export class FallbackService {
       }
     }
 
-    return this.config.preferApi
+    return false // PRIORITY FIX: Default to false to avoid rate limits
   }
 
   private handleApiError(error: Error): void {
@@ -145,48 +148,71 @@ export class FallbackService {
     }
 
     try {
-      console.log('Attempting to fetch tweet data via Scweet service...')
+      console.log(`Attempting to fetch tweet data via Scweet service at ${this.scweetServiceUrl}...`)
 
-      const response = await fetch(`${this.scweetServiceUrl}/tweet`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tweet_url: tweetUrl,
-          include_engagement: true,
-          include_user_info: true
-        }),
-        signal: AbortSignal.timeout(this.config.apiTimeoutMs)
-      })
+      // PRIORITY FIX: Add connection retry logic for network issues
+      let lastError: Error | null = null
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetch(`${this.scweetServiceUrl}/tweet`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              tweet_url: tweetUrl,
+              include_engagement: true,
+              include_user_info: true
+            }),
+            signal: AbortSignal.timeout(this.config.apiTimeoutMs)
+          })
 
-      if (!response.ok) {
-        throw new Error(`Scweet service error: ${response.status}`)
+          if (!response.ok) {
+            throw new Error(`Scweet service error: ${response.status}`)
+          }
+
+          const data = await response.json()
+
+          const fallbackData: FallbackTweetData = {
+            id: data.tweet_id,
+            content: data.content,
+            likes: data.engagement.likes,
+            retweets: data.engagement.retweets,
+            replies: data.engagement.replies,
+            author: {
+              id: data.author.username,
+              username: data.author.username,
+              name: data.author.display_name,
+              profileImage: undefined
+            },
+            createdAt: new Date(data.created_at),
+            source: 'scweet' as const,
+            isFromLayerEdgeCommunity: data.is_from_layeredge_community
+          }
+
+          console.log('Successfully fetched tweet data via Scweet service')
+          return fallbackData
+
+        } catch (error) {
+          lastError = error as Error
+          console.warn(`Scweet service attempt ${attempt} failed:`, error)
+
+          // PRIORITY FIX: Handle network resolution errors specifically
+          if (error instanceof TypeError && error.message.includes('fetch failed')) {
+            console.error(`Network resolution failed for ${this.scweetServiceUrl} - attempt ${attempt}/3`)
+            if (attempt < 3) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // Exponential backoff
+              continue
+            }
+          }
+
+          if (attempt === 3) {
+            throw lastError
+          }
+        }
       }
-
-      const data = await response.json()
-
-      const fallbackData: FallbackTweetData = {
-        id: data.tweet_id,
-        content: data.content,
-        likes: data.engagement.likes,
-        retweets: data.engagement.retweets,
-        replies: data.engagement.replies,
-        author: {
-          id: data.author.username,
-          username: data.author.username,
-          name: data.author.display_name,
-          profileImage: undefined
-        },
-        createdAt: new Date(data.created_at),
-        source: 'scweet' as const,
-        isFromLayerEdgeCommunity: data.is_from_layeredge_community
-      }
-
-      console.log('Successfully fetched tweet data via Scweet service')
-      return fallbackData
     } catch (error) {
-      console.error('Scweet service failed:', error)
+      console.error('Scweet service failed after all retries:', error)
       return null
     }
   }
@@ -233,7 +259,8 @@ export class FallbackService {
   }
 
   private async tryTwikitService(tweetUrl: string): Promise<FallbackTweetData | null> {
-    if (!this.config.enableScweet) { // Use same config flag for now
+    if (!this.config.enableTwikit) { // PRIORITY FIX: Use dedicated Twikit config flag
+      console.log('Twikit fallback disabled')
       return null
     }
 
@@ -285,7 +312,8 @@ export class FallbackService {
   }
 
   private async tryTwikitEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
-    if (!this.config.enableScweet) { // Use same config flag for now
+    if (!this.config.enableTwikit) { // PRIORITY FIX: Use dedicated Twikit config flag
+      console.log('Twikit engagement fallback disabled')
       return null
     }
 

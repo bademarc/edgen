@@ -43,8 +43,11 @@ RUN npm ci --legacy-peer-deps
 # PRIORITY FIX: Install Playwright browsers with proper error handling
 RUN npx playwright install chromium --with-deps
 RUN npx playwright install-deps chromium
-# Verify Playwright installation
+# Verify Playwright installation and browser availability
 RUN npx playwright --version
+RUN ls -la /root/.cache/ms-playwright/
+# Test browser executable
+RUN find /root/.cache/ms-playwright -name "chrome" -type f -executable | head -1
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -113,7 +116,8 @@ ENV HOSTNAME "0.0.0.0"
 # PRIORITY FIX: Set Playwright environment variables for production
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/nextjs/.cache/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/home/nextjs/.cache/ms-playwright/chromium-*/chrome-linux/chrome
+# Fix: Use proper browser executable path
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/home/nextjs/.cache/ms-playwright/chromium-1169/chrome-linux/chrome
 
 # Use startup script to run the application
 # server.js is created by next build from the standalone output
