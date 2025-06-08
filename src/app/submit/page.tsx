@@ -341,7 +341,7 @@ export default function SubmitPage() {
                       name="tweetUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel variant="layeredge">Tweet URL</FormLabel>
+                          <FormLabel>Tweet URL</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
