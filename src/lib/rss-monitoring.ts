@@ -1,5 +1,5 @@
 import { prisma } from './db'
-import { validateTweetContent } from './tweet-validation'
+import { validateTweetContent } from './utils'
 
 interface RSSFeed {
   url: string
@@ -68,7 +68,7 @@ export class RSSMonitoringService {
    */
   async monitorAllFeeds(): Promise<MonitoringResult> {
     console.log('🔍 Starting RSS monitoring for LayerEdge mentions...')
-    
+
     const results: MonitoringResult = {
       totalTweets: 0,
       newTweets: 0,
@@ -85,7 +85,7 @@ export class RSSMonitoringService {
       try {
         console.log(`📡 Monitoring RSS feed: ${feed.name}`)
         const feedResult = await this.monitorSingleFeed(feed)
-        
+
         results.feedResults.push({
           feedName: feed.name,
           tweetsFound: feedResult.tweetsFound,
@@ -96,14 +96,14 @@ export class RSSMonitoringService {
         results.newTweets += feedResult.newTweets
 
         feed.lastCheck = new Date()
-        
+
         // Add delay between feeds to be respectful
         await this.delay(2000)
 
       } catch (error) {
         const errorMsg = `RSS feed ${feed.name} failed: ${error instanceof Error ? error.message : String(error)}`
         console.error('❌', errorMsg)
-        
+
         results.errors.push(errorMsg)
         results.feedResults.push({
           feedName: feed.name,
@@ -130,7 +130,7 @@ export class RSSMonitoringService {
     newTweets: number
   }> {
     const items = await this.fetchAndParseFeed(feed.url)
-    
+
     let totalProcessed = 0
     let newTweets = 0
     let tweetsFound = 0
@@ -139,7 +139,7 @@ export class RSSMonitoringService {
       try {
         // Extract and validate tweet content
         const tweetData = this.extractTweetData(item)
-        
+
         if (!tweetData || !validateTweetContent(tweetData.content)) {
           continue
         }
@@ -190,10 +190,10 @@ export class RSSMonitoringService {
     try {
       // Simple XML parsing for RSS items
       const items: RSSItem[] = []
-      
+
       // Extract items using regex (simple approach for RSS)
       const itemMatches = xmlText.match(/<item[^>]*>[\s\S]*?<\/item>/gi)
-      
+
       if (!itemMatches) return items
 
       for (const itemXml of itemMatches) {
@@ -305,7 +305,7 @@ export class RSSMonitoringService {
 
       // Find user in our database
       const user = await prisma.user.findFirst({
-        where: { 
+        where: {
           xUsername: {
             equals: tweetData.username,
             mode: 'insensitive'
@@ -399,7 +399,7 @@ export class RSSMonitoringService {
     // Bonus for multiple mentions
     const layeredgeCount = (content.toLowerCase().match(/@layeredge/g) || []).length
     const edgenCount = (content.toLowerCase().match(/\$edgen/g) || []).length
-    
+
     points += (layeredgeCount + edgenCount - 1) * 5 // Bonus for multiple mentions
 
     // Bonus for longer content

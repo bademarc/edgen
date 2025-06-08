@@ -1,5 +1,5 @@
 import { extractTweetId } from './utils'
-import { getCacheService } from './cache'
+import { getEnhancedCacheService } from './cache-integration'
 
 interface TwitterTweetData {
   id: string
@@ -57,7 +57,7 @@ export class TwitterApiService {
   private isHealthy: boolean = true
   private lastHealthCheck: number = 0
   private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
-  private cache = getCacheService()
+  private cache = getEnhancedCacheService()
 
   constructor() {
     this.bearerToken = process.env.TWITTER_BEARER_TOKEN || ''
@@ -364,13 +364,20 @@ export class TwitterApiService {
     replies: number
   } | null> {
     try {
-      console.log(`Fetching engagement metrics for URL: ${tweetUrl}`)
-
       const tweetId = extractTweetId(tweetUrl)
       if (!tweetId) {
         console.error('Failed to extract tweet ID from URL:', tweetUrl)
         return null
       }
+
+      // Check cache first (4-hour TTL for engagement metrics)
+      const cached = await this.cache.getTweetEngagement(tweetId)
+      if (cached) {
+        console.log(`🎯 Returning cached engagement metrics for tweet ${tweetId}`)
+        return cached
+      }
+
+      console.log(`🔍 Fetching fresh engagement metrics for URL: ${tweetUrl}`)
 
       const url = `https://api.twitter.com/2/tweets/${tweetId}?tweet.fields=public_metrics`
       const response = await this.makeRequest(url) as TwitterApiResponse
@@ -386,11 +393,17 @@ export class TwitterApiService {
       }
 
       const tweet = response.data
-      return {
+      const metrics = {
         likes: tweet.public_metrics?.like_count || 0,
         retweets: tweet.public_metrics?.retweet_count || 0,
         replies: tweet.public_metrics?.reply_count || 0,
       }
+
+      // Cache the engagement metrics for 4 hours
+      await this.cache.cacheTweetEngagement(tweetId, metrics, 14400)
+      console.log(`💾 Cached engagement metrics for tweet ${tweetId}`)
+
+      return metrics
     } catch (error) {
       console.error('Error fetching tweet engagement metrics:', error)
       return null

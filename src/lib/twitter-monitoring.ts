@@ -856,6 +856,72 @@ export class TwitterMonitoringService {
   }
 
   /**
+   * Monitor tweets for specific users (optimized for API quota conservation)
+   */
+  async monitorSpecificUsers(users: Array<{
+    id: string
+    name?: string | null
+    xUsername?: string | null
+    xUserId?: string | null
+  }>): Promise<{
+    totalUsers: number
+    successfulUsers: number
+    totalTweetsFound: number
+    errors: Array<{ userId: string; error: string }>
+  }> {
+    console.log(`🎯 Starting selective monitoring for ${users.length} critical users...`)
+
+    const results = {
+      totalUsers: users.length,
+      successfulUsers: 0,
+      totalTweetsFound: 0,
+      errors: [] as Array<{ userId: string; error: string }>
+    }
+
+    for (const user of users) {
+      try {
+        console.log(`\n🔍 Processing critical user ${user.name || 'No name'} (@${user.xUsername})...`)
+
+        const result = await this.monitorUserTweets(user.id)
+
+        if (result.success) {
+          results.successfulUsers++
+          results.totalTweetsFound += result.tweetsFound
+          console.log(`✅ Success: Found ${result.tweetsFound} tweets for @${user.xUsername}`)
+        } else {
+          results.errors.push({
+            userId: user.id,
+            error: result.error || 'Unknown error'
+          })
+          console.log(`❌ Error for @${user.xUsername}: ${result.error}`)
+        }
+
+        // Longer delay between critical users to conserve API quota
+        const delay = 5000 // 5 seconds between users
+        console.log(`⏳ Waiting ${delay / 1000}s before processing next critical user...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        results.errors.push({
+          userId: user.id,
+          error: errorMessage
+        })
+        console.error(`💥 Exception for critical user @${user.xUsername}:`, errorMessage)
+        continue
+      }
+    }
+
+    console.log(`\n📊 Selective monitoring completed:`)
+    console.log(`  - Total users: ${results.totalUsers}`)
+    console.log(`  - Successful: ${results.successfulUsers}`)
+    console.log(`  - Total tweets found: ${results.totalTweetsFound}`)
+    console.log(`  - Errors: ${results.errors.length}`)
+
+    return results
+  }
+
+  /**
    * Monitor tweets for all active users
    */
   async monitorAllUsers(): Promise<{
