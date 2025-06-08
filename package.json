@@ -42,7 +42,10 @@
     "test:x-credentials": "node scripts/test-x-credentials.js",
     "setup:x-credentials": "bash scripts/setup-x-credentials.sh",
     "diagnose:system-failures": "node scripts/diagnose-system-failures.js",
+    "test:windows-comprehensive": "node scripts/test-windows-comprehensive.js",
+    "start:local-scweet": "node src/lib/local-scweet-service.js",
     "deploy:critical-fixes": "bash scripts/deploy-critical-fixes.sh",
+    "deploy:windows-fixes": "powershell -ExecutionPolicy Bypass -File scripts/deploy-windows-fixes.ps1",
     "docker:scweet": "docker-compose up scweet-service",
     "docker:all": "docker-compose up",
     "postinstall": "prisma generate"

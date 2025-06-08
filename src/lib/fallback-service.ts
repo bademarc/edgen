@@ -1,5 +1,6 @@
 import { TwitterApiService } from './twitter-api'
 import { WebScraperService, getWebScraperInstance } from './web-scraper'
+import { URLValidator, validateTweetURL, URLValidationError } from './url-validator'
 
 export interface FallbackTweetData {
   id: string
@@ -61,18 +62,18 @@ export class FallbackService {
     this.webScraper = getWebScraperInstance()
     this.config = {
       enableScraping: true,
-      apiTimeoutMs: 10000, // 10 seconds
+      apiTimeoutMs: 15000, // PRIORITY FIX: Increased timeout for network issues
       maxApiRetries: 2,
       preferApi: false, // PRIORITY FIX: Disable Twitter API preference to avoid rate limits
       rateLimitCooldownMs: 15 * 60 * 1000, // 15 minutes
       enableScweet: true,
-      scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://scweet-service:8001',
+      scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://localhost:8001', // PRIORITY FIX: Default to localhost
       enableTwikit: true, // PRIORITY FIX: Enable Twikit fallback
-      // PRIORITY FIX: Multiple service URLs for network resilience
+      // PRIORITY FIX: Multiple service URLs for network resilience (localhost first)
       scweetServiceUrls: [
-        process.env.SCWEET_SERVICE_URL || 'http://scweet-service:8001',
-        'http://localhost:8001', // Fallback for local development
-        'http://127.0.0.1:8001'   // Additional fallback
+        'http://localhost:8001',  // PRIORITY FIX: Try localhost first
+        'http://127.0.0.1:8001',  // IP address fallback
+        process.env.SCWEET_SERVICE_URL || 'http://scweet-service:8001', // Docker fallback
       ],
       ...config
     }
@@ -403,6 +404,13 @@ export class FallbackService {
 
   async getTweetData(tweetUrl: string): Promise<FallbackTweetData | null> {
     console.log(`Fetching tweet data with fallback service: ${tweetUrl}`)
+
+    // PRIORITY FIX: Validate URL format before processing
+    const urlValidation = validateTweetURL(tweetUrl)
+    if (!urlValidation.isValid) {
+      console.error('Invalid tweet URL format:', urlValidation.error)
+      throw new URLValidationError(URLValidator.validateURL(tweetUrl))
+    }
 
     // PRIORITY FIX: Try Official Scweet FIRST to eliminate rate limit issues
     const scweetData = await this.tryScweetService(tweetUrl)
