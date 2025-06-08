@@ -48,6 +48,10 @@
     "deploy:critical-fixes": "bash scripts/deploy-critical-fixes.sh",
     "deploy:windows-fixes": "powershell -ExecutionPolicy Bypass -File scripts/deploy-windows-fixes.ps1",
     "upgrade:x-api": "bash scripts/upgrade-x-api.sh",
+    "install:x-api-dependencies": "bash scripts/install-x-api-dependencies.sh",
+    "verify:x-api-config": "node scripts/verify-x-api-config.js",
+    "fix:deployment-build": "bash scripts/fix-deployment-build.sh",
+    "test:deployment-ready": "node scripts/test-deployment-ready.js",
     "docker:scweet": "docker-compose up scweet-service",
     "docker:all": "docker-compose up",
     "postinstall": "prisma generate"
@@ -95,6 +99,7 @@
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.3.0",
     "three": "^0.176.0",
+    "twitter-api-v2": "^1.17.2",
     "ws": "^8.14.2",
     "zod": "^3.25.56",
     "zustand": "^4.4.7"
