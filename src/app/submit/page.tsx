@@ -323,96 +323,97 @@ export default function SubmitPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-            <Card variant="elevated" className="overflow-hidden">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <SparklesIcon className="h-5 w-5 text-primary" />
-                  <span>Submit Tweet</span>
-                </CardTitle>
-                <CardDescription>
-                  Enter your LayerEdge tweet URL to earn points
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="tweetUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tweet URL</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                {...field}
-                                variant="layeredge"
-                                inputSize="lg"
-                                type="url"
-                                placeholder="https://x.com/username/status/123456789"
-                                className="pl-10"
-                                disabled={isSubmitting}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            Paste the URL of your LayerEdge community tweet
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <Card variant="elevated" className="overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <SparklesIcon className="h-5 w-5 text-primary" />
+                    <span>Submit Tweet</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Enter your LayerEdge tweet URL to earn points
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="tweetUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tweet URL</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  {...field}
+                                  variant="layeredge"
+                                  inputSize="lg"
+                                  type="url"
+                                  placeholder="https://x.com/username/status/123456789"
+                                  className="pl-10"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormDescription>
+                              Paste the URL of your LayerEdge community tweet
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    {/* URL Preview */}
-                    {tweetUrl && isValidTwitterUrl(tweetUrl) && isLayerEdgeCommunityUrl(tweetUrl) && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        transition={{ duration: 0.3 }}
+                      {/* URL Preview */}
+                      {tweetUrl && isValidTwitterUrl(tweetUrl) && isLayerEdgeCommunityUrl(tweetUrl) && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <Alert className="border-green-500/20 bg-green-500/5">
+                            <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                            <AlertDescription className="text-green-700 dark:text-green-300">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">Valid Tweet URL Detected</span>
+                                <Badge variant="outline" className="text-green-600 border-green-500/30">
+                                  VERIFIED
+                                </Badge>
+                              </div>
+                              <div className="mt-2 p-2 bg-background/50 rounded border text-xs font-mono break-all">
+                                {tweetUrl}
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        </motion.div>
+                      )}
+
+                      <Separator />
+
+                      <Button
+                        type="submit"
+                        variant="layeredge"
+                        size="lg"
+                        disabled={isSubmitting}
+                        className="w-full"
                       >
-                        <Alert className="border-green-500/20 bg-green-500/5">
-                          <CheckCircleIcon className="h-4 w-4 text-green-500" />
-                          <AlertDescription className="text-green-700 dark:text-green-300">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">Valid Tweet URL Detected</span>
-                              <Badge variant="outline" className="text-green-600 border-green-500/30">
-                                VERIFIED
-                              </Badge>
-                            </div>
-                            <div className="mt-2 p-2 bg-background/50 rounded border text-xs font-mono break-all">
-                              {tweetUrl}
-                            </div>
-                          </AlertDescription>
-                        </Alert>
-                      </motion.div>
-                    )}
-
-                    <Separator />
-
-                    <Button
-                      type="submit"
-                      variant="layeredge"
-                      size="lg"
-                      disabled={isSubmitting}
-                      className="w-full"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                          Submitting...
-                        </>
-                      ) : (
-                        <>
-                          <SparklesIcon className="h-4 w-4 mr-2" />
-                          Submit Tweet
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
+                        {isSubmitting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <SparklesIcon className="h-4 w-4 mr-2" />
+                            Submit Tweet
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Tweet Preview */}
             {tweetUrl && isValidTwitterUrl(tweetUrl) && isLayerEdgeCommunityUrl(tweetUrl) && (
