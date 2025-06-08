@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies()
 
   // Use production URL for redirects, fallback to request origin for development
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+  const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://edgen.koyeb.app' 
+        : (process.env.NEXT_PUBLIC_SITE_URL || origin)
 
   console.log('OAuth callback - Request origin:', origin)
   console.log('OAuth callback - Base URL for redirects:', baseUrl)

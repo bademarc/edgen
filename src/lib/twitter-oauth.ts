@@ -34,6 +34,10 @@ export class TwitterOAuthService {
   constructor() {
     // Ensure we always have https:// protocol
     let siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://edgen.koyeb.app'
+    // Force production URL in production environment
+    if (process.env.NODE_ENV === 'production') {
+      siteUrl = 'https://edgen.koyeb.app'
+    }
     if (!siteUrl.startsWith('http')) {
       siteUrl = `https://${siteUrl}`
     }
