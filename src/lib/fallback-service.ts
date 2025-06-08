@@ -32,6 +32,8 @@ export interface FallbackServiceConfig {
   maxApiRetries: number
   preferApi: boolean
   rateLimitCooldownMs: number
+  enableScweet?: boolean
+  scweetServiceUrl?: string
 }
 
 export class FallbackService {
@@ -42,6 +44,7 @@ export class FallbackService {
   private lastApiFailure: Date | null = null
   private isApiRateLimited: boolean = false
   private rateLimitResetTime: Date | null = null
+  private scweetServiceUrl: string
 
   constructor(config: Partial<FallbackServiceConfig> = {}) {
     // Try to initialize Twitter API, but don't fail if credentials are missing
@@ -60,11 +63,15 @@ export class FallbackService {
       maxApiRetries: 2,
       preferApi: this.twitterApi !== null, // Only prefer API if it's available
       rateLimitCooldownMs: 15 * 60 * 1000, // 15 minutes
+      enableScweet: true,
+      scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://localhost:8001',
       ...config
     }
 
+    this.scweetServiceUrl = this.config.scweetServiceUrl || 'http://localhost:8001'
+
     console.log('FallbackService initialized with config:', this.config)
-    console.log(`API available: ${this.twitterApi !== null}, Scraping enabled: ${this.config.enableScraping}`)
+    console.log(`API available: ${this.twitterApi !== null}, Scraping enabled: ${this.config.enableScraping}, Scweet enabled: ${this.config.enableScweet}`)
   }
 
   private shouldUseApi(): boolean {
@@ -132,6 +139,99 @@ export class FallbackService {
     }
   }
 
+  private async tryScweetService(tweetUrl: string): Promise<FallbackTweetData | null> {
+    if (!this.config.enableScweet) {
+      return null
+    }
+
+    try {
+      console.log('Attempting to fetch tweet data via Scweet service...')
+
+      const response = await fetch(`${this.scweetServiceUrl}/tweet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tweet_url: tweetUrl,
+          include_engagement: true,
+          include_user_info: true
+        }),
+        signal: AbortSignal.timeout(this.config.apiTimeoutMs)
+      })
+
+      if (!response.ok) {
+        throw new Error(`Scweet service error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      const fallbackData: FallbackTweetData = {
+        id: data.tweet_id,
+        content: data.content,
+        likes: data.engagement.likes,
+        retweets: data.engagement.retweets,
+        replies: data.engagement.replies,
+        author: {
+          id: data.author.username,
+          username: data.author.username,
+          name: data.author.display_name,
+          profileImage: undefined
+        },
+        createdAt: new Date(data.created_at),
+        source: 'scweet' as const,
+        isFromLayerEdgeCommunity: data.is_from_layeredge_community
+      }
+
+      console.log('Successfully fetched tweet data via Scweet service')
+      return fallbackData
+    } catch (error) {
+      console.error('Scweet service failed:', error)
+      return null
+    }
+  }
+
+  private async tryScweetEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
+    if (!this.config.enableScweet) {
+      return null
+    }
+
+    try {
+      console.log('Attempting to fetch engagement metrics via Scweet service...')
+
+      const response = await fetch(`${this.scweetServiceUrl}/engagement`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tweet_url: tweetUrl
+        }),
+        signal: AbortSignal.timeout(this.config.apiTimeoutMs)
+      })
+
+      if (!response.ok) {
+        throw new Error(`Scweet service error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      const fallbackMetrics: FallbackEngagementMetrics = {
+        likes: data.likes,
+        retweets: data.retweets,
+        replies: data.replies,
+        source: 'scweet' as const,
+        timestamp: new Date(data.timestamp)
+      }
+
+      console.log('Successfully fetched engagement metrics via Scweet service')
+      return fallbackMetrics
+    } catch (error) {
+      console.error('Scweet engagement service failed:', error)
+      return null
+    }
+  }
+
   async getTweetData(tweetUrl: string): Promise<FallbackTweetData | null> {
     console.log(`Fetching tweet data with fallback service: ${tweetUrl}`)
 
@@ -166,6 +266,12 @@ export class FallbackService {
         this.handleApiError(error instanceof Error ? error : new Error(String(error)))
         console.log('API failed, falling back to web scraping...')
       }
+    }
+
+    // Try Scweet service as secondary fallback
+    const scweetData = await this.tryScweetService(tweetUrl)
+    if (scweetData) {
+      return scweetData
     }
 
     // Fallback to web scraping
@@ -231,6 +337,12 @@ export class FallbackService {
         this.handleApiError(error instanceof Error ? error : new Error(String(error)))
         console.log('API failed, falling back to web scraping...')
       }
+    }
+
+    // Try Scweet service as secondary fallback
+    const scweetMetrics = await this.tryScweetEngagement(tweetUrl)
+    if (scweetMetrics) {
+      return scweetMetrics
     }
 
     // Fallback to web scraping

@@ -1,0 +1,46 @@
+# Multi-stage Docker build for Scweet integration
+FROM python:3.11-slim as python-base
+
+# Install system dependencies for Chromium and Python
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    unzip \
+    curl \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Chromium
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up Python environment
+WORKDIR /app
+
+# Copy Python requirements
+COPY requirements.scweet.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.scweet.txt
+
+# Copy Scweet service files
+COPY src/services/scweet/ ./scweet/
+COPY src/lib/scweet-service.py ./
+
+# Set environment variables for headless operation
+ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV CHROME_PATH=/usr/bin/google-chrome
+
+# Create non-root user for security
+RUN useradd -m -u 1000 scweet && chown -R scweet:scweet /app
+USER scweet
+
+# Expose port for the Scweet service
+EXPOSE 8001
+
+# Start the Scweet service
+CMD ["python", "scweet-service.py"]

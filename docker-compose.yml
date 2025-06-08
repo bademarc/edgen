@@ -1,0 +1,63 @@
+# Docker Compose for LayerEdge with Scweet integration
+version: '3.8'
+
+services:
+  # Main Next.js application
+  layeredge-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - SCWEET_SERVICE_URL=http://scweet-service:8001
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - TWITTER_CLIENT_ID=${TWITTER_CLIENT_ID}
+      - TWITTER_CLIENT_SECRET=${TWITTER_CLIENT_SECRET}
+      - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN}
+      - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
+      - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
+    depends_on:
+      - scweet-service
+      - redis
+    restart: unless-stopped
+
+  # Scweet scraping service
+  scweet-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.scweet
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - CHROME_BIN=/usr/bin/google-chrome
+      - DISPLAY=:99
+    volumes:
+      - scweet_cookies:/app/cookies
+      - /dev/shm:/dev/shm  # Shared memory for Chrome
+    depends_on:
+      - redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+volumes:
+  redis_data:
+  scweet_cookies:
