@@ -18,7 +18,7 @@ interface PerformanceLog {
   operation: 'tweet_data' | 'engagement' | 'user_info'
   success: boolean
   responseTime: number
-  source: 'api' | 'scweet' | 'scraper'  // 'scweet' = Official Scweet v3.0+
+  source: 'api' | 'scweet' | 'twikit' | 'scraper'  // Added 'twikit' for enhanced fallback
   error?: string
 }
 
@@ -40,7 +40,7 @@ export class ScweetMonitor {
     operation: 'tweet_data' | 'engagement' | 'user_info',
     success: boolean,
     responseTime: number,
-    source: 'api' | 'scweet' | 'scraper',
+    source: 'api' | 'scweet' | 'twikit' | 'scraper',
     error?: string
   ): void {
     const timestamp = new Date()
@@ -258,7 +258,7 @@ export function getScweetMonitor(): ScweetMonitor {
 // Utility function to wrap fallback service calls with monitoring
 export function withMonitoring<T>(
   operation: 'tweet_data' | 'engagement' | 'user_info',
-  source: 'api' | 'scweet' | 'scraper',
+  source: 'api' | 'scweet' | 'twikit' | 'scraper',
   fn: () => Promise<T>
 ): Promise<T> {
   const monitor = getScweetMonitor()

@@ -59,11 +59,12 @@ export class TweetTracker {
     this.fallbackService = getFallbackService()
     this.webScraper = getWebScraperInstance()
 
-    // Initialize scraper rotation
+    // ENHANCED FALLBACK: Official Scweet v3.0+ → Twikit → Twscrape → Basic Fallback
     this.scrapers = [
+      { name: 'scweet', method: this.scrapeWithScweet.bind(this) },
+      { name: 'twikit', method: this.scrapeWithTwikit.bind(this) },
       { name: 'twscrape', method: this.scrapeWithTwscrape.bind(this) },
-      { name: 'rss', method: this.scrapeWithRSS.bind(this) },
-      { name: 'nitter', method: this.scrapeWithNitter.bind(this) },
+      { name: 'fallback', method: this.scrapeWithFallback.bind(this) },
     ]
   }
 
@@ -109,92 +110,122 @@ export class TweetTracker {
   }
 
   /**
-   * Method 2: RSS/Atom Feed Scraping (Backup)
+   * Method 2: Official Scweet v3.0+ Scraping (PRIMARY - Replaces RSS/Nitter)
    */
-  async scrapeWithRSS(): Promise<TweetData[]> {
+  async scrapeWithScweet(): Promise<TweetData[]> {
     try {
-      console.log('🔍 Scraping with RSS feeds')
+      console.log('🔍 Scraping with Official Scweet v3.0+')
 
-      const feeds = [
-        `https://nitter.net/search/rss?q=${encodeURIComponent('$Edgen OR LayerEdge')}`,
-        `https://nitter.poast.org/search/rss?q=${encodeURIComponent('$Edgen OR LayerEdge')}`,
-        `https://nitter.privacydev.net/search/rss?q=${encodeURIComponent('$Edgen OR LayerEdge')}`,
-      ]
+      // Use fallback service which now prioritizes Scweet
+      const scweetResults = await this.fallbackService.getTweetData('https://x.com/search?q=' + encodeURIComponent('$Edgen OR LayerEdge'))
 
-      const tweets: TweetData[] = []
+      if (scweetResults) {
+        // Convert FallbackTweetData to TweetData format
+        const tweets: TweetData[] = [{
+          id: scweetResults.id,
+          text: scweetResults.content,
+          user: {
+            id: scweetResults.author.id,
+            username: scweetResults.author.username,
+            name: scweetResults.author.name,
+            protected: false
+          },
+          public_metrics: {
+            like_count: scweetResults.likes,
+            retweet_count: scweetResults.retweets,
+            reply_count: scweetResults.replies
+          },
+          created_at: scweetResults.createdAt.toISOString()
+        }]
 
-      for (const feedUrl of feeds) {
-        try {
-          console.log(`Trying RSS feed: ${feedUrl}`)
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-          const response = await fetch(feedUrl, {
-            signal: controller.signal,
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-          })
-
-          clearTimeout(timeoutId)
-
-          if (!response.ok) {
-            console.log(`RSS feed ${feedUrl} returned ${response.status}`)
-            continue
-          }
-
-          const xml = await response.text()
-          const parsedTweets = this.parseRSSFeed(xml)
-          tweets.push(...parsedTweets)
-
-          if (parsedTweets.length > 0) {
-            console.log(`✅ RSS feed found ${parsedTweets.length} tweets`)
-            break // Use first successful feed
-          }
-        } catch (err) {
-          console.log(`RSS feed ${feedUrl} failed:`, err)
-        }
+        console.log(`✅ Official Scweet found ${tweets.length} tweets`)
+        return tweets.filter(tweet => this.containsKeywords(tweet.text || ''))
       }
 
-      return tweets
+      return []
     } catch (error) {
-      console.error('RSS scraping error:', error)
+      console.error('Official Scweet scraping error:', error)
       return []
     }
   }
 
   /**
-   * Method 3: Nitter Instance Scraping
+   * Method 3: Twikit Scraping (SECONDARY FALLBACK)
    */
-  async scrapeWithNitter(): Promise<TweetData[]> {
+  async scrapeWithTwikit(): Promise<TweetData[]> {
     try {
-      console.log('🔍 Scraping with Nitter instances')
+      console.log('🔍 Scraping with Twikit (enhanced fallback)')
 
-      const nitterInstances = [
-        'https://nitter.net',
-        'https://nitter.poast.org',
-        'https://nitter.privacydev.net'
-      ]
+      // Use fallback service to try Twikit specifically
+      // This will attempt to get tweets using the Twikit service
+      const twikitResults = await this.fallbackService.getTweetData('https://x.com/search?q=' + encodeURIComponent('$Edgen OR LayerEdge'))
 
-      for (const instance of nitterInstances) {
-        try {
-          const searchUrl = `${instance}/search?q=${encodeURIComponent('$Edgen OR LayerEdge')}&f=tweets`
+      if (twikitResults && twikitResults.source === 'twikit') {
+        // Convert FallbackTweetData to TweetData format
+        const tweets: TweetData[] = [{
+          id: twikitResults.id,
+          text: twikitResults.content,
+          user: {
+            id: twikitResults.author.id,
+            username: twikitResults.author.username,
+            name: twikitResults.author.name,
+            protected: false
+          },
+          public_metrics: {
+            like_count: twikitResults.likes,
+            retweet_count: twikitResults.retweets,
+            reply_count: twikitResults.replies
+          },
+          created_at: twikitResults.createdAt.toISOString()
+        }]
 
-          // Use web scraper to get tweets from Nitter
-          const tweets = await this.webScraper.scrapeNitterSearch(searchUrl)
-
-          if (tweets && tweets.length > 0) {
-            console.log(`✅ Nitter instance ${instance} found ${tweets.length} tweets`)
-            return tweets
-          }
-        } catch (err) {
-          console.log(`Nitter instance ${instance} failed:`, err)
-        }
+        console.log(`✅ Twikit found ${tweets.length} tweets`)
+        return tweets.filter(tweet => this.containsKeywords(tweet.text || ''))
       }
 
       return []
     } catch (error) {
-      console.error('Nitter scraping error:', error)
+      console.error('Twikit scraping error:', error)
+      return []
+    }
+  }
+
+  /**
+   * Method 4: Fallback Web Scraping (LAST RESORT)
+   */
+  async scrapeWithFallback(): Promise<TweetData[]> {
+    try {
+      console.log('🔍 Using fallback web scraping (last resort)')
+
+      // Use the web scraper directly as final fallback
+      const tweets = await this.webScraper.scrapeTweetData('https://x.com/search?q=' + encodeURIComponent('$Edgen OR LayerEdge'))
+
+      if (tweets) {
+        // Convert single tweet to array format
+        const tweetArray: TweetData[] = [{
+          id: tweets.id,
+          text: tweets.content,
+          user: {
+            id: tweets.author.id,
+            username: tweets.author.username,
+            name: tweets.author.name,
+            protected: false
+          },
+          public_metrics: {
+            like_count: tweets.likes,
+            retweet_count: tweets.retweets,
+            reply_count: tweets.replies
+          },
+          created_at: tweets.createdAt.toISOString()
+        }]
+
+        console.log(`✅ Fallback scraping found ${tweetArray.length} tweets`)
+        return tweetArray.filter(tweet => this.containsKeywords(tweet.text || ''))
+      }
+
+      return []
+    } catch (error) {
+      console.error('Fallback scraping error:', error)
       return []
     }
   }

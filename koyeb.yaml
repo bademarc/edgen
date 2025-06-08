@@ -12,6 +12,7 @@ services:
     env:
       - key: NODE_ENV
         value: production
+      # PRIORITY FIX: Scweet service URL for internal communication
       - key: SCWEET_SERVICE_URL
         value: http://scweet-service:8001
       - key: DATABASE_URL
@@ -20,16 +21,23 @@ services:
         value: ${NEXTAUTH_SECRET}
       - key: NEXTAUTH_URL
         value: ${NEXTAUTH_URL}
+      # Twitter API (now fallback only)
       - key: TWITTER_CLIENT_ID
         value: ${TWITTER_CLIENT_ID}
       - key: TWITTER_CLIENT_SECRET
         value: ${TWITTER_CLIENT_SECRET}
       - key: TWITTER_BEARER_TOKEN
         value: ${TWITTER_BEARER_TOKEN}
+      # Redis configuration
       - key: UPSTASH_REDIS_REST_URL
         value: ${UPSTASH_REDIS_REST_URL}
       - key: UPSTASH_REDIS_REST_TOKEN
         value: ${UPSTASH_REDIS_REST_TOKEN}
+      # PRIORITY FIX: Playwright browser configuration
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /home/nextjs/.cache/ms-playwright
+      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+        value: "1"
     build:
       type: docker
       dockerfile: Dockerfile
@@ -51,12 +59,19 @@ services:
       - port: 8001
         protocol: http
     env:
+      # PRIORITY FIX: Official Scweet v3.0+ configuration
       - key: REDIS_URL
         value: ${UPSTASH_REDIS_REST_URL}
       - key: CHROME_BIN
         value: /usr/bin/google-chrome
       - key: DISPLAY
         value: :99
+      - key: SCWEET_HEADLESS
+        value: "true"
+      - key: SCWEET_DISABLE_IMAGES
+        value: "true"
+      - key: SCWEET_CONCURRENCY
+        value: "2"
     build:
       type: docker
       dockerfile: Dockerfile.scweet

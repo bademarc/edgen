@@ -61,18 +61,19 @@ class EngagementResponse(BaseModel):
 
 # Global variables
 scweet_instance = None
+twikit_client = None
 redis_client = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize and cleanup resources"""
-    global scweet_instance, redis_client
-    
+    global scweet_instance, twikit_client, redis_client
+
     try:
         # Initialize Redis for caching
         redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
         redis_client = redis.from_url(redis_url, decode_responses=True)
-        
+
         # Initialize Official Scweet v3.0+
         from Scweet.scweet import Scweet
         scweet_instance = Scweet(
@@ -87,18 +88,47 @@ async def lifespan(app: FastAPI):
             headless=True,  # Required for server deployment
             scroll_ratio=50  # Reduced for faster scraping
         )
-        
-        logger.info("Scweet service initialized successfully")
+
+        # Initialize Twikit client
+        try:
+            from twikit import Client
+            twikit_client = Client('en-US')
+
+            # Try to login with credentials if available
+            twikit_username = os.getenv('TWIKIT_USERNAME')
+            twikit_email = os.getenv('TWIKIT_EMAIL')
+            twikit_password = os.getenv('TWIKIT_PASSWORD')
+
+            if twikit_username and twikit_email and twikit_password:
+                await twikit_client.login(
+                    auth_info_1=twikit_username,
+                    auth_info_2=twikit_email,
+                    password=twikit_password
+                )
+                logger.info("Twikit client logged in successfully")
+            else:
+                logger.info("Twikit client initialized without login (guest mode)")
+
+        except Exception as e:
+            logger.warning(f"Failed to initialize Twikit client: {e}")
+            twikit_client = None
+
+        logger.info("Scweet and Twikit services initialized successfully")
         yield
-        
+
     except Exception as e:
-        logger.error(f"Failed to initialize Scweet service: {e}")
+        logger.error(f"Failed to initialize services: {e}")
         yield
     finally:
         # Cleanup
         if redis_client:
             redis_client.close()
-        logger.info("Scweet service cleanup completed")
+        if twikit_client:
+            try:
+                await twikit_client.close()
+            except:
+                pass
+        logger.info("Services cleanup completed")
 
 # Create FastAPI app
 app = FastAPI(
@@ -148,9 +178,10 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "scweet",
+        "service": "scweet-twikit",
         "timestamp": datetime.utcnow().isoformat(),
-        "scweet_ready": scweet_instance is not None
+        "scweet_ready": scweet_instance is not None,
+        "twikit_ready": twikit_client is not None
     }
 
 @app.post("/tweet", response_model=TweetResponse)
@@ -331,6 +362,150 @@ async def get_user_info(request: UserInfoRequest):
     except Exception as e:
         logger.error(f"Error getting user info for {request.username}: {e}")
         raise HTTPException(status_code=500, detail="Failed to get user information")
+
+@app.post("/twikit/tweet", response_model=TweetResponse)
+async def get_tweet_data_twikit(request: TweetRequest):
+    """Get tweet data using Twikit as fallback"""
+    if not twikit_client:
+        raise HTTPException(status_code=503, detail="Twikit service not initialized")
+
+    try:
+        tweet_id = extract_tweet_id(request.tweet_url)
+
+        # Check cache first
+        cache_key = f"twikit_tweet:{tweet_id}"
+        cached_data = await get_cached_data(cache_key)
+        if cached_data:
+            logger.info(f"Returning cached Twikit data for tweet {tweet_id}")
+            return TweetResponse(**cached_data)
+
+        # Get tweet data using Twikit
+        logger.info(f"Fetching tweet data via Twikit for {request.tweet_url}")
+
+        tweet = await twikit_client.get_tweet_by_id(tweet_id)
+
+        if not tweet:
+            raise HTTPException(status_code=404, detail="Tweet not found via Twikit")
+
+        # Get user info if requested
+        user_info = {}
+        if request.include_user_info and tweet.user:
+            user_info = {
+                'name': tweet.user.name,
+                'verified': tweet.user.verified,
+                'followers': tweet.user.followers_count,
+                'following': tweet.user.following_count
+            }
+
+        # Format response using Twikit data structure
+        response_data = {
+            "tweet_id": tweet_id,
+            "content": tweet.text or '',
+            "author": {
+                "username": tweet.user.screen_name if tweet.user else 'unknown',
+                "display_name": user_info.get('name', tweet.user.screen_name if tweet.user else 'unknown'),
+                "verified": user_info.get('verified', False),
+                "followers_count": user_info.get('followers', 0),
+                "following_count": user_info.get('following', 0)
+            },
+            "engagement": {
+                "likes": int(tweet.favorite_count or 0),
+                "retweets": int(tweet.retweet_count or 0),
+                "replies": int(tweet.reply_count or 0)
+            },
+            "created_at": tweet.created_at.isoformat() if tweet.created_at else datetime.utcnow().isoformat(),
+            "source": "twikit",
+            "is_from_layeredge_community": check_layeredge_community(tweet.text or '')
+        }
+
+        # Cache the result
+        await set_cached_data(cache_key, response_data, ttl=300)  # 5 minutes
+
+        return TweetResponse(**response_data)
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error fetching tweet via Twikit {request.tweet_url}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch tweet data via Twikit")
+
+@app.post("/twikit/engagement", response_model=EngagementResponse)
+async def get_engagement_metrics_twikit(request: EngagementRequest):
+    """Get real-time engagement metrics using Twikit"""
+    if not twikit_client:
+        raise HTTPException(status_code=503, detail="Twikit service not initialized")
+
+    try:
+        tweet_id = extract_tweet_id(request.tweet_url)
+
+        # Check cache first (shorter TTL for engagement data)
+        cache_key = f"twikit_engagement:{tweet_id}"
+        cached_data = await get_cached_data(cache_key)
+        if cached_data:
+            return EngagementResponse(**cached_data)
+
+        # Get fresh engagement data via Twikit
+        tweet = await twikit_client.get_tweet_by_id(tweet_id)
+
+        if not tweet:
+            raise HTTPException(status_code=404, detail="Tweet not found via Twikit")
+
+        response_data = {
+            "likes": int(tweet.favorite_count or 0),
+            "retweets": int(tweet.retweet_count or 0),
+            "replies": int(tweet.reply_count or 0),
+            "timestamp": datetime.utcnow().isoformat(),
+            "source": "twikit"
+        }
+
+        # Cache with shorter TTL for engagement data
+        await set_cached_data(cache_key, response_data, ttl=60)  # 1 minute
+
+        return EngagementResponse(**response_data)
+
+    except Exception as e:
+        logger.error(f"Error getting engagement via Twikit for {request.tweet_url}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get engagement metrics via Twikit")
+
+@app.post("/twikit/user", response_model=UserInfoResponse)
+async def get_user_info_twikit(request: UserInfoRequest):
+    """Get user information using Twikit"""
+    if not twikit_client:
+        raise HTTPException(status_code=503, detail="Twikit service not initialized")
+
+    try:
+        # Check cache first
+        cache_key = f"twikit_user:{request.username}"
+        cached_data = await get_cached_data(cache_key)
+        if cached_data:
+            return UserInfoResponse(**cached_data)
+
+        # Get user data via Twikit
+        user = await twikit_client.get_user_by_screen_name(request.username)
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found via Twikit")
+
+        response_data = {
+            "username": request.username,
+            "display_name": user.name or request.username,
+            "bio": user.description or '',
+            "followers_count": user.followers_count or 0,
+            "following_count": user.following_count or 0,
+            "verified": user.verified or False,
+            "location": user.location,
+            "website": user.url,
+            "join_date": user.created_at.isoformat() if user.created_at else None
+        }
+
+        # Cache user data for longer
+        await set_cached_data(cache_key, response_data, ttl=1800)  # 30 minutes
+
+        return UserInfoResponse(**response_data)
+
+    except Exception as e:
+        logger.error(f"Error getting user info via Twikit for {request.username}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get user information via Twikit")
 
 def check_layeredge_community(content: str) -> bool:
     """Check if tweet content is related to LayerEdge community"""

@@ -99,18 +99,25 @@ $PIP_CMD install "nodriver==0.38.post1"
 echo "📦 Installing Official Scweet v3.0+ from Altimis/Scweet repository..."
 $PIP_CMD install git+https://github.com/Altimis/Scweet.git@master
 
+# Install Twikit for enhanced fallback
+echo "📦 Installing Twikit for enhanced fallback capability..."
+$PIP_CMD install twikit
+
 # Install additional dependencies for our service
 echo "🔧 Installing additional service dependencies..."
 $PIP_CMD install fastapi uvicorn pydantic redis asyncio
 
 # Verify installation
-echo "✅ Verifying Official Scweet installation..."
+echo "✅ Verifying Enhanced Fallback System installation..."
 python3 -c "
 try:
     from Scweet.scweet import Scweet
     from Scweet.utils import create_mailtm_email
     print('✅ Official Scweet v3.0+ imported successfully!')
-    
+
+    from twikit import Client
+    print('✅ Twikit imported successfully!')
+
     # Try to initialize (without actually running)
     scweet = Scweet(
         proxy=None,
@@ -125,7 +132,10 @@ try:
         scroll_ratio=50
     )
     print('✅ Official Scweet initialization test passed!')
-    
+
+    twikit_client = Client('en-US')
+    print('✅ Twikit initialization test passed!')
+
 except ImportError as e:
     print(f'❌ Import failed: {e}')
     exit(1)
@@ -136,22 +146,27 @@ except Exception as e:
 
 if [ $? -eq 0 ]; then
     echo ""
-    echo "🎉 INSTALLATION SUCCESSFUL!"
-    echo "=" | tr '=' '=' | head -c 60; echo
+    echo "🎉 ENHANCED FALLBACK SYSTEM INSTALLATION SUCCESSFUL!"
+    echo "=" | tr '=' '=' | head -c 70; echo
     echo "✅ Official Scweet v3.0+ is installed and ready"
-    echo "📦 Source: https://github.com/Altimis/Scweet"
+    echo "✅ Twikit is installed and ready for enhanced fallback"
+    echo "📦 Scweet Source: https://github.com/Altimis/Scweet"
+    echo "📦 Twikit Source: https://github.com/d60/twikit"
     echo ""
     echo "🔧 Next Steps:"
     echo "1. Copy .env.scweet.example to .env and configure credentials"
     echo "2. Test the installation: python3 scripts/test-official-scweet.py"
-    echo "3. Start the Scweet service: python3 src/lib/scweet-service.py"
-    echo "4. Run integration tests: node scripts/test-scweet-integration.js"
+    echo "3. Start the enhanced service: python3 src/lib/scweet-service.py"
+    echo "4. Run enhanced fallback tests: node scripts/test-enhanced-fallback.js"
+    echo "5. Run integration tests: node scripts/test-scweet-integration.js"
     echo ""
     echo "📚 Documentation:"
     echo "   - Official Scweet: https://github.com/Altimis/Scweet"
+    echo "   - Twikit: https://github.com/d60/twikit"
     echo "   - LayerEdge Integration: See README.md"
     echo ""
-    echo "🎯 Ready for LayerEdge platform integration!"
+    echo "🎯 Ready for enhanced LayerEdge platform integration!"
+    echo "🔗 Fallback Chain: Scweet → Twikit → Twitter API → Web Scraping"
 else
     echo ""
     echo "⚠️ INSTALLATION COMPLETED WITH WARNINGS"

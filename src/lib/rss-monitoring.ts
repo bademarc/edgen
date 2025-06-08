@@ -30,35 +30,37 @@ interface MonitoringResult {
 }
 
 export class RSSMonitoringService {
+  // PRIORITY FIX: Disable all Nitter RSS feeds due to 403 errors and unreliability
+  // Official Scweet v3.0+ now handles all tweet monitoring
   private feeds: RSSFeed[] = [
     {
       url: 'https://nitter.net/search/rss?q=%40layeredge',
-      name: 'Nitter @layeredge',
-      active: true,
+      name: 'Nitter @layeredge (DISABLED)',
+      active: false,  // DISABLED
       priority: 1
     },
     {
       url: 'https://nitter.net/search/rss?q=%24EDGEN',
-      name: 'Nitter $EDGEN',
-      active: true,
+      name: 'Nitter $EDGEN (DISABLED)',
+      active: false,  // DISABLED
       priority: 1
     },
     {
       url: 'https://nitter.privacydev.net/search/rss?q=layeredge',
-      name: 'PrivacyDev LayerEdge',
-      active: true,
+      name: 'PrivacyDev LayerEdge (DISABLED)',
+      active: false,  // DISABLED
       priority: 2
     },
     {
       url: 'https://nitter.fdn.fr/search/rss?q=%40layeredge%20OR%20%24EDGEN',
-      name: 'FDN Combined',
-      active: true,
+      name: 'FDN Combined (DISABLED)',
+      active: false,  // DISABLED
       priority: 2
     },
     {
       url: 'https://nitter.1d4.us/search/rss?q=layeredge',
-      name: '1d4.us LayerEdge',
-      active: true,
+      name: '1d4.us LayerEdge (DISABLED)',
+      active: false,  // DISABLED
       priority: 3
     }
   ]

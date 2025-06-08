@@ -40,9 +40,11 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
 
-# Install Playwright browsers
-RUN npx playwright install chromium
-RUN npx playwright install-deps
+# PRIORITY FIX: Install Playwright browsers with proper error handling
+RUN npx playwright install chromium --with-deps
+RUN npx playwright install-deps chromium
+# Verify Playwright installation
+RUN npx playwright --version
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -71,9 +73,11 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy Playwright browsers from deps stage
+# PRIORITY FIX: Copy Playwright browsers from deps stage with proper permissions
 COPY --from=deps /root/.cache/ms-playwright /home/nextjs/.cache/ms-playwright
 RUN chown -R nextjs:nodejs /home/nextjs/.cache
+# Ensure Playwright browsers are executable
+RUN chmod -R 755 /home/nextjs/.cache/ms-playwright
 
 # CRITICAL: Copy public directory (static assets like images, manifest, etc.)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -106,8 +110,10 @@ ENV PORT 3000
 # set hostname to localhost
 ENV HOSTNAME "0.0.0.0"
 
-# Set Playwright environment variables
+# PRIORITY FIX: Set Playwright environment variables for production
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/nextjs/.cache/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/home/nextjs/.cache/ms-playwright/chromium-*/chrome-linux/chrome
 
 # Use startup script to run the application
 # server.js is created by next build from the standalone output

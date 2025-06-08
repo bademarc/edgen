@@ -38,6 +38,9 @@ RUN pip install --no-cache-dir -r requirements.scweet.txt
 # Install Official Scweet directly from GitHub (ensures latest v3.0+)
 RUN pip install --no-cache-dir git+https://github.com/Altimis/Scweet.git@master
 
+# Install Twikit for enhanced fallback capability
+RUN pip install --no-cache-dir twikit
+
 # Copy Scweet service files
 COPY src/services/scweet/ ./scweet/
 COPY src/lib/scweet-service.py ./

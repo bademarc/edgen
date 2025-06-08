@@ -145,6 +145,34 @@ export class TweetErrorHandler {
     }
   }
 
+  static handleTwikitFailed(): ErrorHandlerResponse {
+    return {
+      error: {
+        type: 'TWIKIT_FAILED',
+        message: 'Twikit service temporarily unavailable',
+        action: 'Our enhanced fallback system is working to resolve this. Please try again in a few minutes',
+        retryable: true,
+        retryDelay: 3 * 60 * 1000, // 3 minutes
+        contactSupport: true
+      },
+      httpStatus: 503
+    }
+  }
+
+  static handleTwikitAuthFailed(): ErrorHandlerResponse {
+    return {
+      error: {
+        type: 'TWIKIT_AUTH_FAILED',
+        message: 'Twikit authentication failed',
+        action: 'Our system is working to re-authenticate. Please try again shortly',
+        retryable: true,
+        retryDelay: 5 * 60 * 1000, // 5 minutes
+        contactSupport: true
+      },
+      httpStatus: 401
+    }
+  }
+
   static handleUnknownError(originalError?: any): ErrorHandlerResponse {
     return {
       error: {
@@ -164,6 +192,14 @@ export class TweetErrorHandler {
     // Rate limiting
     if (fallbackStatus?.isApiRateLimited) {
       return this.handleRateLimit(fallbackStatus.rateLimitResetTime)
+    }
+
+    // Twikit-specific errors
+    if (error?.message?.includes('twikit') || error?.message?.includes('Twikit')) {
+      if (error?.message?.includes('auth') || error?.message?.includes('login')) {
+        return this.handleTwikitAuthFailed()
+      }
+      return this.handleTwikitFailed()
     }
 
     // Tweet not found or deleted

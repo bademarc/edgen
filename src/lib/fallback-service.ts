@@ -14,7 +14,7 @@ export interface FallbackTweetData {
     profileImage?: string
   }
   createdAt: Date
-  source: 'api' | 'scweet' | 'scraper'  // Added 'scweet' for Official Scweet v3.0+
+  source: 'api' | 'scweet' | 'twikit' | 'scraper'  // Added 'twikit' for enhanced fallback
   isFromLayerEdgeCommunity: boolean
 }
 
@@ -22,7 +22,7 @@ export interface FallbackEngagementMetrics {
   likes: number
   retweets: number
   replies: number
-  source: 'api' | 'scweet' | 'scraper'  // Added 'scweet' for Official Scweet v3.0+
+  source: 'api' | 'scweet' | 'twikit' | 'scraper'  // Added 'twikit' for enhanced fallback
   timestamp: Date
 }
 
@@ -61,10 +61,10 @@ export class FallbackService {
       enableScraping: true,
       apiTimeoutMs: 10000, // 10 seconds
       maxApiRetries: 2,
-      preferApi: this.twitterApi !== null, // Only prefer API if it's available
+      preferApi: false, // PRIORITY FIX: Disable Twitter API preference to avoid rate limits
       rateLimitCooldownMs: 15 * 60 * 1000, // 15 minutes
       enableScweet: true,
-      scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://localhost:8001',
+      scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://scweet-service:8001',
       ...config
     }
 
@@ -232,10 +232,110 @@ export class FallbackService {
     }
   }
 
+  private async tryTwikitService(tweetUrl: string): Promise<FallbackTweetData | null> {
+    if (!this.config.enableScweet) { // Use same config flag for now
+      return null
+    }
+
+    try {
+      console.log('Attempting to fetch tweet data via Twikit service...')
+
+      const response = await fetch(`${this.scweetServiceUrl}/twikit/tweet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tweet_url: tweetUrl,
+          include_engagement: true,
+          include_user_info: true
+        }),
+        signal: AbortSignal.timeout(this.config.apiTimeoutMs)
+      })
+
+      if (!response.ok) {
+        throw new Error(`Twikit service error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      const fallbackData: FallbackTweetData = {
+        id: data.tweet_id,
+        content: data.content,
+        likes: data.engagement.likes,
+        retweets: data.engagement.retweets,
+        replies: data.engagement.replies,
+        author: {
+          id: data.author.username,
+          username: data.author.username,
+          name: data.author.display_name,
+          profileImage: undefined
+        },
+        createdAt: new Date(data.created_at),
+        source: 'twikit' as const,
+        isFromLayerEdgeCommunity: data.is_from_layeredge_community
+      }
+
+      console.log('Successfully fetched tweet data via Twikit service')
+      return fallbackData
+    } catch (error) {
+      console.error('Twikit service failed:', error)
+      return null
+    }
+  }
+
+  private async tryTwikitEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
+    if (!this.config.enableScweet) { // Use same config flag for now
+      return null
+    }
+
+    try {
+      console.log('Attempting to fetch engagement metrics via Twikit service...')
+
+      const response = await fetch(`${this.scweetServiceUrl}/twikit/engagement`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tweet_url: tweetUrl
+        }),
+        signal: AbortSignal.timeout(this.config.apiTimeoutMs)
+      })
+
+      if (!response.ok) {
+        throw new Error(`Twikit service error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      const fallbackMetrics: FallbackEngagementMetrics = {
+        likes: data.likes,
+        retweets: data.retweets,
+        replies: data.replies,
+        source: 'twikit' as const,
+        timestamp: new Date(data.timestamp)
+      }
+
+      console.log('Successfully fetched engagement metrics via Twikit service')
+      return fallbackMetrics
+    } catch (error) {
+      console.error('Twikit engagement service failed:', error)
+      return null
+    }
+  }
+
   async getTweetData(tweetUrl: string): Promise<FallbackTweetData | null> {
     console.log(`Fetching tweet data with fallback service: ${tweetUrl}`)
 
-    // Try API first if conditions are met
+    // PRIORITY FIX: Try Official Scweet FIRST to eliminate rate limit issues
+    const scweetData = await this.tryScweetService(tweetUrl)
+    if (scweetData) {
+      console.log('✅ Successfully fetched tweet data via Official Scweet v3.0+ (PRIMARY)')
+      return scweetData
+    }
+
+    // Try API second (if conditions are met and Scweet failed)
     if (this.shouldUseApi()) {
       try {
         console.log('Attempting to fetch tweet data via Twitter API...')
@@ -268,13 +368,13 @@ export class FallbackService {
       }
     }
 
-    // Try Scweet service as secondary fallback
-    const scweetData = await this.tryScweetService(tweetUrl)
-    if (scweetData) {
-      return scweetData
+    // Try Twikit service as tertiary fallback
+    const twikitData = await this.tryTwikitService(tweetUrl)
+    if (twikitData) {
+      return twikitData
     }
 
-    // Fallback to web scraping
+    // Fallback to web scraping (final fallback)
     if (this.config.enableScraping) {
       try {
         console.log('Attempting to fetch tweet data via web scraping...')
@@ -309,7 +409,14 @@ export class FallbackService {
   async getEngagementMetrics(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
     console.log(`Fetching engagement metrics with fallback service: ${tweetUrl}`)
 
-    // Try API first if conditions are met
+    // PRIORITY FIX: Try Official Scweet FIRST for engagement metrics
+    const scweetMetrics = await this.tryScweetEngagement(tweetUrl)
+    if (scweetMetrics) {
+      console.log('✅ Successfully fetched engagement metrics via Official Scweet v3.0+ (PRIMARY)')
+      return scweetMetrics
+    }
+
+    // Try API second (if conditions are met and Scweet failed)
     if (this.shouldUseApi()) {
       try {
         console.log('Attempting to fetch engagement metrics via Twitter API...')
@@ -339,13 +446,13 @@ export class FallbackService {
       }
     }
 
-    // Try Scweet service as secondary fallback
-    const scweetMetrics = await this.tryScweetEngagement(tweetUrl)
-    if (scweetMetrics) {
-      return scweetMetrics
+    // Try Twikit service as tertiary fallback for engagement metrics
+    const twikitMetrics = await this.tryTwikitEngagement(tweetUrl)
+    if (twikitMetrics) {
+      return twikitMetrics
     }
 
-    // Fallback to web scraping
+    // Fallback to web scraping (final fallback)
     if (this.config.enableScraping) {
       try {
         console.log('Attempting to fetch engagement metrics via web scraping...')

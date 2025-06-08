@@ -37,6 +37,7 @@
     "scweet:test": "python3 scripts/test-official-scweet.py",
     "scweet:service": "python3 src/lib/scweet-service.py",
     "test:integration": "node scripts/test-scweet-integration.js",
+    "test:enhanced-fallback": "node scripts/test-enhanced-fallback.js",
     "docker:scweet": "docker-compose up scweet-service",
     "docker:all": "docker-compose up",
     "postinstall": "prisma generate"

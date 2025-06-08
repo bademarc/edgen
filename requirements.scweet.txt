@@ -10,6 +10,9 @@ requests
 beautifulsoup4==4.12.3
 nodriver==0.38.post1
 
+# Twikit for additional fallback capability
+twikit>=1.7.0
+
 # FastAPI for service API
 fastapi>=0.104.0
 uvicorn>=0.24.0

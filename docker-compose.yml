@@ -1,5 +1,10 @@
-# Docker Compose for LayerEdge with Scweet integration
+# Docker Compose for LayerEdge with Official Scweet v3.0+ integration
 version: '3.8'
+
+# PRIORITY FIX: Define custom network for proper service communication
+networks:
+  layeredge-network:
+    driver: bridge
 
 services:
   # Main Next.js application
@@ -11,7 +16,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - SCWEET_SERVICE_URL=http://scweet-service:8001
+      - SCWEET_SERVICE_URL=http://scweet-service:8001  # Internal Docker network URL
       - DATABASE_URL=${DATABASE_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
@@ -21,11 +26,15 @@ services:
       - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
       - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
     depends_on:
-      - scweet-service
-      - redis
+      scweet-service:
+        condition: service_healthy  # Wait for Scweet service to be healthy
+      redis:
+        condition: service_started
     restart: unless-stopped
+    networks:
+      - layeredge-network
 
-  # Scweet scraping service
+  # Official Scweet v3.0+ scraping service
   scweet-service:
     build:
       context: .
@@ -36,17 +45,36 @@ services:
       - REDIS_URL=redis://redis:6379
       - CHROME_BIN=/usr/bin/google-chrome
       - DISPLAY=:99
+      - SCWEET_HEADLESS=true
+      - SCWEET_DISABLE_IMAGES=true
+      - SCWEET_CONCURRENCY=2  # Lower for stability
+      # Twikit configuration
+      - TWIKIT_USERNAME=${TWIKIT_USERNAME}
+      - TWIKIT_EMAIL=${TWIKIT_EMAIL}
+      - TWIKIT_PASSWORD=${TWIKIT_PASSWORD}
+      - TWIKIT_LANGUAGE=en-US
+      - TWIKIT_TIMEOUT=30
     volumes:
       - scweet_cookies:/app/cookies
       - /dev/shm:/dev/shm  # Shared memory for Chrome
     depends_on:
-      - redis
+      redis:
+        condition: service_started
     restart: unless-stopped
+    # PRIORITY FIX: Add health check for proper service discovery
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     deploy:
       resources:
         limits:
           memory: 1G
           cpus: '0.5'
+    networks:
+      - layeredge-network
 
   # Redis for caching
   redis:
@@ -57,6 +85,14 @@ services:
       - redis_data:/data
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # PRIORITY FIX: Add health check for Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - layeredge-network
 
 volumes:
   redis_data:

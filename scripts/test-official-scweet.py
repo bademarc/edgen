@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 def test_official_scweet_import():
     """Test importing Official Scweet v3.0+ library"""
     print("🔍 Testing Official Scweet v3.0+ Import...")
-    
+
     try:
         from Scweet.scweet import Scweet
         from Scweet.utils import create_mailtm_email
@@ -28,6 +28,22 @@ def test_official_scweet_import():
         return False
     except Exception as e:
         print(f"❌ Unexpected error importing Scweet: {e}")
+        return False
+
+def test_twikit_import():
+    """Test importing Twikit library"""
+    print("🔍 Testing Twikit Import...")
+
+    try:
+        from twikit import Client
+        print("✅ Twikit imported successfully!")
+        return True
+    except ImportError as e:
+        print(f"❌ Failed to import Twikit: {e}")
+        print("💡 Install Twikit with: pip install twikit")
+        return False
+    except Exception as e:
+        print(f"❌ Unexpected error importing Twikit: {e}")
         return False
 
 def initialize_official_scweet():
@@ -221,16 +237,20 @@ def generate_test_report(results: Dict[str, bool]):
 
 def main():
     """Main test execution"""
-    print("🚀 OFFICIAL SCWEET v3.0+ INTEGRATION TEST SUITE")
-    print("📦 Testing Altimis/Scweet Repository Integration")
-    print("🔗 https://github.com/Altimis/Scweet")
+    print("🚀 ENHANCED FALLBACK SYSTEM TEST SUITE")
+    print("📦 Testing Official Scweet v3.0+ + Twikit Integration")
+    print("🔗 Scweet: https://github.com/Altimis/Scweet")
+    print("🔗 Twikit: https://github.com/d60/twikit")
     print("="*60)
-    
+
     results = {}
-    
+
     # Test 1: Import Official Scweet
     results["Import Official Scweet v3.0+"] = test_official_scweet_import()
-    
+
+    # Test 2: Import Twikit
+    results["Import Twikit"] = test_twikit_import()
+
     if not results["Import Official Scweet v3.0+"]:
         print("\n❌ Cannot proceed without Official Scweet library")
         return False
