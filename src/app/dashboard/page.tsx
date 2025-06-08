@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { SubmitTweetCTA } from '@/components/ui/submit-tweet-cta'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 
 
 interface DashboardStats {
@@ -268,7 +269,9 @@ export default function DashboardPage() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="mb-8"
           >
-            <SubmitTweetCTA variant="prominent" />
+            <ErrorBoundary>
+              <SubmitTweetCTA variant="prominent" />
+            </ErrorBoundary>
           </motion.div>
 
           {/* Recent Activity */}
@@ -308,7 +311,9 @@ export default function DashboardPage() {
                 ) : (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">No contributions yet</p>
-                    <SubmitTweetCTA variant="compact" />
+                    <ErrorBoundary>
+                      <SubmitTweetCTA variant="compact" />
+                    </ErrorBoundary>
                   </div>
                 )}
               </CardContent>

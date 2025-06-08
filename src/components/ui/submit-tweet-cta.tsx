@@ -22,12 +22,18 @@ interface SubmitTweetCTAProps {
   showPointsBreakdown?: boolean
 }
 
-export function SubmitTweetCTA({ 
-  className = '', 
+export function SubmitTweetCTA({
+  className = '',
   variant = 'default',
-  showPointsBreakdown = true 
+  showPointsBreakdown = true
 }: SubmitTweetCTAProps) {
   const [isHovered, setIsHovered] = useState(false)
+
+  // Validate props
+  if (!variant || !['default', 'prominent', 'compact'].includes(variant)) {
+    console.warn('SubmitTweetCTA: Invalid variant prop, falling back to "default"')
+    variant = 'default'
+  }
 
   const pointsData = [
     { icon: SparklesIcon, label: 'Base submission', points: 5, color: 'text-primary' },
@@ -104,20 +110,23 @@ export function SubmitTweetCTA({
           <CardContent className="relative z-10 space-y-6">
             {showPointsBreakdown && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {pointsData.map((item, index) => (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    whileHover={{ scale: 1.05 }}
-                    className="text-center p-3 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
-                  >
-                    <item.icon className={`h-5 w-5 mx-auto mb-2 ${item.color}`} />
-                    <div className="text-lg font-bold">{item.points > 1 ? '+' : ''}{item.points}</div>
-                    <div className="text-xs text-muted-foreground">{item.label}</div>
-                  </motion.div>
-                ))}
+                {pointsData.map((item, index) => {
+                  const IconComponent = item.icon
+                  return (
+                    <motion.div
+                      key={item.label}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      whileHover={{ scale: 1.05 }}
+                      className="text-center p-3 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
+                    >
+                      <IconComponent className={`h-5 w-5 mx-auto mb-2 ${item.color}`} />
+                      <div className="text-lg font-bold">{item.points > 1 ? '+' : ''}{item.points}</div>
+                      <div className="text-xs text-muted-foreground">{item.label}</div>
+                    </motion.div>
+                  )
+                })}
               </div>
             )}
 
@@ -178,13 +187,16 @@ export function SubmitTweetCTA({
         <CardContent className="space-y-4">
           {showPointsBreakdown && (
             <div className="grid grid-cols-4 gap-2">
-              {pointsData.map((item) => (
-                <div key={item.label} className="text-center p-2 rounded border bg-card/50">
-                  <item.icon className={`h-4 w-4 mx-auto mb-1 ${item.color}`} />
-                  <div className="text-sm font-bold">{item.points > 1 ? '+' : ''}{item.points}</div>
-                  <div className="text-xs text-muted-foreground truncate">{item.label}</div>
-                </div>
-              ))}
+              {pointsData.map((item) => {
+                const IconComponent = item.icon
+                return (
+                  <div key={item.label} className="text-center p-2 rounded border bg-card/50">
+                    <IconComponent className={`h-4 w-4 mx-auto mb-1 ${item.color}`} />
+                    <div className="text-sm font-bold">{item.points > 1 ? '+' : ''}{item.points}</div>
+                    <div className="text-xs text-muted-foreground truncate">{item.label}</div>
+                  </div>
+                )
+              })}
             </div>
           )}
 

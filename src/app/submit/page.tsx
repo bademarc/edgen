@@ -36,6 +36,7 @@ import { SubmissionHistory } from '@/components/ui/submission-history'
 import { RealTimeEngagement } from '@/components/ui/real-time-engagement'
 import { AchievementNotification, useAchievementNotifications } from '@/components/ui/achievement-notification'
 import { SocialSharingService } from '@/lib/social-sharing'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 
 const submitSchema = z.object({
   tweetUrl: z.string()
@@ -46,22 +47,40 @@ const submitSchema = z.object({
 
 type SubmitFormData = z.infer<typeof submitSchema>
 
-// Typewriter effect hook
+// Typewriter effect hook with error handling
 const useTypewriter = (text: string, speed: number = 50) => {
   const [displayText, setDisplayText] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
 
   useEffect(() => {
-    if (currentIndex < text.length) {
-      const timeout = setTimeout(() => {
+    // Reset if text changes
+    if (currentIndex === 0 && displayText !== '') {
+      setDisplayText('')
+    }
+  }, [text])
+
+  useEffect(() => {
+    if (!text || currentIndex >= text.length) {
+      return
+    }
+
+    const timeout = setTimeout(() => {
+      try {
         setDisplayText(prev => prev + text[currentIndex])
         setCurrentIndex(prev => prev + 1)
-      }, speed)
-      return () => clearTimeout(timeout)
-    }
+      } catch (error) {
+        console.error('Typewriter effect error:', error)
+        // Fallback to full text
+        setDisplayText(text)
+        setCurrentIndex(text.length)
+      }
+    }, speed)
+
+    return () => clearTimeout(timeout)
   }, [currentIndex, text, speed])
 
-  return displayText
+  // Fallback to full text if something goes wrong
+  return displayText || text
 }
 
 export default function SubmitPage() {
@@ -422,10 +441,12 @@ export default function SubmitPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                <TweetPreview
-                  tweetUrl={tweetUrl}
-                  onPreviewLoad={handlePreviewLoad}
-                />
+                <ErrorBoundary>
+                  <TweetPreview
+                    tweetUrl={tweetUrl}
+                    onPreviewLoad={handlePreviewLoad}
+                  />
+                </ErrorBoundary>
               </motion.div>
             )}
 
@@ -435,7 +456,9 @@ export default function SubmitPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <SubmissionHistory limit={5} />
+              <ErrorBoundary>
+                <SubmissionHistory limit={5} />
+              </ErrorBoundary>
             </motion.div>
           </div>
 
@@ -536,17 +559,19 @@ export default function SubmitPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                <RealTimeEngagement
-                  tweetId={submittedTweetId || undefined}
-                  initialData={tweetData ? {
-                    likes: tweetData.likes || 0,
-                    retweets: tweetData.retweets || 0,
-                    replies: tweetData.replies || 0,
-                    points: tweetData.totalPoints || 0,
-                    lastUpdate: new Date().toISOString(),
-                  } : undefined}
-                  updateInterval={30000}
-                />
+                <ErrorBoundary>
+                  <RealTimeEngagement
+                    tweetId={submittedTweetId || undefined}
+                    initialData={tweetData ? {
+                      likes: tweetData.likes || 0,
+                      retweets: tweetData.retweets || 0,
+                      replies: tweetData.replies || 0,
+                      points: tweetData.totalPoints || 0,
+                      lastUpdate: new Date().toISOString(),
+                    } : undefined}
+                    updateInterval={30000}
+                  />
+                </ErrorBoundary>
               </motion.div>
             )}
 
