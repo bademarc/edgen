@@ -1,6 +1,7 @@
 import { TwitterApiService } from './twitter-api'
 import { WebScraperService, getWebScraperInstance } from './web-scraper'
 import { URLValidator, validateTweetURL, URLValidationError } from './url-validator'
+import { XApiService, getXApiService, XTweetData } from './x-api-service'
 
 export interface FallbackTweetData {
   id: string
@@ -41,6 +42,7 @@ export interface FallbackServiceConfig {
 
 export class FallbackService {
   private twitterApi: TwitterApiService | null = null
+  private xApiService: XApiService | null = null
   private webScraper: WebScraperService
   private config: FallbackServiceConfig
   private apiFailureCount: number = 0
@@ -57,6 +59,15 @@ export class FallbackService {
     } catch (error) {
       console.warn('⚠️ Twitter API service unavailable:', error instanceof Error ? error.message : String(error))
       this.twitterApi = null
+    }
+
+    // Try to initialize X API service with new credentials
+    try {
+      this.xApiService = getXApiService()
+      console.log('✅ X API service initialized with new credentials')
+    } catch (error) {
+      console.warn('⚠️ X API service unavailable:', error instanceof Error ? error.message : String(error))
+      this.xApiService = null
     }
 
     this.webScraper = getWebScraperInstance()
@@ -419,10 +430,43 @@ export class FallbackService {
       return scweetData
     }
 
-    // Try API second (if conditions are met and Scweet failed)
+    // Try X API second (NEW: Enhanced API with new credentials)
+    if (this.xApiService && this.xApiService.isReady()) {
+      try {
+        console.log('Attempting to fetch tweet data via X API (NEW)...')
+
+        const xApiData = await this.xApiService.getTweetByUrl(tweetUrl)
+
+        if (xApiData) {
+          const fallbackData: FallbackTweetData = {
+            id: xApiData.id,
+            content: xApiData.content,
+            likes: xApiData.engagement.likes,
+            retweets: xApiData.engagement.retweets,
+            replies: xApiData.engagement.replies,
+            author: {
+              id: xApiData.author.id,
+              username: xApiData.author.username,
+              name: xApiData.author.name,
+              profileImage: xApiData.author.profileImage
+            },
+            createdAt: xApiData.createdAt,
+            source: 'api' as const,
+            isFromLayerEdgeCommunity: xApiData.isFromLayerEdgeCommunity
+          }
+
+          console.log('✅ Successfully fetched tweet data via X API (NEW)')
+          return fallbackData
+        }
+      } catch (error) {
+        console.error('X API failed:', error)
+      }
+    }
+
+    // Try legacy Twitter API third (if conditions are met and X API failed)
     if (this.shouldUseApi()) {
       try {
-        console.log('Attempting to fetch tweet data via Twitter API...')
+        console.log('Attempting to fetch tweet data via Legacy Twitter API...')
 
         const apiData = await Promise.race([
           this.twitterApi!.getTweetData(tweetUrl),
@@ -443,12 +487,12 @@ export class FallbackService {
             isFromLayerEdgeCommunity: isFromCommunity
           }
 
-          console.log('Successfully fetched tweet data via API')
+          console.log('Successfully fetched tweet data via Legacy API')
           return fallbackData
         }
       } catch (error) {
         this.handleApiError(error instanceof Error ? error : new Error(String(error)))
-        console.log('API failed, falling back to web scraping...')
+        console.log('Legacy API failed, continuing with fallback chain...')
       }
     }
 

@@ -90,3 +90,4 @@ docs/OFFICIAL-SCWEET-INTEGRATION.md
 docs/WINDOWS-DEPLOYMENT-GUIDE.md
 scripts/deploy-windows-fixes.ps1
 scripts/test-windows-comprehensive.js
+docs/X-API-UPGRADE-GUIDE.md
