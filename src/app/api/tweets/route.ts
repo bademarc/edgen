@@ -3,6 +3,7 @@ import { getAuthenticatedUserId } from '@/lib/auth-utils'
 import { prisma } from '@/lib/db'
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent, verifyTweetAuthor, extractUsernameFromTweetUrl } from '@/lib/utils'
 import { getFallbackService } from '@/lib/fallback-service'
+import { TweetErrorHandler, createErrorResponse } from '@/lib/tweet-error-handler'
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,23 +57,26 @@ export async function POST(request: NextRequest) {
 
     // Validate tweet URL
     if (!tweetUrl || typeof tweetUrl !== 'string') {
+      const errorResponse = TweetErrorHandler.handleInvalidUrl()
       return NextResponse.json(
-        { error: 'Tweet URL is required' },
-        { status: 400 }
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
       )
     }
 
     if (!isValidTwitterUrl(tweetUrl)) {
+      const errorResponse = TweetErrorHandler.handleInvalidUrl()
       return NextResponse.json(
-        { error: 'Invalid Twitter URL' },
-        { status: 400 }
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
       )
     }
 
     if (!isLayerEdgeCommunityUrl(tweetUrl)) {
+      const errorResponse = TweetErrorHandler.handleInvalidUrl()
       return NextResponse.json(
-        { error: 'Please enter a valid X (Twitter) URL' },
-        { status: 400 }
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
       )
     }
 
@@ -114,16 +118,10 @@ export async function POST(request: NextRequest) {
 
       console.log(`Duplicate tweet detected. URL: ${tweetUrl}, Original submitter: ${submitterName}, Current user: ${userId}`)
 
+      const errorResponse = TweetErrorHandler.handleDuplicateSubmission(isOwnTweet, submitterName)
       return NextResponse.json(
-        {
-          error: isOwnTweet
-            ? 'You have already submitted this tweet and earned points for it.'
-            : `This tweet has already been submitted by ${submitterName}. Each tweet can only be submitted once.`,
-          errorType: 'DUPLICATE_TWEET',
-          isOwnSubmission: isOwnTweet,
-          originalSubmitter: submitterName
-        },
-        { status: 409 }
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
       )
     }
 
@@ -140,16 +138,10 @@ export async function POST(request: NextRequest) {
     if (!tweetData) {
       console.error(`Failed to fetch tweet data for URL: ${tweetUrl}`)
       const fallbackStatus = fallbackService.getStatus()
+      const errorResponse = TweetErrorHandler.determineErrorType(fallbackStatus, tweetData, null)
       return NextResponse.json(
-        {
-          error: 'Unable to fetch tweet data. This could be due to: 1) Tweet not found or deleted, 2) Tweet is private/protected, 3) Invalid tweet URL, 4) Twitter API rate limits, or 5) Web scraping failed.',
-          errorType: 'TWEET_NOT_FOUND',
-          fallbackStatus,
-          suggestedAction: fallbackStatus.isApiRateLimited
-            ? 'Twitter API is rate limited. Please try again later or contact support.'
-            : 'Please verify the tweet URL and ensure the tweet is public and accessible.'
-        },
-        { status: 404 }
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
       )
     }
 
@@ -166,15 +158,13 @@ export async function POST(request: NextRequest) {
 
     if (!isAuthorVerified && !isUrlUsernameValid) {
       console.log(`SECURITY VIOLATION: User ${authenticatedUser.xUsername} attempted to submit tweet by ${tweetData.author.username}`)
+      const errorResponse = TweetErrorHandler.handleUnauthorizedSubmission(
+        tweetData.author.username,
+        authenticatedUser.xUsername || 'unknown'
+      )
       return NextResponse.json(
-        {
-          error: 'You can only submit your own tweets. This tweet was authored by a different user.',
-          errorType: 'UNAUTHORIZED_TWEET_SUBMISSION',
-          tweetAuthor: tweetData.author.username,
-          authenticatedUser: authenticatedUser.xUsername,
-          securityViolation: true
-        },
-        { status: 403 }
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
       )
     }
 
@@ -188,16 +178,10 @@ export async function POST(request: NextRequest) {
     const isValidContent = validateTweetContent(tweetData.content)
     if (!isValidContent) {
       console.log(`Content validation failed for tweet: "${tweetData.content}"`)
+      const errorResponse = TweetErrorHandler.handleContentValidation(tweetData.content)
       return NextResponse.json(
-        {
-          error: 'Tweet must contain either "@layeredge" or "$EDGEN" to earn points. Please make sure your tweet mentions LayerEdge or the $EDGEN token.',
-          contentValidationFailed: true,
-          errorType: 'CONTENT_VALIDATION_FAILED',
-          tweetContent: tweetData.content.substring(0, 200), // First 200 chars for debugging
-          source: tweetData.source,
-          fallbackStatus: fallbackService.getStatus()
-        },
-        { status: 400 }
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
       )
     }
 
@@ -259,9 +243,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(tweet, { status: 201 })
   } catch (error) {
     console.error('Error creating tweet:', error)
+    const errorResponse = TweetErrorHandler.handleUnknownError(error)
     return NextResponse.json(
-      { error: 'Failed to submit tweet' },
-      { status: 500 }
+      createErrorResponse(errorResponse),
+      { status: errorResponse.httpStatus }
     )
   }
 }

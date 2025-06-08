@@ -37,6 +37,7 @@ import { RealTimeEngagement } from '@/components/ui/real-time-engagement'
 import { AchievementNotification, useAchievementNotifications } from '@/components/ui/achievement-notification'
 import { SocialSharingService } from '@/lib/social-sharing'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { ErrorDisplay } from '@/components/ui/error-display'
 
 const submitSchema = z.object({
   tweetUrl: z.string()
@@ -89,6 +90,7 @@ export default function SubmitPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error' | 'content-validation-failed'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
+  const [errorDetails, setErrorDetails] = useState<any>(null)
   const [tweetData, setTweetData] = useState<any>(null)
   const [showEngagementMetrics, setShowEngagementMetrics] = useState(false)
   const [submittedTweetId, setSubmittedTweetId] = useState<string | null>(null)
@@ -178,29 +180,44 @@ export default function SubmitPage() {
           router.push('/dashboard')
         }, 5000) // Increased delay to show engagement tracking
       } else {
-        // Enhanced error handling for security violations
-        if (result.errorType === 'UNAUTHORIZED_TWEET_SUBMISSION') {
-          setSubmitStatus('error')
-          setErrorMessage(`Security Error: You can only submit your own tweets. This tweet was authored by @${result.tweetAuthor}.`)
+        // Enhanced error handling with detailed error information
+        setSubmitStatus('error')
+        setErrorDetails(result)
+        setErrorMessage(result.error || 'Failed to submit tweet')
+
+        // Show appropriate toast based on error type
+        if (result.errorType === 'UNAUTHORIZED_SUBMISSION') {
           toast.error('Unauthorized Submission', {
-            description: `You can only submit your own tweets. This tweet was authored by @${result.tweetAuthor}.`,
+            description: `You can only submit your own tweets. This tweet was authored by @${result.details?.tweetAuthor}.`,
           })
-        } else if (result.contentValidationFailed) {
-          setSubmitStatus('content-validation-failed')
+        } else if (result.errorType === 'CONTENT_VALIDATION_FAILED') {
           toast.error('Content validation failed', {
             description: 'Tweet must contain @layeredge or $EDGEN',
           })
+        } else if (result.errorType === 'RATE_LIMITED') {
+          toast.error('Rate Limited', {
+            description: result.action,
+          })
+        } else if (result.errorType === 'DUPLICATE_SUBMISSION') {
+          toast.error('Duplicate Tweet', {
+            description: result.action,
+          })
         } else {
-          setSubmitStatus('error')
           toast.error('Submission failed', {
             description: result.error || 'Failed to submit tweet',
           })
         }
-        setErrorMessage(result.error || 'Failed to submit tweet')
       }
     } catch (error) {
       console.error('Error submitting tweet:', error)
       setSubmitStatus('error')
+      setErrorDetails({
+        errorType: 'NETWORK_ERROR',
+        error: 'Network error. Please try again.',
+        action: 'Please check your internet connection and try again',
+        retryable: true,
+        retryDelay: 5000
+      })
       setErrorMessage('Network error. Please try again.')
       toast.error('Network error', {
         description: 'Please check your connection and try again.',
@@ -213,6 +230,24 @@ export default function SubmitPage() {
   // Handle tweet preview data
   const handlePreviewLoad = (data: any) => {
     setPreviewData(data)
+  }
+
+  // Retry submission handler
+  const handleRetrySubmission = () => {
+    setSubmitStatus('idle')
+    setErrorMessage('')
+    setErrorDetails(null)
+    // Re-trigger form submission
+    const currentValues = form.getValues()
+    if (currentValues.tweetUrl) {
+      onSubmit(currentValues)
+    }
+  }
+
+  // Contact support handler
+  const handleContactSupport = () => {
+    // Open support email or chat
+    window.open('mailto:support@layeredge.io?subject=Tweet Submission Issue', '_blank')
   }
 
   // Social sharing handler
@@ -426,6 +461,15 @@ export default function SubmitPage() {
                       )}
 
                       <Separator />
+
+                      {/* Error Display */}
+                      {submitStatus === 'error' && errorDetails && (
+                        <ErrorDisplay
+                          error={errorDetails}
+                          onRetry={errorDetails.retryable ? handleRetrySubmission : undefined}
+                          onContactSupport={errorDetails.contactSupport ? handleContactSupport : undefined}
+                        />
+                      )}
 
                       <Button
                         type="submit"

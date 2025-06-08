@@ -65,36 +65,33 @@ export function TweetPreview({ tweetUrl, onPreviewLoad, className }: TweetPrevie
       setError(null)
 
       try {
-        // For now, create a mock preview to avoid API issues
-        const mockPreview: TweetPreviewData = {
-          content: 'This is a preview of your LayerEdge tweet. The actual content will be fetched when the API is available.',
-          author: 'LayerEdge User',
-          createdAt: new Date().toISOString(),
-          engagement: {
-            likes: Math.floor(Math.random() * 50),
-            retweets: Math.floor(Math.random() * 20),
-            replies: Math.floor(Math.random() * 10),
+        const response = await fetch('/api/tweets/preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          points: {
-            base: 5,
-            engagement: Math.floor(Math.random() * 30),
-            total: 5 + Math.floor(Math.random() * 30),
-          },
-          validation: {
-            isValid: tweetUrl.includes('layeredge') || tweetUrl.includes('EDGEN'),
-            containsKeywords: tweetUrl.includes('layeredge') || tweetUrl.includes('EDGEN'),
-            message: tweetUrl.includes('layeredge') || tweetUrl.includes('EDGEN')
-              ? 'Tweet contains required keywords (@layeredge or $EDGEN)'
-              : 'Tweet must contain @layeredge or $EDGEN to earn points'
-          },
-          source: 'Mock Preview'
+          body: JSON.stringify({ tweetUrl }),
+        })
+
+        const result = await response.json()
+
+        if (response.ok) {
+          setPreviewData(result.preview)
+          onPreviewLoad?.(result.preview)
+        } else {
+          // Handle specific error types
+          if (result.errorType === 'UNAUTHORIZED_SUBMISSION') {
+            setError(`Security Error: ${result.error}`)
+          } else if (result.errorType === 'RATE_LIMITED') {
+            setError(`Rate Limited: ${result.error}`)
+          } else if (result.errorType === 'TWEET_NOT_FOUND') {
+            setError(`Tweet Not Found: ${result.error}`)
+          } else if (result.errorType === 'INVALID_URL') {
+            setError(`Invalid URL: ${result.error}`)
+          } else {
+            setError(result.error || 'Failed to load tweet preview')
+          }
         }
-
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        setPreviewData(mockPreview)
-        onPreviewLoad?.(mockPreview)
       } catch (error) {
         console.error('Error fetching tweet preview:', error)
         setError('Network error while loading preview')

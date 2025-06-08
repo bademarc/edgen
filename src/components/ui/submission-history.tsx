@@ -73,60 +73,21 @@ export function SubmissionHistory({ className, limit = 5 }: SubmissionHistoryPro
     setError(null)
 
     try {
-      // Mock data for demonstration
-      const mockData: SubmissionHistoryData = {
-        tweets: [
-          {
-            id: '1',
-            url: 'https://x.com/user/status/123',
-            content: 'Excited about @layeredge and the future of Bitcoin! #LayerEdge',
-            likes: 15,
-            retweets: 5,
-            replies: 3,
-            totalPoints: 28,
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            user: {
-              id: 'user1',
-              name: 'LayerEdge User',
-              xUsername: 'layeredge_user',
-              image: '/icon/-AlLx9IW_400x400.png'
-            }
-          },
-          {
-            id: '2',
-            url: 'https://x.com/user/status/124',
-            content: 'Building the future with $EDGEN! 🚀',
-            likes: 8,
-            retweets: 2,
-            replies: 1,
-            totalPoints: 17,
-            createdAt: new Date(Date.now() - 172800000).toISOString(),
-            user: {
-              id: 'user1',
-              name: 'LayerEdge User',
-              xUsername: 'layeredge_user',
-              image: '/icon/-AlLx9IW_400x400.png'
-            }
-          }
-        ],
-        pagination: {
-          total: 2,
-          limit,
-          offset,
-          hasMore: false
-        },
-        stats: {
-          totalTweets: 2,
-          totalPoints: 45,
-          totalLikes: 23,
-          totalRetweets: 7,
-          totalReplies: 4
+      const response = await fetch(`/api/tweets/user/history?limit=${limit}&offset=${offset}`)
+      const result = await response.json()
+
+      if (response.ok) {
+        setData(result)
+      } else {
+        // Handle specific error types
+        if (result.errorType === 'UNAUTHORIZED') {
+          setError('Please log in to view your submission history')
+        } else if (result.errorType === 'NETWORK_ERROR') {
+          setError('Network error while loading history. Please try again.')
+        } else {
+          setError(result.error || 'Failed to load submission history')
         }
       }
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500))
-      setData(mockData)
     } catch (error) {
       console.error('Error fetching submission history:', error)
       setError('Network error while loading history')

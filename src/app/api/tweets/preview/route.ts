@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/auth-utils'
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl, validateTweetContent, verifyTweetAuthor, extractUsernameFromTweetUrl } from '@/lib/utils'
 import { prisma } from '@/lib/db'
+import { getFallbackService } from '@/lib/fallback-service'
+import { TweetErrorHandler, createErrorResponse } from '@/lib/tweet-error-handler'
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,53 +58,61 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For build compatibility, return mock data with security validation
-    // Extract username from URL for verification
-    const urlUsername = extractUsernameFromTweetUrl(tweetUrl)
+    // Use real fallback service for preview
+    console.log(`Fetching tweet preview for URL: ${tweetUrl}`)
+    const fallbackService = getFallbackService({
+      enableScraping: true,
+      preferApi: true,
+      apiTimeoutMs: 8000, // 8 seconds for preview
+    })
 
-    // Security check: Verify URL username matches authenticated user
-    if (urlUsername && !verifyTweetAuthor(urlUsername, authenticatedUser.xUsername)) {
+    const tweetData = await fallbackService.getTweetData(tweetUrl)
+
+    if (!tweetData) {
+      console.error(`Failed to fetch tweet preview for URL: ${tweetUrl}`)
+      const fallbackStatus = fallbackService.getStatus()
+      const errorResponse = TweetErrorHandler.determineErrorType(fallbackStatus, tweetData, null)
       return NextResponse.json(
-        {
-          error: 'You can only preview your own tweets. This tweet appears to be from a different user.',
-          errorType: 'UNAUTHORIZED_PREVIEW',
-          tweetAuthor: urlUsername,
-          authenticatedUser: authenticatedUser.xUsername
-        },
-        { status: 403 }
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
       )
     }
 
-    // Create mock data using authenticated user's info
-    const mockTweetData = {
-      content: 'This is a mock tweet preview for @layeredge community! #LayerEdge $EDGEN',
-      author: authenticatedUser.xUsername || 'LayerEdge User',
-      createdAt: new Date().toISOString(),
-      likes: Math.floor(Math.random() * 50),
-      retweets: Math.floor(Math.random() * 20),
-      replies: Math.floor(Math.random() * 10),
-      source: 'mock'
+    // Security check: Verify tweet author matches authenticated user
+    const isAuthorVerified = verifyTweetAuthor(tweetData.author.username, authenticatedUser.xUsername)
+    const urlUsername = extractUsernameFromTweetUrl(tweetUrl)
+    const isUrlUsernameValid = urlUsername ? verifyTweetAuthor(urlUsername, authenticatedUser.xUsername) : false
+
+    if (!isAuthorVerified && !isUrlUsernameValid) {
+      const errorResponse = TweetErrorHandler.handleUnauthorizedSubmission(
+        tweetData.author.username,
+        authenticatedUser.xUsername || 'unknown'
+      )
+      return NextResponse.json(
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
+      )
     }
 
     // Validate tweet content for required keywords
-    const isValidContent = validateTweetContent(mockTweetData.content)
+    const isValidContent = validateTweetContent(tweetData.content)
 
     // Calculate potential points
     const basePoints = 5
-    const engagementPoints = (mockTweetData.likes || 0) * 1 +
-                           (mockTweetData.retweets || 0) * 3 +
-                           (mockTweetData.replies || 0) * 2
+    const engagementPoints = (tweetData.likes || 0) * 1 +
+                           (tweetData.retweets || 0) * 3 +
+                           (tweetData.replies || 0) * 2
     const totalPoints = basePoints + engagementPoints
 
     return NextResponse.json({
       preview: {
-        content: mockTweetData.content,
-        author: mockTweetData.author,
-        createdAt: mockTweetData.createdAt,
+        content: tweetData.content,
+        author: tweetData.author.username,
+        createdAt: tweetData.createdAt,
         engagement: {
-          likes: mockTweetData.likes,
-          retweets: mockTweetData.retweets,
-          replies: mockTweetData.replies,
+          likes: tweetData.likes || 0,
+          retweets: tweetData.retweets || 0,
+          replies: tweetData.replies || 0,
         },
         points: {
           base: basePoints,
@@ -116,15 +126,9 @@ export async function POST(request: NextRequest) {
             ? 'Tweet contains required keywords (@layeredge or $EDGEN)'
             : 'Tweet must contain @layeredge or $EDGEN to earn points'
         },
-        source: mockTweetData.source,
+        source: tweetData.source,
       },
-      fallbackStatus: {
-        apiFailureCount: 0,
-        lastApiFailure: null,
-        isApiRateLimited: false,
-        rateLimitResetTime: null,
-        preferredSource: 'mock'
-      },
+      fallbackStatus: fallbackService.getStatus(),
     })
   } catch (error) {
     console.error('Error fetching tweet preview:', error)

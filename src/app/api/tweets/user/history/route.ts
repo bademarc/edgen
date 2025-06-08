@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/auth-utils'
+import { prisma } from '@/lib/db'
+import { TweetErrorHandler, createErrorResponse } from '@/lib/tweet-error-handler'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,56 +18,50 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    // For build compatibility, return mock data
-    // In production, this would use Prisma to fetch real data
-    const mockTweets = [
-      {
-        id: '1',
-        url: 'https://x.com/user/status/123',
-        content: 'Excited about @layeredge and the future of Bitcoin! #LayerEdge',
-        likes: 15,
-        retweets: 5,
-        replies: 3,
-        totalPoints: 28,
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        user: {
-          id: userId,
-          name: 'LayerEdge User',
-          xUsername: 'layeredge_user',
-          image: '/icon/-AlLx9IW_400x400.png'
-        }
+    // Fetch user's tweet submission history from database
+    const tweets = await prisma.tweet.findMany({
+      where: {
+        userId: userId,
       },
-      {
-        id: '2',
-        url: 'https://x.com/user/status/124',
-        content: 'Building the future with $EDGEN! 🚀',
-        likes: 8,
-        retweets: 2,
-        replies: 1,
-        totalPoints: 17,
-        createdAt: new Date(Date.now() - 172800000).toISOString(),
+      include: {
         user: {
-          id: userId,
-          name: 'LayerEdge User',
-          xUsername: 'layeredge_user',
-          image: '/icon/-AlLx9IW_400x400.png'
-        }
-      }
-    ]
+          select: {
+            id: true,
+            name: true,
+            xUsername: true,
+            image: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+      skip: offset,
+    })
 
-    const tweets = mockTweets.slice(offset, offset + limit)
-    const totalCount = mockTweets.length
+    // Get total count for pagination
+    const totalCount = await prisma.tweet.count({
+      where: {
+        userId: userId,
+      },
+    })
 
-    // Mock stats
-    const stats = {
-      _count: { id: 2 },
+    // Calculate summary stats
+    const stats = await prisma.tweet.aggregate({
+      where: {
+        userId: userId,
+      },
       _sum: {
-        totalPoints: 45,
-        likes: 23,
-        retweets: 7,
-        replies: 4,
-      }
-    }
+        totalPoints: true,
+        likes: true,
+        retweets: true,
+        replies: true,
+      },
+      _count: {
+        id: true,
+      },
+    })
 
     return NextResponse.json({
       tweets,
@@ -85,9 +81,10 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching user tweet history:', error)
+    const errorResponse = TweetErrorHandler.handleUnknownError(error)
     return NextResponse.json(
-      { error: 'Failed to fetch tweet history' },
-      { status: 500 }
+      createErrorResponse(errorResponse),
+      { status: errorResponse.httpStatus }
     )
   }
 }
