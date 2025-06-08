@@ -18,7 +18,8 @@ import {
   ArrowPathIcon,
   ChatBubbleLeftIcon,
   TrophyIcon,
-  ClockIcon
+  ClockIcon,
+  ShareIcon
 } from '@heroicons/react/24/outline'
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
