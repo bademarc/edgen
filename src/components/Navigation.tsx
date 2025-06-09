@@ -68,6 +68,17 @@ export function Navigation() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem>
+                <Link href="/helper" legacyBehavior passHref>
+                  <NavigationMenuLink
+                    className={cn(
+                      "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                    )}
+                  >
+                    Helper
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
                 <Link href="/about" legacyBehavior passHref>
                   <NavigationMenuLink
                     className={cn(
@@ -150,6 +161,9 @@ export function Navigation() {
             </Link>
             <Link href="/recent" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
               Recent Activity
+            </Link>
+            <Link href="/helper" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+              Helper
             </Link>
             <Link href="/about" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
               About
