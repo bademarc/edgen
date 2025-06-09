@@ -1,14 +1,9 @@
 import { PrismaClient } from '@prisma/client'
-import { exec } from 'child_process'
-import { promisify } from 'util'
 import cron from 'node-cron'
 import { calculatePoints } from './utils'
 import { TwitterApiService } from './twitter-api'
-import { getFallbackService } from './fallback-service'
-import { getWebScraperInstance } from './web-scraper'
 
 const prisma = new PrismaClient()
-const execAsync = promisify(exec)
 
 export interface TweetData {
   id: string
@@ -40,289 +35,135 @@ export class TweetTracker {
   private trackedUsers: Set<string>
   private isRunning: boolean
   private twitterApi: TwitterApiService | null
-  private fallbackService: ReturnType<typeof getFallbackService>
-  private webScraper: ReturnType<typeof getWebScraperInstance>
-  private currentScraperIndex: number
-  private scrapers: Array<{
-    name: string
-    method: () => Promise<TweetData[]>
-  }>
+  private lastSearchTime: number = 0
+  private readonly SEARCH_INTERVAL_MS = 15 * 60 * 1000 // 15 minutes to respect rate limits
 
   constructor() {
-    this.keywords = ['$Edgen', 'LayerEdge', '#Edgen', '#LayerEdge', '@layeredge', '$EDGEN']
+    this.keywords = ['@layeredge', '$EDGEN'] // Simplified to only required mentions
     this.trackedUsers = new Set()
     this.isRunning = false
-    this.currentScraperIndex = 0
 
-    // Initialize services
-    this.twitterApi = new TwitterApiService()
-    this.fallbackService = getFallbackService()
-    this.webScraper = getWebScraperInstance()
-
-    // ENHANCED FALLBACK: Official Scweet v3.0+ → Twikit → Twscrape → Basic Fallback
-    this.scrapers = [
-      { name: 'scweet', method: this.scrapeWithScweet.bind(this) },
-      { name: 'twikit', method: this.scrapeWithTwikit.bind(this) },
-      { name: 'twscrape', method: this.scrapeWithTwscrape.bind(this) },
-      { name: 'fallback', method: this.scrapeWithFallback.bind(this) },
-    ]
+    // Initialize Twitter API service only
+    try {
+      this.twitterApi = new TwitterApiService()
+      console.log('✅ Twitter API service initialized for tweet tracking')
+    } catch (error) {
+      console.warn('⚠️ Twitter API service unavailable:', error)
+      this.twitterApi = null
+    }
   }
 
   /**
-   * Method 1: Web Scraping with twscrape (Primary)
+   * Search for tweets using Twitter API v1.1 only
    */
-  async scrapeWithTwscrape(): Promise<TweetData[]> {
+  async searchTweetsWithApi(): Promise<TweetData[]> {
+    if (!this.twitterApi) {
+      console.warn('Twitter API not available for tweet search')
+      return []
+    }
+
+    // Respect rate limits - don't search more than once every 15 minutes
+    const now = Date.now()
+    if (now - this.lastSearchTime < this.SEARCH_INTERVAL_MS) {
+      console.log('Skipping search due to rate limit cooldown')
+      return []
+    }
+
     try {
       const query = this.keywords.join(' OR ')
-      console.log(`🔍 Scraping with twscrape: ${query}`)
+      console.log(`🔍 Searching tweets with Twitter API: ${query}`)
 
-      const { stdout } = await execAsync(`twscrape search "${query}" --limit 50`)
+      // Use Twitter API to search for recent tweets
+      const searchResults = await this.twitterApi.searchTweets(query, {
+        max_results: 50,
+        tweet_fields: 'public_metrics,created_at,author_id',
+        user_fields: 'username,name,protected'
+      })
 
-      if (!stdout.trim()) {
-        console.log('No output from twscrape')
+      this.lastSearchTime = now
+
+      if (!searchResults?.data) {
+        console.log('No tweets found in API search')
         return []
       }
 
-      // Parse twscrape output - it returns one JSON object per line
-      const lines = stdout.trim().split('\n').filter(line => line.trim())
-      const tweets: TweetData[] = []
+      // Filter for valid tweets containing our keywords
+      const filteredTweets = searchResults.data.filter((tweet: any) => {
+        const user = searchResults.includes?.users?.find((u: any) => u.id === tweet.author_id)
+        return !user?.protected && this.containsKeywords(tweet.text || '')
+      })
 
-      for (const line of lines) {
-        try {
-          const tweet = JSON.parse(line) as TweetData
-          tweets.push(tweet)
-        } catch {
-          console.log('Failed to parse twscrape line:', line.substring(0, 100))
+      console.log(`✅ Twitter API found ${filteredTweets.length} valid tweets`)
+
+      // Convert to our TweetData format
+      return filteredTweets.map((tweet: any) => {
+        const user = searchResults.includes?.users?.find((u: any) => u.id === tweet.author_id)
+        return {
+          id: tweet.id,
+          text: tweet.text,
+          user: {
+            id: tweet.author_id,
+            username: user?.username || 'unknown',
+            name: user?.name || 'Unknown User',
+            protected: user?.protected || false
+          },
+          public_metrics: tweet.public_metrics || {
+            like_count: 0,
+            retweet_count: 0,
+            reply_count: 0
+          },
+          created_at: tweet.created_at
         }
-      }
+      })
 
-      const filteredTweets = tweets.filter((tweet: TweetData) =>
-        !tweet.user?.protected && // Only public tweets
-        this.containsKeywords(tweet.text || '')
-      )
-
-      console.log(`✅ twscrape found ${filteredTweets.length} valid tweets`)
-      return filteredTweets
     } catch (error) {
-      console.error('Twscrape error:', error)
+      console.error('Twitter API search error:', error)
       return []
     }
   }
 
-  /**
-   * Method 2: Official Scweet v3.0+ Scraping (PRIMARY - Replaces RSS/Nitter)
-   */
-  async scrapeWithScweet(): Promise<TweetData[]> {
-    try {
-      console.log('🔍 Scraping with Official Scweet v3.0+')
 
-      // Use fallback service which now prioritizes Scweet
-      const scweetResults = await this.fallbackService.getTweetData('https://x.com/search?q=' + encodeURIComponent('$Edgen OR LayerEdge'))
 
-      if (scweetResults) {
-        // Convert FallbackTweetData to TweetData format
-        const tweets: TweetData[] = [{
-          id: scweetResults.id,
-          text: scweetResults.content,
-          user: {
-            id: scweetResults.author.id,
-            username: scweetResults.author.username,
-            name: scweetResults.author.name,
-            protected: false
-          },
-          public_metrics: {
-            like_count: scweetResults.likes,
-            retweet_count: scweetResults.retweets,
-            reply_count: scweetResults.replies
-          },
-          created_at: scweetResults.createdAt.toISOString()
-        }]
 
-        console.log(`✅ Official Scweet found ${tweets.length} tweets`)
-        return tweets.filter(tweet => this.containsKeywords(tweet.text || ''))
-      }
 
-      return []
-    } catch (error) {
-      console.error('Official Scweet scraping error:', error)
-      return []
-    }
-  }
+
+
+
 
   /**
-   * Method 3: Twikit Scraping (SECONDARY FALLBACK)
+   * Setup Twitter API monitoring with rate limit respect
    */
-  async scrapeWithTwikit(): Promise<TweetData[]> {
-    try {
-      console.log('🔍 Scraping with Twikit (enhanced fallback)')
+  async setupTwitterApiMonitoring(): Promise<void> {
+    console.log('🔄 Setting up Twitter API monitoring system...')
 
-      // Use fallback service to try Twikit specifically
-      // This will attempt to get tweets using the Twikit service
-      const twikitResults = await this.fallbackService.getTweetData('https://x.com/search?q=' + encodeURIComponent('$Edgen OR LayerEdge'))
-
-      if (twikitResults && twikitResults.source === 'twikit') {
-        // Convert FallbackTweetData to TweetData format
-        const tweets: TweetData[] = [{
-          id: twikitResults.id,
-          text: twikitResults.content,
-          user: {
-            id: twikitResults.author.id,
-            username: twikitResults.author.username,
-            name: twikitResults.author.name,
-            protected: false
-          },
-          public_metrics: {
-            like_count: twikitResults.likes,
-            retweet_count: twikitResults.retweets,
-            reply_count: twikitResults.replies
-          },
-          created_at: twikitResults.createdAt.toISOString()
-        }]
-
-        console.log(`✅ Twikit found ${tweets.length} tweets`)
-        return tweets.filter(tweet => this.containsKeywords(tweet.text || ''))
-      }
-
-      return []
-    } catch (error) {
-      console.error('Twikit scraping error:', error)
-      return []
-    }
-  }
-
-  /**
-   * Method 4: Fallback Web Scraping (LAST RESORT)
-   */
-  async scrapeWithFallback(): Promise<TweetData[]> {
-    try {
-      console.log('🔍 Using fallback web scraping (last resort)')
-
-      // Use the web scraper directly as final fallback
-      const tweets = await this.webScraper.scrapeTweetData('https://x.com/search?q=' + encodeURIComponent('$Edgen OR LayerEdge'))
-
-      if (tweets) {
-        // Convert single tweet to array format
-        const tweetArray: TweetData[] = [{
-          id: tweets.id,
-          text: tweets.content,
-          user: {
-            id: tweets.author.id,
-            username: tweets.author.username,
-            name: tweets.author.name,
-            protected: false
-          },
-          public_metrics: {
-            like_count: tweets.likes,
-            retweet_count: tweets.retweets,
-            reply_count: tweets.replies
-          },
-          created_at: tweets.createdAt.toISOString()
-        }]
-
-        console.log(`✅ Fallback scraping found ${tweetArray.length} tweets`)
-        return tweetArray.filter(tweet => this.containsKeywords(tweet.text || ''))
-      }
-
-      return []
-    } catch (error) {
-      console.error('Fallback scraping error:', error)
-      return []
-    }
-  }
-
-  /**
-   * Parse RSS/XML feed to extract tweet data
-   */
-  private parseRSSFeed(xml: string): TweetData[] {
-    try {
-      // Simple XML parsing for RSS feeds
-      const tweets: TweetData[] = []
-      const itemRegex = /<item>(.*?)<\/item>/gs
-      const items = xml.match(itemRegex) || []
-
-      for (const item of items) {
-        try {
-          const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] || ''
-          const link = item.match(/<link>(.*?)<\/link>/)?.[1] || ''
-          const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || ''
-
-          // Extract tweet ID from link
-          const tweetIdMatch = link.match(/status\/(\d+)/)
-          if (!tweetIdMatch) continue
-
-          const tweetId = tweetIdMatch[1]
-
-          // Extract username from title or link
-          const usernameMatch = title.match(/^([^:]+):/) || link.match(/\/([^\/]+)\/status/)
-          if (!usernameMatch) continue
-
-          const username = usernameMatch[1].replace('@', '')
-
-          if (this.containsKeywords(title)) {
-            tweets.push({
-              id: tweetId,
-              text: title,
-              user: {
-                id: username, // We don't have user ID from RSS
-                username: username,
-                name: username,
-                protected: false
-              },
-              public_metrics: {
-                like_count: 0,
-                retweet_count: 0,
-                reply_count: 0
-              },
-              created_at: pubDate || new Date().toISOString()
-            })
-          }
-        } catch (err) {
-          console.error('Error parsing RSS item:', err)
-        }
-      }
-
-      return tweets
-    } catch (error) {
-      console.error('Error parsing RSS feed:', error)
-      return []
-    }
-  }
-
-  /**
-   * Distributed scraping approach - rotate between methods
-   */
-  async setupDistributedScraping(): Promise<void> {
-    console.log('🔄 Setting up distributed scraping system...')
-
-    // Run different scrapers every 5 minutes to distribute load
-    cron.schedule('*/5 * * * *', async () => {
+    // Run Twitter API search every 15 minutes to respect rate limits
+    cron.schedule('*/15 * * * *', async () => {
       if (!this.isRunning) return
 
-      const scraper = this.rotateScraper()
       const startTime = Date.now()
 
       try {
-        console.log(`🚀 Running ${scraper.name} scraper...`)
-        const tweets = await scraper.method()
+        console.log('🚀 Running Twitter API search...')
+        const tweets = await this.searchTweetsWithApi()
         const duration = Date.now() - startTime
 
-        const processedCount = await this.processTweets(tweets, scraper.name)
+        const processedCount = await this.processTweets(tweets, 'twitter-api')
 
         // Log tracking result
         await this.logTrackingResult({
-          method: scraper.name,
+          method: 'twitter-api',
           success: true,
           tweetsFound: processedCount,
           duration
         })
 
-        console.log(`✅ ${scraper.name} completed: ${processedCount} tweets processed in ${duration}ms`)
+        console.log(`✅ Twitter API search completed: ${processedCount} tweets processed in ${duration}ms`)
       } catch (error) {
         const duration = Date.now() - startTime
-        console.error(`❌ ${scraper.name} failed:`, error)
+        console.error('❌ Twitter API search failed:', error)
 
         await this.logTrackingResult({
-          method: scraper.name,
+          method: 'twitter-api',
           success: false,
           tweetsFound: 0,
           error: error instanceof Error ? error.message : String(error),
@@ -330,14 +171,6 @@ export class TweetTracker {
         })
       }
     })
-  }
-
-  /**
-   * Rotate to next scraper in the list
-   */
-  private rotateScraper() {
-    this.currentScraperIndex = (this.currentScraperIndex + 1) % this.scrapers.length
-    return this.scrapers[this.currentScraperIndex]
   }
 
   /**
@@ -581,14 +414,14 @@ export class TweetTracker {
     }
 
     this.isRunning = true
-    console.log('🚀 Starting enhanced tweet tracking system...')
+    console.log('🚀 Starting Twitter API tweet tracking system...')
 
-    // Initialize distributed scraping
-    await this.setupDistributedScraping()
+    // Initialize Twitter API monitoring
+    await this.setupTwitterApiMonitoring()
 
     console.log('✅ Tweet tracking system is now active!')
-    console.log('📊 Monitoring methods: twscrape, RSS feeds, Nitter instances')
-    console.log('⏰ Scraping interval: Every 5 minutes with method rotation')
+    console.log('📊 Monitoring method: Twitter API v1.1 only')
+    console.log('⏰ Search interval: Every 15 minutes (respecting rate limits)')
   }
 
   /**
@@ -607,12 +440,14 @@ export class TweetTracker {
     keywords: string[]
     currentMethod: string
     trackedUsers: number
+    lastSearchTime: number
   } {
     return {
       isRunning: this.isRunning,
       keywords: this.keywords,
-      currentMethod: this.scrapers[this.currentScraperIndex]?.name || 'unknown',
-      trackedUsers: this.trackedUsers.size
+      currentMethod: 'twitter-api',
+      trackedUsers: this.trackedUsers.size,
+      lastSearchTime: this.lastSearchTime
     }
   }
 }

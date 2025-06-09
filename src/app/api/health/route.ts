@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { TwitterApiService } from '@/lib/twitter-api'
-import { getWebScraperInstance } from '@/lib/web-scraper'
-import { getFallbackService } from '@/lib/fallback-service'
+import { getSimplifiedFallbackService } from '@/lib/simplified-fallback-service'
+import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
+import { getEngagementUpdateService } from '@/lib/engagement-update-service'
 
 interface RateLimitInfo {
   limit: number
@@ -16,16 +17,16 @@ interface TwitterApiHealth {
   error: string | null
 }
 
-interface WebScraperHealth {
+interface ManualSubmissionHealth {
   available: boolean
   status: string
   error: string | null
 }
 
-interface EdgeFunctionHealth {
+interface EngagementUpdateHealth {
   available: boolean
-  deployed: boolean
-  authenticated: boolean
+  isRunning: boolean
+  lastUpdateTime: number
   error: string | null
 }
 
@@ -40,10 +41,11 @@ export async function GET() {
     // Check environment variables
     const envCheck = {
       twitterBearerToken: !!process.env.TWITTER_BEARER_TOKEN,
-      mentionTrackerSecret: !!process.env.MENTION_TRACKER_SECRET,
+      twitterClientId: !!process.env.TWITTER_CLIENT_ID,
+      twitterClientSecret: !!process.env.TWITTER_CLIENT_SECRET,
       supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      supabaseServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      siteUrl: !!process.env.NEXT_PUBLIC_SITE_URL
+      supabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      databaseUrl: !!process.env.DATABASE_URL
     }
 
     // Check Twitter API health
@@ -63,97 +65,75 @@ export async function GET() {
       twitterApiHealth.error = error instanceof Error ? error.message : 'Unknown error'
     }
 
-    // Check Web Scraper health
-    const webScraperHealth: WebScraperHealth = {
+    // Check Manual Submission Service health
+    const manualSubmissionHealth: ManualSubmissionHealth = {
       available: false,
       status: 'unknown',
       error: null
     }
 
     try {
-      const webScraper = getWebScraperInstance()
-      webScraperHealth.available = webScraper.isBrowserAvailable()
-      const browserStatus = webScraper.getBrowserStatus()
-      webScraperHealth.status = browserStatus.isHealthy ? 'healthy' : 'unhealthy'
-
-      // Try to initialize if not available
-      if (!webScraperHealth.available) {
-        // Note: Browser initialization is handled internally by the service
-        webScraperHealth.error = 'Browser not available - initialization needed'
-      }
+      const submissionService = getManualTweetSubmissionService()
+      manualSubmissionHealth.available = true
+      manualSubmissionHealth.status = 'healthy'
     } catch (error) {
-      webScraperHealth.error = error instanceof Error ? error.message : 'Browser initialization failed'
+      manualSubmissionHealth.error = error instanceof Error ? error.message : 'Manual submission service failed'
     }
 
-    // Check Fallback Service
-    const fallbackService = getFallbackService()
-    const fallbackServiceHealth = fallbackService.getStatus()
-
-    // Check Supabase Edge Function
-    const edgeFunctionHealth: EdgeFunctionHealth = {
+    // Check Engagement Update Service health
+    const engagementUpdateHealth: EngagementUpdateHealth = {
       available: false,
-      deployed: false,
-      authenticated: false,
+      isRunning: false,
+      lastUpdateTime: 0,
       error: null
     }
 
     try {
-      const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/track-mentions`
-      const edgeResponse = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.MENTION_TRACKER_SECRET}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (edgeResponse.status === 404) {
-        edgeFunctionHealth.error = 'Edge function not deployed'
-      } else if (edgeResponse.status === 401) {
-        edgeFunctionHealth.deployed = true
-        edgeFunctionHealth.error = 'Authentication failed'
-      } else {
-        edgeFunctionHealth.deployed = true
-        edgeFunctionHealth.authenticated = true
-        edgeFunctionHealth.available = true
-      }
+      const engagementService = getEngagementUpdateService()
+      const status = engagementService.getStatus()
+      engagementUpdateHealth.available = true
+      engagementUpdateHealth.isRunning = status.isRunning
+      engagementUpdateHealth.lastUpdateTime = status.lastUpdateTime
     } catch (error) {
-      edgeFunctionHealth.error = error instanceof Error ? error.message : 'Edge function test failed'
+      engagementUpdateHealth.error = error instanceof Error ? error.message : 'Engagement update service failed'
     }
+
+    // Check Simplified Fallback Service
+    const fallbackService = getSimplifiedFallbackService()
+    const fallbackServiceHealth = fallbackService.getStatus()
+
+
 
     // Overall system assessment
     const systemHealth = {
       status: 'healthy' as 'healthy' | 'degraded' | 'unhealthy',
-      canTrackMentions: false,
+      canSubmitTweets: false,
+      canUpdateEngagement: false,
       issues: [] as string[],
       capabilities: {
         twitterApi: twitterApiHealth.healthy,
-        webScraping: webScraperHealth.available,
-        edgeFunction: edgeFunctionHealth.available,
+        manualSubmission: manualSubmissionHealth.available,
+        engagementUpdates: engagementUpdateHealth.available,
         fallbackService: true
       }
     }
 
-    // Determine if we can track mentions
-    systemHealth.canTrackMentions = (twitterApiHealth.healthy || webScraperHealth.available) && edgeFunctionHealth.available
+    // Determine system capabilities
+    systemHealth.canSubmitTweets = twitterApiHealth.healthy && manualSubmissionHealth.available
+    systemHealth.canUpdateEngagement = twitterApiHealth.healthy && engagementUpdateHealth.available
 
     // Assess overall health
-    if (!systemHealth.canTrackMentions) {
+    if (!systemHealth.canSubmitTweets) {
       systemHealth.status = 'unhealthy'
-      if (!edgeFunctionHealth.available) {
-        systemHealth.issues.push('Edge function not available for automated tracking')
-      }
-      if (!twitterApiHealth.healthy && !webScraperHealth.available) {
-        systemHealth.issues.push('No data sources available (API and scraping both failed)')
-      }
-    } else if (!twitterApiHealth.healthy || !webScraperHealth.available) {
-      systemHealth.status = 'degraded'
       if (!twitterApiHealth.healthy) {
-        systemHealth.issues.push('Twitter API unavailable, using web scraping fallback')
+        systemHealth.issues.push('Twitter API unavailable - manual tweet submission disabled')
       }
-      if (!webScraperHealth.available) {
-        systemHealth.issues.push('Web scraping unavailable, using Twitter API only')
+      if (!manualSubmissionHealth.available) {
+        systemHealth.issues.push('Manual submission service unavailable')
       }
+    } else if (!systemHealth.canUpdateEngagement) {
+      systemHealth.status = 'degraded'
+      systemHealth.issues.push('Engagement update service unavailable - metrics may be stale')
     }
 
     // Check for missing environment variables
@@ -172,9 +152,9 @@ export async function GET() {
       environment: envCheck,
       services: {
         twitterApi: twitterApiHealth,
-        webScraper: webScraperHealth,
-        fallbackService: fallbackServiceHealth,
-        edgeFunction: edgeFunctionHealth
+        manualSubmission: manualSubmissionHealth,
+        engagementUpdates: engagementUpdateHealth,
+        fallbackService: fallbackServiceHealth
       },
       recommendations: [] as string[]
     }
@@ -183,17 +163,17 @@ export async function GET() {
     if (missingEnvVars.length > 0) {
       healthReport.recommendations.push(`Set missing environment variables: ${missingEnvVars.join(', ')}`)
     }
-    if (!edgeFunctionHealth.deployed) {
-      healthReport.recommendations.push('Deploy Supabase edge function: supabase functions deploy track-mentions')
-    }
-    if (!edgeFunctionHealth.authenticated && edgeFunctionHealth.deployed) {
-      healthReport.recommendations.push('Check MENTION_TRACKER_SECRET environment variable')
-    }
     if (!twitterApiHealth.available) {
-      healthReport.recommendations.push('Configure Twitter API credentials (TWITTER_BEARER_TOKEN)')
+      healthReport.recommendations.push('Configure Twitter API credentials (TWITTER_BEARER_TOKEN, TWITTER_CLIENT_ID, TWITTER_CLIENT_SECRET)')
     }
-    if (!webScraperHealth.available) {
-      healthReport.recommendations.push('Install Playwright browsers: npx playwright install chromium')
+    if (!manualSubmissionHealth.available) {
+      healthReport.recommendations.push('Check manual tweet submission service configuration')
+    }
+    if (!engagementUpdateHealth.available) {
+      healthReport.recommendations.push('Check engagement update service configuration')
+    }
+    if (!engagementUpdateHealth.isRunning && engagementUpdateHealth.available) {
+      healthReport.recommendations.push('Start engagement update service: npm run services:start')
     }
 
     // Set appropriate HTTP status based on health
@@ -226,22 +206,15 @@ export async function POST() {
   try {
     console.log('🔄 Resetting system health status...')
 
-    // Reset fallback service
-    const fallbackService = getFallbackService()
+    // Reset simplified fallback service
+    const fallbackService = getSimplifiedFallbackService()
     fallbackService.resetApiFailures()
-
-    // Reset web scraper
-    const webScraper = getWebScraperInstance()
-    webScraper.resetBrowserHealth()
-
-    // Note: Browser reinitialization is handled internally by the service
-    console.log('Browser health reset requested')
 
     console.log('✅ Health status reset completed')
 
     return NextResponse.json({
       success: true,
-      message: 'System health status reset successfully',
+      message: 'System health status reset successfully (manual submission system)',
       timestamp: new Date().toISOString()
     })
 

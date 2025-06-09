@@ -61,8 +61,8 @@ export function Navigation() {
                     <ListItem href="/recent" title="Recent Activity">
                       Latest community engagement
                     </ListItem>
-                    <ListItem href="/submit" title="Submit Tweet">
-                      Submit your LayerEdge tweets
+                    <ListItem href="/submit-tweet" title="Submit Tweet">
+                      Submit your LayerEdge tweets manually
                     </ListItem>
                   </ul>
                 </NavigationMenuContent>
@@ -153,7 +153,7 @@ export function Navigation() {
             <Link href="/dashboard" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
               Dashboard
             </Link>
-            <Link href="/submit" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+            <Link href="/submit-tweet" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
               Submit Tweet
             </Link>
             <Link href="/leaderboard" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>

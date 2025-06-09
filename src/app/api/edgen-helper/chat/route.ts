@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       // Return success with fallback message to keep chatbot working
       return NextResponse.json({
         success: true,
-        message: parseAIContent(fallbackResponse.message),
+        message: parseAIContent(fallbackResponse.message || ''),
         isOffline: true,
         mode: 'Enhanced Offline Mode',
         serviceStatus: serviceStatus,
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: parseAIContent(fallbackResponse.message),
+        message: parseAIContent(fallbackResponse.message || ''),
         isOffline: true,
         mode: 'Enhanced Offline Mode',
         originalError: response.error,
@@ -129,7 +129,7 @@ export async function GET() {
       ionetApiStatus: {
         initialized: status.initialized,
         apiKey: status.apiKey,
-        apiUrl: status.apiUrl,
+        baseUrl: status.baseUrl,
         model: status.model,
         ready: status.ready
       },

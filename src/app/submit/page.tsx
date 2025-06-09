@@ -639,7 +639,7 @@ export default function SubmitPage() {
 
             {/* Social Sharing */}
             {previewData && (
-              <Card variant="outline">
+              <Card variant="subtle">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2 text-sm">
                     <ShareIcon className="h-4 w-4" />

@@ -47,7 +47,7 @@ export async function GET() {
         stateLength: state.length,
         basicAuthHeaderPreview: basicAuthCredentials ? `Basic ${basicAuthCredentials.substring(0, 20)}...` : 'CANNOT_GENERATE'
       },
-      potentialIssues: []
+      potentialIssues: [] as string[]
     }
 
     // Check for potential issues

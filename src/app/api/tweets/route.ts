@@ -128,7 +128,6 @@ export async function POST(request: NextRequest) {
     // Fetch real tweet data using fallback service (API + scraping)
     console.log(`Attempting to fetch tweet data for URL: ${tweetUrl}`)
     const fallbackService = getFallbackService({
-      enableScraping: true,
       preferApi: true,
       apiTimeoutMs: 12000, // 12 seconds for tweet submission
     })

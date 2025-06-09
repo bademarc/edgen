@@ -84,9 +84,12 @@ export async function GET(request: NextRequest) {
     const unhealthyFeeds = results.filter(r => r.status !== 'healthy')
     
     const overallHealth = healthyFeeds.length >= 2 ? 'healthy' : 'degraded'
-    const averageResponseTime = results
-      .filter(r => r.responseTime)
-      .reduce((sum, r) => sum + (r.responseTime || 0), 0) / results.length
+    const responseTimes = results
+      .filter(r => r.responseTime !== undefined)
+      .map(r => r.responseTime!)
+    const averageResponseTime = responseTimes.length > 0
+      ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
+      : 0
 
     console.log(`✅ RSS health check completed: ${healthyFeeds.length}/${results.length} feeds healthy`)
 
@@ -143,9 +146,12 @@ function generateHealthRecommendations(results: any[]): string[] {
   }
 
   // Response time recommendations
-  const avgResponseTime = results
-    .filter(r => r.responseTime)
-    .reduce((sum, r) => sum + (r.responseTime || 0), 0) / results.length
+  const responseTimes = results
+    .filter(r => r.responseTime !== undefined)
+    .map(r => r.responseTime!)
+  const avgResponseTime = responseTimes.length > 0
+    ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
+    : 0
 
   if (avgResponseTime > 5000) {
     recommendations.push('🐌 RSS feeds are responding slowly - consider timeout adjustments')

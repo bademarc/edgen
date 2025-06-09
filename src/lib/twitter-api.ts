@@ -463,4 +463,33 @@ export class TwitterApiService {
       rateLimitInfo: this.rateLimitInfo
     }
   }
+
+  // Search for tweets containing specific keywords
+  async searchTweets(query: string, options: {
+    max_results?: number
+    tweet_fields?: string
+    user_fields?: string
+  } = {}): Promise<any> {
+    try {
+      const maxResults = Math.min(options.max_results || 50, 100) // API limit
+      const tweetFields = options.tweet_fields || 'public_metrics,created_at,author_id'
+      const userFields = options.user_fields || 'username,name,protected'
+
+      const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=${maxResults}&tweet.fields=${tweetFields}&user.fields=${userFields}&expansions=author_id`
+
+      console.log(`🔍 Searching tweets with query: ${query}`)
+
+      const response = await this.makeRequest(url)
+
+      if ('errors' in response && response.errors) {
+        console.error('Twitter API search errors:', response.errors)
+        return null
+      }
+
+      return response
+    } catch (error) {
+      console.error('Error searching tweets:', error)
+      return null
+    }
+  }
 }

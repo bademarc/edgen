@@ -117,7 +117,7 @@ export class TieredCacheService {
   async delete(key: string): Promise<void> {
     this.l1Cache.delete(key)
     try {
-      await this.l2Cache.delete(key)
+      await this.l2Cache.del(key)
     } catch (error) {
       console.warn(`⚠️ L2 cache delete error for key ${key}:`, error)
     }

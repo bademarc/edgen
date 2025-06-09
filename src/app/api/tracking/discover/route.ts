@@ -24,24 +24,18 @@ export async function POST(request: NextRequest) {
 
     try {
       if (method === 'all' || method === 'twscrape') {
-        console.log('🔍 Running manual twscrape discovery...')
-        const tweets = await tweetTracker.scrapeWithTwscrape()
-        const processed = await tweetTracker.processTweets(tweets, 'manual-twscrape')
-        results.twscrape = { tweets: tweets.length, processed }
+        console.log('🚫 twscrape discovery has been removed from LayerEdge platform')
+        results.twscrape = { tweets: 0, processed: 0, error: 'Web scraping removed' }
       }
 
       if (method === 'all' || method === 'rss') {
-        console.log('🔍 Running manual RSS discovery...')
-        const tweets = await tweetTracker.scrapeWithRSS()
-        const processed = await tweetTracker.processTweets(tweets, 'manual-rss')
-        results.rss = { tweets: tweets.length, processed }
+        console.log('🚫 RSS discovery has been removed from LayerEdge platform')
+        results.rss = { tweets: 0, processed: 0, error: 'Web scraping removed' }
       }
 
       if (method === 'all' || method === 'nitter') {
-        console.log('🔍 Running manual Nitter discovery...')
-        const tweets = await tweetTracker.scrapeWithNitter()
-        const processed = await tweetTracker.processTweets(tweets, 'manual-nitter')
-        results.nitter = { tweets: tweets.length, processed }
+        console.log('🚫 Nitter discovery has been removed from LayerEdge platform')
+        results.nitter = { tweets: 0, processed: 0, error: 'Web scraping removed' }
       }
 
       const duration = Date.now() - startTime

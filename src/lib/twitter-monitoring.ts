@@ -2,8 +2,6 @@ import { TwitterApiService } from './twitter-api'
 import { TwitterUserApiService } from './twitter-user-api'
 import { prisma } from './db'
 import { validateTweetContent, calculatePoints } from './utils'
-import { getFallbackService, FallbackTweetData, FallbackService } from './fallback-service'
-import { getWebScraperInstance, WebScraperService } from './web-scraper'
 
 interface TwitterTimelineResponse {
   data?: Array<{
@@ -42,32 +40,20 @@ interface TwitterTimelineResponse {
 export class TwitterMonitoringService {
   private twitterApi: TwitterApiService | null = null
   private userApi: TwitterUserApiService
-  private fallbackService: FallbackService
-  private webScraper: WebScraperService
   private lastRateLimitTime: number = 0
   private rateLimitBackoffMs: number = 0
 
   constructor() {
     try {
       this.twitterApi = new TwitterApiService()
+      console.log('✅ Twitter API service initialized for monitoring')
     } catch (error) {
-      console.warn('Twitter API service unavailable, using fallback methods only:', error)
+      console.warn('⚠️ Twitter API service unavailable:', error)
       this.twitterApi = null
     }
 
     // Initialize user-specific API service
     this.userApi = new TwitterUserApiService()
-
-    // Initialize fallback service with scraping enabled
-    this.fallbackService = getFallbackService({
-      enableScraping: true,
-      preferApi: this.twitterApi !== null,
-      apiTimeoutMs: 10000,
-      maxApiRetries: 2,
-      rateLimitCooldownMs: 900000 // 15 minutes
-    })
-
-    this.webScraper = getWebScraperInstance()
   }
 
   /**
@@ -101,51 +87,7 @@ export class TwitterMonitoringService {
     console.log(`🚫 Rate limit hit. Backing off for ${Math.round(this.rateLimitBackoffMs / 1000)}s`)
   }
 
-  /**
-   * Search for tweets from a specific user using web scraping fallback
-   */
-  async searchUserTweetsWithFallback(username: string, sinceId?: string): Promise<FallbackTweetData[]> {
-    console.log(`🔍 Searching tweets for @${username} using fallback methods...`)
 
-    try {
-      // First, try to get recent tweets from user's profile using web scraping
-      const userProfileUrl = `https://x.com/${username}`
-      const recentTweets = await this.webScraper.scrapeUserTweets(userProfileUrl, {
-        maxTweets: 20,
-        sinceId: sinceId,
-        filterKeywords: ['@layeredge', '$EDGEN', 'layeredge', 'EDGEN']
-      })
-
-      if (recentTweets && recentTweets.length > 0) {
-        console.log(`✅ Found ${recentTweets.length} tweets via web scraping for @${username}`)
-
-        // Filter for LayerEdge mentions and convert to FallbackTweetData format
-        const layeredgeTweets: FallbackTweetData[] = recentTweets
-          .filter(tweet => validateTweetContent(tweet.content))
-          .map(tweet => ({
-            id: tweet.id,
-            content: tweet.content,
-            likes: tweet.likes,
-            retweets: tweet.retweets,
-            replies: tweet.replies,
-            author: tweet.author,
-            createdAt: tweet.createdAt,
-            source: 'scraper' as const,
-            isFromLayerEdgeCommunity: tweet.isFromLayerEdgeCommunity
-          }))
-
-        console.log(`📝 ${layeredgeTweets.length} tweets contain LayerEdge mentions`)
-        return layeredgeTweets
-      }
-
-      console.log(`⚠️ No tweets found via web scraping for @${username}`)
-      return []
-
-    } catch (error) {
-      console.error(`❌ Error searching tweets for @${username}:`, error)
-      return []
-    }
-  }
 
   /**
    * Search user timeline using their OAuth token (preferred method)
@@ -390,73 +332,7 @@ export class TwitterMonitoringService {
     return processedCount
   }
 
-  /**
-   * Process scraped tweets and save them to database
-   */
-  private async processScrapedTweets(userId: string, scrapedTweets: FallbackTweetData[]): Promise<number> {
-    let processedCount = 0
 
-    for (const tweet of scrapedTweets) {
-      try {
-        // Check if tweet already exists by tweetId
-        const existingTweet = await prisma.tweet.findFirst({
-          where: { tweetId: tweet.id }
-        })
-
-        if (existingTweet) {
-          console.log(`Tweet ${tweet.id} already exists, skipping...`)
-          continue
-        }
-
-        // Validate tweet content
-        if (!validateTweetContent(tweet.content)) {
-          console.log(`Tweet ${tweet.id} does not contain required LayerEdge mentions, skipping...`)
-          continue
-        }
-
-        // Calculate points
-        const basePoints = 5
-        const bonusPoints = calculatePoints({ likes: tweet.likes, retweets: tweet.retweets, comments: tweet.replies }) - basePoints
-        const totalPoints = basePoints + bonusPoints
-
-        // Save tweet to database
-        await prisma.tweet.create({
-          data: {
-            tweetId: tweet.id,
-            content: tweet.content,
-            likes: tweet.likes,
-            retweets: tweet.retweets,
-            replies: tweet.replies,
-            basePoints: basePoints,
-            bonusPoints: bonusPoints,
-            totalPoints: totalPoints,
-            userId: userId,
-            isAutoDiscovered: true,
-            discoveredAt: new Date(),
-            url: `https://x.com/i/web/status/${tweet.id}`,
-          }
-        })
-
-        // Update user points
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            totalPoints: {
-              increment: totalPoints
-            }
-          }
-        })
-
-        console.log(`✅ Processed scraped tweet ${tweet.id} for user ${userId} (+${totalPoints} points)`)
-        processedCount++
-
-      } catch (error) {
-        console.error(`Error processing scraped tweet ${tweet.id}:`, error)
-      }
-    }
-
-    return processedCount
-  }
 
   /**
    * Monitor tweets for a specific user
@@ -605,9 +481,7 @@ export class TwitterMonitoringService {
       let processedCount = 0
       let searchMethod = 'unknown'
 
-      // Check fallback service status
-      const fallbackStatus = this.fallbackService.getStatus()
-      console.log(`Fallback service status:`, fallbackStatus)
+
 
       // Try user-specific OAuth token first (preferred method)
       let apiSearchResult: { success: boolean; error?: string; rateLimited?: boolean; tokenRefreshed?: boolean } | null = null
@@ -681,42 +555,7 @@ export class TwitterMonitoringService {
         }
       }
 
-      // Fallback to web scraping if API failed or unavailable
-      if (processedCount === 0) {
-        try {
-          console.log(`🕷️ Falling back to web scraping for @${user.xUsername}`)
 
-          // Check if web scraping is enabled
-          if (!this.webScraper) {
-            throw new Error('Web scraper service not initialized')
-          }
-
-          const scrapedTweets = await this.searchUserTweetsWithFallback(
-            user.xUsername,
-            lastTweet?.tweetId || undefined
-          )
-
-          if (scrapedTweets && scrapedTweets.length > 0) {
-            processedCount = await this.processScrapedTweets(userId, scrapedTweets)
-            searchMethod = 'scraper'
-            console.log(`✅ Web scraping successful: ${processedCount} tweets processed via ${searchMethod}`)
-          } else {
-            console.warn(`⚠️ No tweets found via web scraping for @${user.xUsername}`)
-          }
-        } catch (scrapingError) {
-          const errorMessage = scrapingError instanceof Error ? scrapingError.message : 'Unknown scraping error'
-          console.error(`❌ Web scraping failed for @${user.xUsername}: ${errorMessage}`)
-
-          // Log specific scraping error details
-          if (errorMessage.includes('browser')) {
-            console.error(`🌐 Browser initialization failed - check Playwright installation`)
-          } else if (errorMessage.includes('timeout')) {
-            console.error(`⏰ Scraping timeout - target site may be slow or blocking`)
-          } else if (errorMessage.includes('navigation')) {
-            console.error(`🧭 Navigation failed - target page may be inaccessible`)
-          }
-        }
-      }
 
       // Determine final status based on what happened
       if (processedCount === 0) {
@@ -761,10 +600,8 @@ export class TwitterMonitoringService {
 
         if (apiSearchResult?.rateLimited) {
           errorMessage = 'Twitter API rate limited - will retry when limit resets'
-        } else if (apiSearchResult?.error && !this.webScraper) {
-          errorMessage = `Twitter API failed: ${apiSearchResult.error}. Web scraping unavailable.`
         } else if (apiSearchResult?.error) {
-          errorMessage = 'Both Twitter API and web scraping failed - will retry next cycle'
+          errorMessage = `Twitter API failed: ${apiSearchResult.error}`
         }
 
         console.warn(`❌ Monitoring failed for @${user.xUsername}: ${errorMessage}`)

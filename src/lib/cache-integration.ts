@@ -130,7 +130,7 @@ export class EnhancedCacheService {
 
       await this.legacyCache.set(testKey, testValue, 10)
       const retrieved = await this.legacyCache.get(testKey)
-      await this.legacyCache.delete(testKey)
+      await this.legacyCache.del(testKey)
 
       const responseTime = Date.now() - startTime
 

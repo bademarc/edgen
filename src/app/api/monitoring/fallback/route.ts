@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@/lib/supabase-server'
 import { TwitterMonitoringService } from '@/lib/twitter-monitoring'
-import { getFallbackService } from '@/lib/fallback-service'
+import { getSimplifiedFallbackService } from '@/lib/simplified-fallback-service'
 import { prisma } from '@/lib/db'
 
 /**
@@ -61,28 +61,14 @@ export async function POST(request: NextRequest) {
     let method = 'unknown'
 
     if (forceMethod === 'scraper') {
-      // Force web scraping only
-      console.log('🕷️ Forcing web scraping method')
-      try {
-        const scrapedTweets = await monitoringService.searchUserTweetsWithFallback(
-          dbUser.xUsername,
-          undefined
-        )
-
-        if (scrapedTweets.length > 0) {
-          const processedCount = await monitoringService['processScrapedTweets'](userId, scrapedTweets)
-          result = { success: true, tweetsFound: processedCount }
-          method = 'scraper'
-        } else {
-          result = { success: false, tweetsFound: 0, error: 'No tweets found via scraping' }
-        }
-      } catch (error) {
-        result = {
-          success: false,
-          tweetsFound: 0,
-          error: error instanceof Error ? error.message : 'Scraping failed'
-        }
+      // Web scraping has been removed from LayerEdge platform
+      console.log('🚫 Web scraping method has been removed - falling back to API')
+      result = {
+        success: false,
+        tweetsFound: 0,
+        error: 'Web scraping has been removed from LayerEdge platform'
       }
+      method = 'scraper-removed'
     } else if (forceMethod === 'api') {
       // Force API only
       console.log('🔌 Forcing API method')
@@ -158,7 +144,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get fallback system status
-    const fallbackService = getFallbackService()
+    const fallbackService = getSimplifiedFallbackService()
     const fallbackStatus = fallbackService.getStatus()
 
     console.log('Fallback system status:', fallbackStatus)

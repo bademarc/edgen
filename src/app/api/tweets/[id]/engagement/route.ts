@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getFallbackService } from '@/lib/fallback-service'
+import { getSimplifiedFallbackService } from '@/lib/simplified-fallback-service'
 import { calculatePoints, validateTweetContent } from '@/lib/utils'
 
 export async function POST(
@@ -65,9 +65,8 @@ export async function POST(
       }
     }
 
-    // Use fallback service for engagement metrics
-    const fallbackService = getFallbackService({
-      enableScraping: true,
+    // Use simplified fallback service for engagement metrics
+    const fallbackService = getSimplifiedFallbackService({
       preferApi: true,
       apiTimeoutMs: 8000, // 8 seconds for engagement updates
     })

@@ -13,7 +13,7 @@ import {
   ArrowPathIcon,
   ChatBubbleLeftIcon,
   TrophyIcon,
-  ExternalLinkIcon,
+  ArrowTopRightOnSquareIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ShareIcon
@@ -266,7 +266,7 @@ export function SubmissionHistory({ className, limit = 5 }: SubmissionHistoryPro
                     className="h-8 w-8 p-0"
                     onClick={() => window.open(tweet.url, '_blank')}
                   >
-                    <ExternalLinkIcon className="h-3 w-3" />
+                    <ArrowTopRightOnSquareIcon className="h-3 w-3" />
                   </Button>
                 </div>
               </div>

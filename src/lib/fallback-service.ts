@@ -1,7 +1,6 @@
 import { TwitterApiService } from './twitter-api'
-import { WebScraperService, getWebScraperInstance } from './web-scraper'
 import { URLValidator, validateTweetURL, URLValidationError } from './url-validator'
-import { XApiService, getXApiService, XTweetData } from './x-api-service'
+import { XApiService, getXApiService } from './x-api-service'
 
 export interface FallbackTweetData {
   id: string
@@ -16,7 +15,7 @@ export interface FallbackTweetData {
     profileImage?: string
   }
   createdAt: Date
-  source: 'api' | 'scweet' | 'twikit' | 'scraper'  // Added 'twikit' for enhanced fallback
+  source: 'api' | 'x-api'  // Simplified to only API sources
   isFromLayerEdgeCommunity: boolean
 }
 
@@ -24,32 +23,25 @@ export interface FallbackEngagementMetrics {
   likes: number
   retweets: number
   replies: number
-  source: 'api' | 'scweet' | 'twikit' | 'scraper'  // Added 'twikit' for enhanced fallback
+  source: 'api' | 'x-api'  // Simplified to only API sources
   timestamp: Date
 }
 
 export interface FallbackServiceConfig {
-  enableScraping: boolean
   apiTimeoutMs: number
   maxApiRetries: number
   preferApi: boolean
   rateLimitCooldownMs: number
-  enableScweet?: boolean
-  scweetServiceUrl?: string
-  enableTwikit?: boolean
-  scweetServiceUrls?: string[] // PRIORITY FIX: Multiple service URLs for network resilience
 }
 
 export class FallbackService {
   private twitterApi: TwitterApiService | null = null
   private xApiService: XApiService | null = null
-  private webScraper: WebScraperService
   private config: FallbackServiceConfig
   private apiFailureCount: number = 0
   private lastApiFailure: Date | null = null
   private isApiRateLimited: boolean = false
   private rateLimitResetTime: Date | null = null
-  private scweetServiceUrl: string
 
   constructor(config: Partial<FallbackServiceConfig> = {}) {
     // Try to initialize Twitter API, but don't fail if credentials are missing
@@ -70,29 +62,16 @@ export class FallbackService {
       this.xApiService = null
     }
 
-    this.webScraper = getWebScraperInstance()
     this.config = {
-      enableScraping: true,
-      apiTimeoutMs: 15000, // PRIORITY FIX: Increased timeout for network issues
+      apiTimeoutMs: 15000,
       maxApiRetries: 2,
-      preferApi: false, // PRIORITY FIX: Disable Twitter API preference to avoid rate limits
+      preferApi: true, // Prefer API over other methods
       rateLimitCooldownMs: 15 * 60 * 1000, // 15 minutes
-      enableScweet: true,
-      scweetServiceUrl: process.env.SCWEET_SERVICE_URL || 'http://localhost:8001', // PRIORITY FIX: Default to localhost
-      enableTwikit: true, // PRIORITY FIX: Enable Twikit fallback
-      // PRIORITY FIX: Multiple service URLs for network resilience (localhost first)
-      scweetServiceUrls: [
-        'http://localhost:8001',  // PRIORITY FIX: Try localhost first
-        'http://127.0.0.1:8001',  // IP address fallback
-        process.env.SCWEET_SERVICE_URL || 'http://scweet-service:8001', // Docker fallback
-      ],
       ...config
     }
 
-    this.scweetServiceUrl = this.config.scweetServiceUrl || 'http://localhost:8001'
-
     console.log('FallbackService initialized with config:', this.config)
-    console.log(`API available: ${this.twitterApi !== null}, Scraping enabled: ${this.config.enableScraping}, Scweet enabled: ${this.config.enableScweet}`)
+    console.log(`Twitter API available: ${this.twitterApi !== null}, X API available: ${this.xApiService !== null}`)
   }
 
   private shouldUseApi(): boolean {
@@ -162,255 +141,27 @@ export class FallbackService {
   }
 
   private async tryScweetService(tweetUrl: string): Promise<FallbackTweetData | null> {
-    if (!this.config.enableScweet) {
-      return null
-    }
-
-    // PRIORITY FIX: Try multiple service URLs for network resilience
-    const serviceUrls = this.config.scweetServiceUrls || [this.scweetServiceUrl]
-
-    for (const serviceUrl of serviceUrls) {
-      try {
-        console.log(`Attempting to fetch tweet data via Scweet service at ${serviceUrl}...`)
-
-        // PRIORITY FIX: Add connection retry logic for network issues
-        let lastError: Error | null = null
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            const response = await fetch(`${serviceUrl}/tweet`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                tweet_url: tweetUrl,
-                include_engagement: true,
-                include_user_info: true
-              }),
-              signal: AbortSignal.timeout(this.config.apiTimeoutMs)
-            })
-
-            if (!response.ok) {
-              throw new Error(`Scweet service error: ${response.status}`)
-            }
-
-            const data = await response.json()
-
-            const fallbackData: FallbackTweetData = {
-              id: data.tweet_id,
-              content: data.content,
-              likes: data.engagement.likes,
-              retweets: data.engagement.retweets,
-              replies: data.engagement.replies,
-              author: {
-                id: data.author.username,
-                username: data.author.username,
-                name: data.author.display_name,
-                profileImage: undefined
-              },
-              createdAt: new Date(data.created_at),
-              source: 'scweet' as const,
-              isFromLayerEdgeCommunity: data.is_from_layeredge_community
-            }
-
-            console.log(`Successfully fetched tweet data via Scweet service at ${serviceUrl}`)
-            return fallbackData
-
-          } catch (error) {
-            lastError = error as Error
-            console.warn(`Scweet service attempt ${attempt} failed for ${serviceUrl}:`, error)
-
-            // PRIORITY FIX: Handle network resolution errors specifically
-            if (error instanceof TypeError && error.message.includes('fetch failed')) {
-              console.error(`Network resolution failed for ${serviceUrl} - attempt ${attempt}/3`)
-              if (attempt < 3) {
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // Exponential backoff
-                continue
-              }
-            }
-
-            if (attempt === 3) {
-              break // Try next service URL
-            }
-          }
-        }
-
-        console.error(`All attempts failed for ${serviceUrl}, trying next URL...`)
-      } catch (error) {
-        console.error(`Scweet service failed for ${serviceUrl}:`, error)
-      }
-    }
-
-    console.error('Scweet service failed for all URLs after all retries')
+    // Scweet service has been removed - return null
+    console.log('Scweet service has been removed from LayerEdge platform')
     return null
   }
 
   private async tryScweetEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
-    if (!this.config.enableScweet) {
-      return null
-    }
-
-    try {
-      console.log('Attempting to fetch engagement metrics via Scweet service...')
-
-      const response = await fetch(`${this.scweetServiceUrl}/engagement`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tweet_url: tweetUrl
-        }),
-        signal: AbortSignal.timeout(this.config.apiTimeoutMs)
-      })
-
-      if (!response.ok) {
-        throw new Error(`Scweet service error: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      const fallbackMetrics: FallbackEngagementMetrics = {
-        likes: data.likes,
-        retweets: data.retweets,
-        replies: data.replies,
-        source: 'scweet' as const,
-        timestamp: new Date(data.timestamp)
-      }
-
-      console.log('Successfully fetched engagement metrics via Scweet service')
-      return fallbackMetrics
-    } catch (error) {
-      console.error('Scweet engagement service failed:', error)
-      return null
-    }
+    // Scweet service has been removed - return null
+    console.log('Scweet engagement service has been removed from LayerEdge platform')
+    return null
   }
 
   private async tryTwikitService(tweetUrl: string): Promise<FallbackTweetData | null> {
-    if (!this.config.enableTwikit) { // PRIORITY FIX: Use dedicated Twikit config flag
-      console.log('Twikit fallback disabled')
-      return null
-    }
-
-    // PRIORITY FIX: Try multiple service URLs for Twikit network resilience
-    const serviceUrls = this.config.scweetServiceUrls || [this.scweetServiceUrl]
-
-    for (const serviceUrl of serviceUrls) {
-      try {
-        console.log(`Attempting to fetch tweet data via Twikit service at ${serviceUrl}...`)
-
-        // PRIORITY FIX: Add connection retry logic for Twikit network issues
-        let lastError: Error | null = null
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            const response = await fetch(`${serviceUrl}/twikit/tweet`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                tweet_url: tweetUrl,
-                include_engagement: true,
-                include_user_info: true
-              }),
-              signal: AbortSignal.timeout(this.config.apiTimeoutMs)
-            })
-
-            if (!response.ok) {
-              throw new Error(`Twikit service error: ${response.status}`)
-            }
-
-            const data = await response.json()
-
-            const fallbackData: FallbackTweetData = {
-              id: data.tweet_id,
-              content: data.content,
-              likes: data.engagement.likes,
-              retweets: data.engagement.retweets,
-              replies: data.engagement.replies,
-              author: {
-                id: data.author.username,
-                username: data.author.username,
-                name: data.author.display_name,
-                profileImage: undefined
-              },
-              createdAt: new Date(data.created_at),
-              source: 'twikit' as const,
-              isFromLayerEdgeCommunity: data.is_from_layeredge_community
-            }
-
-            console.log(`Successfully fetched tweet data via Twikit service at ${serviceUrl}`)
-            return fallbackData
-
-          } catch (error) {
-            lastError = error as Error
-            console.warn(`Twikit service attempt ${attempt} failed for ${serviceUrl}:`, error)
-
-            // PRIORITY FIX: Handle network resolution errors specifically for Twikit
-            if (error instanceof TypeError && error.message.includes('fetch failed')) {
-              console.error(`Twikit network resolution failed for ${serviceUrl} - attempt ${attempt}/3`)
-              if (attempt < 3) {
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // Exponential backoff
-                continue
-              }
-            }
-
-            if (attempt === 3) {
-              break // Try next service URL
-            }
-          }
-        }
-
-        console.error(`All Twikit attempts failed for ${serviceUrl}, trying next URL...`)
-      } catch (error) {
-        console.error(`Twikit service failed for ${serviceUrl}:`, error)
-      }
-    }
-
-    console.error('Twikit service failed for all URLs after all retries')
+    // Twikit service has been removed - return null
+    console.log('Twikit service has been removed from LayerEdge platform')
     return null
   }
 
   private async tryTwikitEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
-    if (!this.config.enableTwikit) { // PRIORITY FIX: Use dedicated Twikit config flag
-      console.log('Twikit engagement fallback disabled')
-      return null
-    }
-
-    try {
-      console.log('Attempting to fetch engagement metrics via Twikit service...')
-
-      const response = await fetch(`${this.scweetServiceUrl}/twikit/engagement`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tweet_url: tweetUrl
-        }),
-        signal: AbortSignal.timeout(this.config.apiTimeoutMs)
-      })
-
-      if (!response.ok) {
-        throw new Error(`Twikit service error: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      const fallbackMetrics: FallbackEngagementMetrics = {
-        likes: data.likes,
-        retweets: data.retweets,
-        replies: data.replies,
-        source: 'twikit' as const,
-        timestamp: new Date(data.timestamp)
-      }
-
-      console.log('Successfully fetched engagement metrics via Twikit service')
-      return fallbackMetrics
-    } catch (error) {
-      console.error('Twikit engagement service failed:', error)
-      return null
-    }
+    // Twikit service has been removed - return null
+    console.log('Twikit engagement service has been removed from LayerEdge platform')
+    return null
   }
 
   async getTweetData(tweetUrl: string): Promise<FallbackTweetData | null> {
@@ -502,33 +253,7 @@ export class FallbackService {
       return twikitData
     }
 
-    // Fallback to web scraping (final fallback)
-    if (this.config.enableScraping) {
-      try {
-        console.log('Attempting to fetch tweet data via web scraping...')
-
-        const scrapedData = await this.webScraper.scrapeTweetData(tweetUrl)
-
-        if (scrapedData) {
-          const fallbackData: FallbackTweetData = {
-            id: scrapedData.id,
-            content: scrapedData.content,
-            likes: scrapedData.likes,
-            retweets: scrapedData.retweets,
-            replies: scrapedData.replies,
-            author: scrapedData.author,
-            createdAt: scrapedData.createdAt,
-            source: 'scraper' as const,
-            isFromLayerEdgeCommunity: scrapedData.isFromLayerEdgeCommunity
-          }
-
-          console.log('Successfully fetched tweet data via web scraping')
-          return fallbackData
-        }
-      } catch (error) {
-        console.error('Web scraping also failed:', error)
-      }
-    }
+    // Web scraping has been removed from LayerEdge platform
 
     console.error('All fallback methods failed for tweet:', tweetUrl)
     return null
@@ -580,29 +305,7 @@ export class FallbackService {
       return twikitMetrics
     }
 
-    // Fallback to web scraping (final fallback)
-    if (this.config.enableScraping) {
-      try {
-        console.log('Attempting to fetch engagement metrics via web scraping...')
-
-        const scrapedMetrics = await this.webScraper.scrapeEngagementMetrics(tweetUrl)
-
-        if (scrapedMetrics) {
-          const fallbackMetrics: FallbackEngagementMetrics = {
-            likes: scrapedMetrics.likes,
-            retweets: scrapedMetrics.retweets,
-            replies: scrapedMetrics.replies,
-            source: 'scraper' as const,
-            timestamp: scrapedMetrics.timestamp
-          }
-
-          console.log('Successfully fetched engagement metrics via web scraping')
-          return fallbackMetrics
-        }
-      } catch (error) {
-        console.error('Web scraping also failed:', error)
-      }
-    }
+    // Web scraping has been removed from LayerEdge platform
 
     console.error('All fallback methods failed for engagement metrics:', tweetUrl)
     return null
@@ -669,31 +372,7 @@ export class FallbackService {
       }
     }
 
-    // Fallback to web scraping
-    if (this.config.enableScraping) {
-      try {
-        console.log('Attempting batch fetch via web scraping...')
-
-        const scrapedResults = await this.webScraper.scrapeBatchEngagementMetrics(tweetUrls)
-
-        const fallbackResults = scrapedResults.map(result => ({
-          url: result.url,
-          metrics: result.metrics ? {
-            likes: result.metrics.likes,
-            retweets: result.metrics.retweets,
-            replies: result.metrics.replies,
-            source: 'scraper' as const,
-            timestamp: result.metrics.timestamp
-          } : null
-        }))
-
-        const successfulResults = fallbackResults.filter(result => result.metrics !== null)
-        console.log(`Successfully scraped ${successfulResults.length}/${fallbackResults.length} metrics`)
-        return fallbackResults
-      } catch (error) {
-        console.error('Web scraping batch also failed:', error)
-      }
-    }
+    // Web scraping has been removed from LayerEdge platform
 
     console.error('All fallback methods failed for batch engagement metrics')
     return tweetUrls.map(url => ({ url, metrics: null }))
@@ -704,14 +383,14 @@ export class FallbackService {
     lastApiFailure: Date | null
     isApiRateLimited: boolean
     rateLimitResetTime: Date | null
-    preferredSource: 'api' | 'scraper'
+    preferredSource: 'api' | 'x-api'
   } {
     return {
       apiFailureCount: this.apiFailureCount,
       lastApiFailure: this.lastApiFailure,
       isApiRateLimited: this.isApiRateLimited,
       rateLimitResetTime: this.rateLimitResetTime,
-      preferredSource: this.shouldUseApi() ? 'api' : 'scraper'
+      preferredSource: this.shouldUseApi() ? 'api' : 'x-api'
     }
   }
 

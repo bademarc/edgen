@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@/lib/supabase-server'
-import { getFallbackService } from '@/lib/fallback-service'
+import { getSimplifiedFallbackService } from '@/lib/simplified-fallback-service'
 import { isValidTwitterUrl } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
@@ -29,8 +29,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`Scraping engagement metrics for URL: ${tweetUrl}`)
 
-      const fallbackService = getFallbackService({
-        enableScraping: true,
+      const fallbackService = getSimplifiedFallbackService({
         preferApi: forceMethod === 'api',
         apiTimeoutMs: 6000, // Shorter timeout for engagement updates
       })
@@ -98,8 +97,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`Scraping engagement metrics for ${tweetUrls.length} tweets`)
 
-      const fallbackService = getFallbackService({
-        enableScraping: true,
+      const fallbackService = getSimplifiedFallbackService({
         preferApi: forceMethod === 'api',
         apiTimeoutMs: 8000, // Longer timeout for batch requests
       })
@@ -108,10 +106,19 @@ export async function POST(request: NextRequest) {
         fallbackService.updateConfig({ preferApi: false })
       }
 
-      const results = await fallbackService.getBatchEngagementMetrics(tweetUrls)
+      // Process each URL individually since batch processing is removed
+      const results = []
+      for (const url of tweetUrls) {
+        try {
+          const metrics = await fallbackService.getEngagementMetrics(url)
+          results.push({ url, metrics })
+        } catch (error) {
+          results.push({ url, metrics: null, error: error instanceof Error ? error.message : 'Unknown error' })
+        }
+      }
 
-      const successfulResults = results.filter(result => result.metrics !== null)
-      const failedResults = results.filter(result => result.metrics === null)
+      const successfulResults = results.filter((result: any) => result.metrics !== null)
+      const failedResults = results.filter((result: any) => result.metrics === null)
 
       return NextResponse.json({
         success: true,
@@ -177,8 +184,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`Getting engagement metrics for URL: ${tweetUrl} using method: ${method || 'auto'}`)
 
-    const fallbackService = getFallbackService({
-      enableScraping: true,
+    const fallbackService = getSimplifiedFallbackService({
       preferApi: method === 'api' || method !== 'scraper',
     })
 
@@ -229,7 +235,7 @@ export async function GET(request: NextRequest) {
 // Status endpoint for monitoring the scraping service
 export async function HEAD() {
   try {
-    const fallbackService = getFallbackService()
+    const fallbackService = getSimplifiedFallbackService()
     const status = fallbackService.getStatus()
 
     return new NextResponse(null, {

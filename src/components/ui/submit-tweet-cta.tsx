@@ -132,7 +132,7 @@ export function SubmitTweetCTA({
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button asChild variant="layeredge" size="lg" className="flex-1">
-                <Link href="/submit" className="flex items-center justify-center space-x-2">
+                <Link href="/submit-tweet" className="flex items-center justify-center space-x-2">
                   <SparklesIcon className="h-5 w-5" />
                   <span>Submit Tweet Now</span>
                   <ArrowRightIcon className="h-4 w-4" />
@@ -201,7 +201,7 @@ export function SubmitTweetCTA({
           )}
 
           <Button asChild variant="layeredge" size="lg" className="w-full">
-            <Link href="/submit" className="flex items-center justify-center space-x-2">
+            <Link href="/submit-tweet" className="flex items-center justify-center space-x-2">
               <PlusIcon className="h-4 w-4" />
               <span>Submit Tweet</span>
               <ArrowRightIcon className="h-4 w-4" />
