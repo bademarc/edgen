@@ -44,6 +44,7 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
+  const [currentMode, setCurrentMode] = useState('AI Assistant')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -121,9 +122,19 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
           timestamp: new Date()
         }
         setMessages(prev => [...prev, assistantMessage])
-        setIsOnline(true)
+
+        // Update online status and mode based on response
+        if (data.isOffline) {
+          setIsOnline(false)
+          setCurrentMode(data.mode || 'Enhanced Offline')
+          console.log(`🤖 Edgen Helper running in: ${data.mode || 'Offline Mode'}`)
+        } else {
+          setIsOnline(true)
+          setCurrentMode('DeepSeek-R1 Online')
+          console.log('🤖 Edgen Helper online with DeepSeek-R1')
+        }
       } else {
-        // Fallback response
+        // This should rarely happen now since we always return success
         const fallbackMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
@@ -220,7 +231,7 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                     <div>
                       <CardTitle className="text-white text-lg">Edgen Helper</CardTitle>
                       <p className="text-xs text-gray-400">
-                        {isOnline ? 'AI Assistant Online' : 'Offline Mode'}
+                        {currentMode}
                       </p>
                     </div>
                   </div>
