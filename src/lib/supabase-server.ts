@@ -37,7 +37,12 @@ export const createRouteHandlerClient = (request: Request) => {
         if (!cookieHeader) return []
 
         return cookieHeader.split(';').map(cookie => {
-          const [name, value] = cookie.trim().split('=')
+          const trimmed = cookie.trim()
+          const equalIndex = trimmed.indexOf('=')
+          if (equalIndex === -1) return { name: trimmed, value: '' }
+
+          const name = trimmed.substring(0, equalIndex)
+          const value = trimmed.substring(equalIndex + 1)
           return { name, value }
         })
       },

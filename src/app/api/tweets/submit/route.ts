@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@/lib/supabase-server'
 import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
+import { getAuthenticatedUser } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,11 +13,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get authenticated user
-    const supabase = await createServerComponentClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get authenticated user using universal auth function
+    const authResult = await getAuthenticatedUser(request)
 
-    if (authError || !user) {
+    if (!authResult.isAuthenticated || !authResult.userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -29,10 +27,10 @@ export async function POST(request: NextRequest) {
     const submissionService = getManualTweetSubmissionService()
 
     // Check submission status
-    const submissionStatus = submissionService.getSubmissionStatus(user.id)
+    const submissionStatus = submissionService.getSubmissionStatus(authResult.userId)
     if (!submissionStatus.canSubmit) {
       return NextResponse.json(
-        { 
+        {
           error: `Please wait ${submissionStatus.cooldownRemaining} minutes before submitting another tweet.`,
           cooldownRemaining: submissionStatus.cooldownRemaining
         },
@@ -41,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Submit tweet
-    const result = await submissionService.submitTweet(tweetUrl, user.id)
+    const result = await submissionService.submitTweet(tweetUrl, authResult.userId)
 
     if (result.success) {
       return NextResponse.json({
@@ -71,11 +69,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get authenticated user
-    const supabase = await createServerComponentClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get authenticated user using universal auth function
+    const authResult = await getAuthenticatedUser(request)
 
-    if (authError || !user) {
+    if (!authResult.isAuthenticated || !authResult.userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -86,7 +83,7 @@ export async function GET(request: NextRequest) {
     const submissionService = getManualTweetSubmissionService()
 
     // Get submission status
-    const submissionStatus = submissionService.getSubmissionStatus(user.id)
+    const submissionStatus = submissionService.getSubmissionStatus(authResult.userId)
 
     return NextResponse.json({
       canSubmit: submissionStatus.canSubmit,

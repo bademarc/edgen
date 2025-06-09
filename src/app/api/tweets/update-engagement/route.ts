@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@/lib/supabase-server'
 import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
+import { getAuthenticatedUser } from '@/lib/auth-utils'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -17,11 +16,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get authenticated user
-    const supabase = await createServerComponentClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get authenticated user using universal auth function
+    const authResult = await getAuthenticatedUser(request)
 
-    if (authError || !user) {
+    if (!authResult.isAuthenticated || !authResult.userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -32,7 +30,7 @@ export async function POST(request: NextRequest) {
     const tweet = await prisma.tweet.findFirst({
       where: {
         tweetId: tweetId,
-        userId: user.id
+        userId: authResult.userId
       }
     })
 
@@ -83,11 +81,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get authenticated user
-    const supabase = await createServerComponentClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get authenticated user using universal auth function
+    const authResult = await getAuthenticatedUser(request)
 
-    if (authError || !user) {
+    if (!authResult.isAuthenticated || !authResult.userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -97,7 +94,7 @@ export async function GET(request: NextRequest) {
     // Get user's tweets that need engagement updates
     const tweets = await prisma.tweet.findMany({
       where: {
-        userId: user.id,
+        userId: authResult.userId,
         OR: [
           { lastEngagementUpdate: null },
           { 

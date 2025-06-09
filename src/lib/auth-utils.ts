@@ -25,10 +25,12 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthRe
     if (!authError && user) {
       userId = user.id
       authMethod = 'supabase'
-      console.log('Authentication via Supabase session:', userId)
+      console.log('✅ Authentication via Supabase session:', userId)
+    } else {
+      console.log('❌ Supabase auth failed:', authError?.message || 'No user')
     }
-  } catch {
-    console.log('Supabase auth not available, checking custom session')
+  } catch (error) {
+    console.log('❌ Supabase auth exception:', error instanceof Error ? error.message : 'Unknown error')
   }
 
   // If no Supabase session, check for custom session cookie
@@ -36,6 +38,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthRe
     try {
       const cookieStore = await cookies()
       const customUserId = cookieStore.get('user_id')?.value
+      console.log('🔍 Checking custom session cookie, user_id:', customUserId)
 
       if (customUserId) {
         // Verify the user exists in our database
@@ -47,13 +50,15 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthRe
         if (dbUser) {
           userId = customUserId
           authMethod = 'custom'
-          console.log('Authentication via custom session:', userId)
+          console.log('✅ Authentication via custom session:', userId)
         } else {
-          console.log('Custom session user not found in database:', customUserId)
+          console.log('❌ Custom session user not found in database:', customUserId)
         }
+      } else {
+        console.log('❌ No custom session cookie found')
       }
     } catch (error) {
-      console.error('Error checking custom session:', error)
+      console.error('❌ Error checking custom session:', error)
     }
   }
 

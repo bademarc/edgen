@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@/lib/supabase-server'
 import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
+import { getAuthenticatedUser } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,11 +13,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get authenticated user
-    const supabase = await createServerComponentClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get authenticated user using universal auth function
+    const authResult = await getAuthenticatedUser(request)
 
-    if (authError || !user) {
+    if (!authResult.isAuthenticated || !authResult.userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -29,7 +27,7 @@ export async function POST(request: NextRequest) {
     const submissionService = getManualTweetSubmissionService()
 
     // Verify tweet ownership
-    const verification = await submissionService.verifyTweetOwnership(tweetUrl, user.id)
+    const verification = await submissionService.verifyTweetOwnership(tweetUrl, authResult.userId)
 
     return NextResponse.json({
       isValid: verification.isValid,
