@@ -1,8 +1,8 @@
 /**
  * io.net Intelligence API Service for Edgen Helper AI Chatbot
- * Integrates with io.net Intelligence API using DeepSeek-R1-0528 model
+ * Integrates with io.net Intelligence API using Llama-3.3-70B-Instruct model
  * Reference: https://docs.io.net/reference/get-started-with-io-intelligence-api
- * Model: deepseek-ai/DeepSeek-R1-0528
+ * Model: meta-llama/Llama-3.3-70B-Instruct
  */
 
 export interface IoNetConfig {
@@ -41,7 +41,7 @@ export class IoNetApiService {
     this.config = {
       apiKey: process.env.IO_NET_API_KEY || '',
       baseUrl: process.env.IO_NET_BASE_URL || 'https://api.intelligence.io.solutions/api',
-      model: process.env.IO_NET_MODEL || 'deepseek-ai/DeepSeek-R1-0528',
+      model: process.env.IO_NET_MODEL || 'meta-llama/Llama-3.3-70B-Instruct',
       maxTokens: parseInt(process.env.EDGEN_HELPER_MAX_TOKENS || '1000'),
       temperature: parseFloat(process.env.EDGEN_HELPER_TEMPERATURE || '0.7'),
       topP: parseFloat(process.env.EDGEN_HELPER_TOP_P || '0.9'),
@@ -58,7 +58,7 @@ export class IoNetApiService {
       this.isInitialized = false
     } else {
       this.isInitialized = true
-      console.log('✅ io.net Intelligence API service initialized with DeepSeek-R1-0528')
+      console.log('✅ io.net Intelligence API service initialized with Llama-3.3-70B-Instruct')
       console.log(`📡 Base URL: ${this.config.baseUrl}`)
       console.log(`🤖 Model: ${this.config.model}`)
       console.log(`🔑 API Key: ${this.config.apiKey.substring(0, 20)}...`)
@@ -66,61 +66,48 @@ export class IoNetApiService {
   }
 
   /**
-   * Get the system prompt for Edgen Helper (optimized for DeepSeek-R1)
+   * Get the system prompt for Edgen Helper (optimized for Llama-3.3-70B-Instruct)
    */
   private getSystemPrompt(): string {
-    return `You are "Edgen Helper", an intelligent AI assistant powered by DeepSeek-R1 for the LayerEdge community platform.
+    return `You are "Edgen Helper", an intelligent AI assistant powered by Llama-3.3-70B-Instruct for the LayerEdge community platform.
 
 CORE MISSION: Help LayerEdge community members maximize their engagement and earn points through strategic tweet submission.
 
 PLATFORM OVERVIEW:
-LayerEdge is a community-driven platform for $EDGEN token holders where users earn points by submitting high-engagement tweets containing specific mentions.
+LayerEdge is a community-driven platform for \\$EDGEN token holders where users earn points by submitting high-engagement tweets containing specific mentions.
+
+RESPONSE STYLE:
+- Be direct, helpful, and engaging
+- Use emojis and LayerEdge branding appropriately
+- Provide actionable guidance
+- Match the user's energy level
+- No meta-commentary or planning - just helpful responses
 
 KEY FEATURES YOU SUPPORT:
 
-1. POINTS SYSTEM GUIDANCE:
-   - Submit tweets with @layeredge OR $EDGEN mentions
-   - Points = base score + engagement multiplier (likes + retweets + replies)
-   - Only verified community members earn points
-   - Automatic point calculation after tweet verification
+1. **Points System**: Users earn points by submitting tweets with @layeredge OR \\$EDGEN mentions. Points = base score + engagement multiplier (likes + retweets + replies).
 
-2. TWEET SUBMISSION PROCESS:
-   - Navigate to /submit page
-   - Paste direct tweet URL: https://x.com/username/status/[ID]
-   - System validates @layeredge or $EDGEN presence
-   - Real-time engagement tracking begins
+2. **Tweet Submission**: Guide users to /submit page where they paste direct tweet URLs. System validates mentions and tracks engagement.
 
-3. HASHTAG STRATEGY:
-   - @layeredge: Official account mention (high visibility)
-   - $EDGEN: Token reference (community signal)
-   - Case-insensitive detection
-   - Either mention qualifies for points
+3. **Hashtag Strategy**: @layeredge (official mention) or \\$EDGEN (token reference) - either qualifies for points.
 
-4. COMMON ISSUES & SOLUTIONS:
-   - "Invalid URL": Use direct tweet links, not search/profile URLs
-   - "Tweet not found": Ensure tweet is public and accessible
-   - "No points": Verify required mentions are present
-   - "Login problems": Check X/Twitter account connection
+4. **Troubleshooting**: Help with common issues like invalid URLs, tweet not found, missing points, or login problems.
 
-5. COMMUNITY BEST PRACTICES:
-   - Share authentic LayerEdge-related content
-   - Engage genuinely with community posts
-   - Maintain respectful discourse
-   - Follow platform and X/Twitter guidelines
+5. **Best Practices**: Encourage authentic content, genuine engagement, and respectful community participation.
 
-RESPONSE STYLE:
-- Be concise but comprehensive
-- Use friendly, professional tone
-- Include specific action steps
-- Reference Bitcoin orange (#f7931a) branding when relevant
-- Direct to /submit, dashboard, or documentation when appropriate
+GUIDELINES:
+- Be helpful and actionable
+- Use Bitcoin orange (#f7931a) branding when relevant
+- Direct users to /submit page for tweet submission
+- Keep responses clean and professional
+- Match user energy (casual/formal as appropriate)
 
-If unsure about specific technical details, recommend contacting platform support or checking documentation.`
+If unsure about technical details, recommend contacting platform support.`
   }
 
   /**
    * Send a chat message to io.net Intelligence API
-   * Uses DeepSeek-R1-0528 model through io.net's infrastructure
+   * Uses Llama-3.3-70B-Instruct model through io.net's infrastructure
    */
   async sendMessage(userMessage: string, conversationHistory: ChatMessage[] = []): Promise<ChatResponse> {
     if (!this.isInitialized) {
@@ -131,7 +118,7 @@ If unsure about specific technical details, recommend contacting platform suppor
     }
 
     try {
-      console.log('🤖 Sending message to io.net Intelligence API with DeepSeek-R1-0528...')
+      console.log('🤖 Sending message to io.net Intelligence API with Llama-3.3-70B-Instruct...')
 
       // Prepare messages array with system prompt
       const messages: ChatMessage[] = [
@@ -139,7 +126,7 @@ If unsure about specific technical details, recommend contacting platform suppor
           role: 'system',
           content: this.getSystemPrompt()
         },
-        ...conversationHistory.slice(-8), // Keep last 8 messages for context (DeepSeek-R1 optimization)
+        ...conversationHistory.slice(-8), // Keep last 8 messages for context (Llama optimization)
         {
           role: 'user',
           content: userMessage
@@ -148,7 +135,7 @@ If unsure about specific technical details, recommend contacting platform suppor
 
       // Prepare request payload according to io.net Intelligence API documentation
       const requestPayload = {
-        model: this.config.model, // deepseek-ai/DeepSeek-R1-0528
+        model: this.config.model, // meta-llama/Llama-3.3-70B-Instruct
         messages: messages.map(msg => ({
           role: msg.role,
           content: msg.content
@@ -157,7 +144,7 @@ If unsure about specific technical details, recommend contacting platform suppor
         temperature: this.config.temperature,
         top_p: this.config.topP,
         stream: false,
-        // DeepSeek-R1 specific parameters
+        // Llama-3.3-70B-Instruct specific parameters
         stop: null,
         presence_penalty: 0,
         frequency_penalty: 0
@@ -276,41 +263,41 @@ If unsure about specific technical details, recommend contacting platform suppor
     if (message.includes('points') || message.includes('earn')) {
       return {
         success: true,
-        message: "🎯 **How to Earn Points on LayerEdge:**\n\n1. **Submit Tweets**: Go to `/submit` page and paste your tweet URL\n2. **Required Mentions**: Your tweet must contain `@layeredge` OR `$EDGEN`\n3. **Engagement Matters**: Points = base score + (likes + retweets + replies)\n4. **Community Verification**: Only verified community members earn points\n\n💡 **Pro Tip**: Higher engagement = more points! Focus on creating quality content that resonates with the LayerEdge community.\n\n*Note: I'm currently in enhanced offline mode with comprehensive responses.*"
+        message: "🎯 **How to Earn Points on LayerEdge:**\n\n1. **Submit Tweets**: Go to `/submit` page and paste your tweet URL\n2. **Required Mentions**: Your tweet must contain `@layeredge` OR `\\$EDGEN`\n3. **Engagement Matters**: Points = base score + (likes + retweets + replies)\n4. **Community Verification**: Only verified community members earn points\n\n💡 **Pro Tip**: Higher engagement = more points! Focus on creating quality content that resonates with the LayerEdge community.\n\n*Note: I'm currently in enhanced offline mode with comprehensive responses.*"
       }
     }
 
     if (message.includes('submit') || message.includes('tweet')) {
       return {
         success: true,
-        message: "📝 **Tweet Submission Guide:**\n\n**Step 1**: Create a tweet containing `@layeredge` or `$EDGEN`\n**Step 2**: Copy the direct tweet URL (format: https://x.com/username/status/1234567890)\n**Step 3**: Visit `/submit` page on LayerEdge platform\n**Step 4**: Paste your tweet URL and click submit\n**Step 5**: Wait for verification and point calculation\n\n⚠️ **Common Issues**:\n- Use direct tweet URLs, not profile or search URLs\n- Ensure tweet is public and accessible\n- Verify you included required mentions\n\n*Enhanced offline assistance active.*"
+        message: "📝 **Tweet Submission Guide:**\n\n**Step 1**: Create a tweet containing `@layeredge` or `\\$EDGEN`\n**Step 2**: Copy the direct tweet URL (format: https://x.com/username/status/1234567890)\n**Step 3**: Visit `/submit` page on LayerEdge platform\n**Step 4**: Paste your tweet URL and click submit\n**Step 5**: Wait for verification and point calculation\n\n⚠️ **Common Issues**:\n- Use direct tweet URLs, not profile or search URLs\n- Ensure tweet is public and accessible\n- Verify you included required mentions\n\n*Enhanced offline assistance active.*"
       }
     }
 
     if (message.includes('hashtag') || message.includes('@layeredge') || message.includes('$edgen')) {
       return {
         success: true,
-        message: "🏷️ **LayerEdge Hashtag Strategy:**\n\n**@layeredge**: Official account mention\n- Use when referencing the platform\n- Great for community engagement\n- Increases visibility\n\n**$EDGEN**: Token reference\n- Use when discussing the token\n- Shows community involvement\n- Attracts token holders\n\n**Best Practices**:\n- You only need ONE of these mentions (not both)\n- Case-insensitive matching\n- Natural integration works best\n- Combine with relevant content\n\n*Comprehensive offline guidance available.*"
+        message: "🏷️ **LayerEdge Hashtag Strategy:**\n\n**@layeredge**: Official account mention\n- Use when referencing the platform\n- Great for community engagement\n- Increases visibility\n\n**\\$EDGEN**: Token reference\n- Use when discussing the token\n- Shows community involvement\n- Attracts token holders\n\n**Best Practices**:\n- You only need ONE of these mentions (not both)\n- Case-insensitive matching\n- Natural integration works best\n- Combine with relevant content\n\n*Comprehensive offline guidance available.*"
       }
     }
 
     if (message.includes('troubleshoot') || message.includes('problem') || message.includes('issue')) {
       return {
         success: true,
-        message: "🔧 **LayerEdge Troubleshooting:**\n\n**Tweet Submission Issues**:\n- ❌ Invalid URL → Use direct tweet links\n- ❌ Tweet not found → Check if tweet is public\n- ❌ No points awarded → Verify @layeredge or $EDGEN mention\n- ❌ Login problems → Reconnect your X/Twitter account\n\n**Common Solutions**:\n1. Refresh the page and try again\n2. Check your internet connection\n3. Verify tweet URL format\n4. Ensure tweet contains required mentions\n5. Contact support if issues persist\n\n*Advanced troubleshooting in offline mode.*"
+        message: "🔧 **LayerEdge Troubleshooting:**\n\n**Tweet Submission Issues**:\n- ❌ Invalid URL → Use direct tweet links\n- ❌ Tweet not found → Check if tweet is public\n- ❌ No points awarded → Verify @layeredge or \\$EDGEN mention\n- ❌ Login problems → Reconnect your X/Twitter account\n\n**Common Solutions**:\n1. Refresh the page and try again\n2. Check your internet connection\n3. Verify tweet URL format\n4. Ensure tweet contains required mentions\n5. Contact support if issues persist\n\n*Advanced troubleshooting in offline mode.*"
       }
     }
 
     if (message.includes('hello') || message.includes('hi') || message.includes('help')) {
       return {
         success: true,
-        message: "👋 **Welcome to Edgen Helper!**\n\nI'm your LayerEdge community assistant, currently running in **Enhanced Offline Mode** with comprehensive responses.\n\n🎯 **I can help you with**:\n• Tweet submission and optimization\n• Points system and earning strategies\n• @layeredge and $EDGEN hashtag usage\n• Platform navigation and features\n• Troubleshooting common issues\n\n💬 **Try asking me**:\n- \"How do I earn points?\"\n- \"How to submit a tweet?\"\n- \"What hashtags should I use?\"\n- \"I'm having issues with...\"\n\n*Enhanced AI responses available even offline!*"
+        message: "👋 **Welcome to Edgen Helper!**\n\nI'm your LayerEdge community assistant, currently running in **Enhanced Offline Mode** with comprehensive responses.\n\n🎯 **I can help you with**:\n• Tweet submission and optimization\n• Points system and earning strategies\n• @layeredge and \\$EDGEN hashtag usage\n• Platform navigation and features\n• Troubleshooting common issues\n\n💬 **Try asking me**:\n- \"How do I earn points?\"\n- \"How to submit a tweet?\"\n- \"What hashtags should I use?\"\n- \"I'm having issues with...\"\n\n*Enhanced AI responses available even offline!*"
       }
     }
 
     return {
       success: true,
-      message: "🤖 **Edgen Helper - Enhanced Offline Mode**\n\nI'm your LayerEdge community assistant with comprehensive offline capabilities!\n\n🎯 **Quick Help**:\n• **Earn Points**: Submit tweets with @layeredge or $EDGEN\n• **Submit Tweets**: Visit `/submit` page\n• **Check Points**: View your dashboard\n• **Get Help**: Ask me specific questions\n\n💡 **Popular Topics**: Points system, tweet submission, hashtag strategy, troubleshooting\n\n*Ask me anything about LayerEdge - I have enhanced offline responses ready!*"
+      message: "🤖 **Edgen Helper - Enhanced Offline Mode**\n\nI'm your LayerEdge community assistant with comprehensive offline capabilities!\n\n🎯 **Quick Help**:\n• **Earn Points**: Submit tweets with @layeredge or \\$EDGEN\n• **Submit Tweets**: Visit `/submit` page\n• **Check Points**: View your dashboard\n• **Get Help**: Ask me specific questions\n\n💡 **Popular Topics**: Points system, tweet submission, hashtag strategy, troubleshooting\n\n*Ask me anything about LayerEdge - I have enhanced offline responses ready!*"
     }
   }
 
@@ -325,7 +312,7 @@ If unsure about specific technical details, recommend contacting platform suppor
 
     try {
       console.log('🔍 Testing io.net Intelligence API connection...')
-      const testResponse = await this.sendMessage('Hello, this is a connection test for DeepSeek-R1.')
+      const testResponse = await this.sendMessage('Hello, this is a connection test for Llama-3.3-70B-Instruct.')
 
       if (testResponse.success) {
         console.log('✅ io.net Intelligence API connection successful')

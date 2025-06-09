@@ -33,6 +33,33 @@ interface ChatMessage {
   isTyping?: boolean
 }
 
+// Enhanced content parsing utility to remove AI thinking tags
+const parseAIContent = (content: string): string => {
+  if (!content) return content
+
+  console.log('🧹 [Chatbot] Parsing AI content, original length:', content.length)
+
+  let cleanContent = content
+
+  // Remove all <think> and </think> tags and their content (case insensitive, multiline)
+  cleanContent = cleanContent.replace(/<think>[\s\S]*?<\/think>/gim, '')
+
+  // Remove any standalone thinking tags that might appear
+  cleanContent = cleanContent.replace(/<\/?think>/gim, '')
+
+  // Also handle potential variations with attributes or spaces
+  cleanContent = cleanContent.replace(/<think[^>]*>[\s\S]*?<\/think[^>]*>/gim, '')
+  cleanContent = cleanContent.replace(/<\/?think[^>]*>/gim, '')
+
+  // Clean up any extra whitespace or newlines left behind
+  cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n')
+  cleanContent = cleanContent.replace(/^\s+|\s+$/g, '') // More thorough trim
+
+  console.log('✅ [Chatbot] Cleaned content length:', cleanContent.length)
+
+  return cleanContent
+}
+
 interface EdgenHelperChatbotProps {
   className?: string
 }
@@ -118,7 +145,7 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.message,
+          content: parseAIContent(data.message), // Parse content to remove thinking tags
           timestamp: new Date()
         }
         setMessages(prev => [...prev, assistantMessage])
@@ -138,7 +165,7 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
         const fallbackMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.fallbackMessage || "I'm having trouble connecting to the AI service right now. Please try again later or check our documentation for help.",
+          content: parseAIContent(data.fallbackMessage || "I'm having trouble connecting to the AI service right now. Please try again later or check our documentation for help."),
           timestamp: new Date()
         }
         setMessages(prev => [...prev, fallbackMessage])
@@ -153,7 +180,7 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I'm currently offline. For immediate help: visit /submit for tweet submission, check your dashboard for points, or refer to our platform documentation.",
+        content: parseAIContent("I'm currently offline. For immediate help: visit /submit for tweet submission, check your dashboard for points, or refer to our platform documentation."),
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -275,7 +302,7 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                               animate={{ opacity: 1, y: 0 }}
                               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
-                              <div className={`flex items-start space-x-2 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                              <div className={`flex items-start space-x-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
                                 <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
                                   message.role === 'user' 
                                     ? 'bg-[#f7931a]' 
