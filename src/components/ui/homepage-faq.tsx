@@ -75,21 +75,21 @@ const categoryColors = {
 
 export function HomepageFAQ() {
   return (
-    <section className="py-16 px-4">
+    <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
       <div className="container mx-auto max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
           <div className="flex items-center justify-center mb-4">
             <div className="p-3 rounded-full bg-primary/10">
-              <HelpCircle className="h-8 w-8 text-primary" />
+              <HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             </div>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
-          <p className="text-muted-foreground text-lg mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-2">Frequently Asked Questions</h2>
+          <p className="text-muted-foreground text-base sm:text-lg mb-4 sm:mb-6 px-2 leading-relaxed">
             Everything you need to know about earning points and engaging with the LayerEdge community
           </p>
         </motion.div>
@@ -100,7 +100,7 @@ export function HomepageFAQ() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <Accordion type="single" collapsible className="w-full">
                 {faqData.map((faq, index) => (
                   <motion.div
@@ -110,22 +110,22 @@ export function HomepageFAQ() {
                     transition={{ duration: 0.4, delay: index * 0.05 }}
                   >
                     <AccordionItem value={faq.id} className="border-b border-border/50">
-                      <AccordionTrigger className="text-left hover:no-underline py-4">
-                        <div className="flex items-start space-x-3">
-                          <Badge 
-                            variant="secondary" 
-                            className={`text-xs font-medium ${categoryColors[faq.category as keyof typeof categoryColors] || 'bg-gray-500/10 text-gray-700 dark:text-gray-400'}`}
+                      <AccordionTrigger className="text-left hover:no-underline py-3 sm:py-4 touch-friendly">
+                        <div className="flex flex-col sm:flex-row sm:items-start space-y-2 sm:space-y-0 sm:space-x-3 text-left">
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs font-medium self-start ${categoryColors[faq.category as keyof typeof categoryColors] || 'bg-gray-500/10 text-gray-700 dark:text-gray-400'}`}
                           >
                             {faq.category}
                           </Badge>
-                          <span className="font-semibold text-foreground">
+                          <span className="font-semibold text-foreground text-sm sm:text-base leading-tight">
                             {faq.question}
                           </span>
                         </div>
                       </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <div className="pl-16 pr-4">
-                          <p className="text-muted-foreground leading-relaxed">
+                      <AccordionContent className="pb-3 sm:pb-4">
+                        <div className="pl-0 sm:pl-16 pr-2 sm:pr-4">
+                          <p className="text-muted-foreground leading-relaxed text-sm sm:text-base">
                             {faq.answer}
                           </p>
                         </div>
@@ -143,54 +143,54 @@ export function HomepageFAQ() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12"
         >
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader className="text-center pb-4">
-              <div className="mx-auto p-3 rounded-full bg-blue-500/10 w-fit">
-                <MessageSquare className="h-6 w-6 text-blue-500" />
+          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly">
+            <CardHeader className="text-center pb-3 sm:pb-4 px-4 sm:px-6">
+              <div className="mx-auto p-2.5 sm:p-3 rounded-full bg-blue-500/10 w-fit">
+                <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
               </div>
-              <CardTitle className="text-lg">Submit Your First Tweet</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Submit Your First Tweet</CardTitle>
             </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-muted-foreground text-sm mb-4">
+            <CardContent className="text-center px-4 sm:px-6 pb-4 sm:pb-6">
+              <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
                 Ready to start earning points? Submit a tweet mentioning @layeredge or $EDGEN.
               </p>
-              <Button asChild className="w-full">
+              <Button asChild className="w-full min-h-[44px]">
                 <Link href="/submit-tweet">Submit Tweet</Link>
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader className="text-center pb-4">
-              <div className="mx-auto p-3 rounded-full bg-purple-500/10 w-fit">
-                <Trophy className="h-6 w-6 text-purple-500" />
+          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly">
+            <CardHeader className="text-center pb-3 sm:pb-4 px-4 sm:px-6">
+              <div className="mx-auto p-2.5 sm:p-3 rounded-full bg-purple-500/10 w-fit">
+                <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
               </div>
-              <CardTitle className="text-lg">View Leaderboard</CardTitle>
+              <CardTitle className="text-base sm:text-lg">View Leaderboard</CardTitle>
             </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-muted-foreground text-sm mb-4">
+            <CardContent className="text-center px-4 sm:px-6 pb-4 sm:pb-6">
+              <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
                 See how you rank against other community members and top contributors.
               </p>
-              <Button variant="outline" asChild className="w-full">
+              <Button variant="outline" asChild className="w-full min-h-[44px]">
                 <Link href="/leaderboard">View Rankings</Link>
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader className="text-center pb-4">
-              <div className="mx-auto p-3 rounded-full bg-green-500/10 w-fit">
-                <Users className="h-6 w-6 text-green-500" />
+          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly sm:col-span-2 lg:col-span-1">
+            <CardHeader className="text-center pb-3 sm:pb-4 px-4 sm:px-6">
+              <div className="mx-auto p-2.5 sm:p-3 rounded-full bg-green-500/10 w-fit">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
               </div>
-              <CardTitle className="text-lg">Join Community</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Join Community</CardTitle>
             </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-muted-foreground text-sm mb-4">
+            <CardContent className="text-center px-4 sm:px-6 pb-4 sm:pb-6">
+              <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
                 Connect with other LayerEdge enthusiasts and stay updated on the latest news.
               </p>
-              <Button variant="outline" asChild className="w-full">
+              <Button variant="outline" asChild className="w-full min-h-[44px]">
                 <a href="https://x.com/i/communities/1890107751621357663" target="_blank" rel="noopener noreferrer">
                   Join X Community
                 </a>

@@ -31,7 +31,7 @@ interface UseRealTimeEngagementReturn {
 export function useRealTimeEngagement({
   tweets,
   enabled = true,
-  updateInterval = 30000, // 30 seconds default
+  updateInterval = 60000, // Increased to 60 seconds to reduce API calls
   maxRetries = 3,
 }: UseRealTimeEngagementOptions): UseRealTimeEngagementReturn {
   const [updatedTweets, setUpdatedTweets] = useState<Tweet[]>(tweets)
@@ -45,34 +45,69 @@ export function useRealTimeEngagement({
   const isComponentMounted = useRef(true)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
-  // Update local tweets when props change
+  // Update local tweets when props change (with deep comparison to prevent unnecessary updates)
   useEffect(() => {
-    setUpdatedTweets(tweets)
-  }, [tweets])
+    const tweetsChanged = tweets.length !== updatedTweets.length ||
+      tweets.some((tweet, index) => {
+        const existing = updatedTweets[index]
+        return !existing || tweet.id !== existing.id ||
+               tweet.likes !== existing.likes ||
+               tweet.retweets !== existing.retweets ||
+               tweet.replies !== existing.replies
+      })
 
-  // Subscribe to engagement manager updates
+    if (tweetsChanged) {
+      setUpdatedTweets(tweets)
+    }
+  }, [tweets, updatedTweets])
+
+  // Subscribe to engagement manager updates with throttling
   useEffect(() => {
+    let updateTimeout: NodeJS.Timeout | null = null
+
     const handleEngagementUpdate = (result: EngagementUpdateResult) => {
       if (!isComponentMounted.current) return
 
-      if (result.success && result.tweets && result.tweets.length > 0) {
-        setUpdatedTweets(prevTweets =>
-          prevTweets.map(tweet => {
-            const updatedTweet = result.tweets!.find(t => t.id === tweet.id)
-            return updatedTweet || tweet
-          })
-        )
-        setUpdateCount(prev => prev + 1)
-        setRetryCount(0)
-        setError(null)
-      } else if (!result.success && result.error) {
-        setError(result.error)
+      // Throttle updates to prevent excessive re-renders
+      if (updateTimeout) {
+        clearTimeout(updateTimeout)
       }
+
+      updateTimeout = setTimeout(() => {
+        if (result.success && result.tweets && result.tweets.length > 0) {
+          setUpdatedTweets(prevTweets => {
+            const hasChanges = result.tweets!.some(updatedTweet => {
+              const existing = prevTweets.find(t => t.id === updatedTweet.id)
+              return existing && (
+                existing.likes !== updatedTweet.likes ||
+                existing.retweets !== updatedTweet.retweets ||
+                existing.replies !== updatedTweet.replies ||
+                existing.totalPoints !== updatedTweet.totalPoints
+              )
+            })
+
+            if (!hasChanges) return prevTweets
+
+            return prevTweets.map(tweet => {
+              const updatedTweet = result.tweets!.find(t => t.id === tweet.id)
+              return updatedTweet || tweet
+            })
+          })
+          setUpdateCount(prev => prev + 1)
+          setRetryCount(0)
+          setError(null)
+        } else if (!result.success && result.error) {
+          setError(result.error)
+        }
+      }, 100) // 100ms throttle
     }
 
     unsubscribeRef.current = engagementManager.subscribe(handleEngagementUpdate)
 
     return () => {
+      if (updateTimeout) {
+        clearTimeout(updateTimeout)
+      }
       if (unsubscribeRef.current) {
         unsubscribeRef.current()
         unsubscribeRef.current = null

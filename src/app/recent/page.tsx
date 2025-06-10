@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   ChatBubbleLeftRightIcon,
@@ -11,6 +11,9 @@ import {
 import { TweetCard } from '@/components/TweetCard'
 import { useRealTimeEngagement } from '@/hooks/useRealTimeEngagement'
 import { formatNumber } from '@/lib/utils'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { ContentLoading, ApiLoading } from '@/components/ui/loading-states'
+import { SmartTweetList } from '@/components/ui/virtualized-tweet-list'
 
 interface Tweet {
   id: string
@@ -75,18 +78,24 @@ export default function RecentSubmissionsPage() {
     fetchTweets()
   }, [fetchTweets])
 
-  // Filter and sort tweets
-  const filteredAndSortedTweets = updatedTweets
-    .filter(tweet => {
-      if (!searchTerm) return true
+  // Optimized filter and sort tweets with memoization
+  const filteredAndSortedTweets = useMemo(() => {
+    let filtered = updatedTweets
+
+    // Apply search filter
+    if (searchTerm) {
       const searchLower = searchTerm.toLowerCase()
-      return (
-        tweet.content?.toLowerCase().includes(searchLower) ||
-        tweet.user.name?.toLowerCase().includes(searchLower) ||
-        tweet.user.xUsername?.toLowerCase().includes(searchLower)
-      )
-    })
-    .sort((a, b) => {
+      filtered = updatedTweets.filter(tweet => {
+        return (
+          tweet.content?.toLowerCase().includes(searchLower) ||
+          tweet.user.name?.toLowerCase().includes(searchLower) ||
+          tweet.user.xUsername?.toLowerCase().includes(searchLower)
+        )
+      })
+    }
+
+    // Apply sorting
+    return filtered.sort((a, b) => {
       switch (sortBy) {
         case 'points':
           return b.totalPoints - a.totalPoints
@@ -97,8 +106,9 @@ export default function RecentSubmissionsPage() {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       }
     })
+  }, [updatedTweets, searchTerm, sortBy])
 
-  const handleUpdateSingleTweet = async (tweetId: string) => {
+  const handleUpdateSingleTweet = useCallback(async (tweetId: string) => {
     try {
       const response = await fetch(`/api/tweets/${tweetId}/engagement`, {
         method: 'POST',
@@ -115,15 +125,16 @@ export default function RecentSubmissionsPage() {
     } catch (error) {
       console.error('Error updating single tweet:', error)
     }
-  }
+  }, [])
 
+  // Render loading and error states with optimized components
   if (isLoading) {
     return (
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-1/3 mb-8"></div>
+          <ContentLoading isLoading={true} fallback={
             <div className="space-y-6">
+              <div className="h-8 bg-muted rounded w-1/3 mb-8"></div>
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="bg-card border border-border rounded-lg p-6">
                   <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
@@ -136,7 +147,9 @@ export default function RecentSubmissionsPage() {
                 </div>
               ))}
             </div>
-          </div>
+          }>
+            {null}
+          </ContentLoading>
         </div>
       </div>
     )
@@ -146,24 +159,22 @@ export default function RecentSubmissionsPage() {
     return (
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground mb-4">Error Loading Tweets</h1>
-            <p className="text-muted-foreground mb-6">{error}</p>
-            <button
-              onClick={fetchTweets}
-              className="btn-layeredge-primary px-6 py-3 rounded-lg font-semibold hover-lift"
-            >
-              Try Again
-            </button>
-          </div>
+          <ApiLoading
+            isLoading={false}
+            error={error}
+            onRetry={fetchTweets}
+          >
+            {null}
+          </ApiLoading>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+    <ErrorBoundary>
+      <div className="min-h-screen py-12">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -252,12 +263,11 @@ export default function RecentSubmissionsPage() {
           </div>
         </motion.div>
 
-        {/* Tweets List */}
+        {/* Tweets List - Optimized with Smart List */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="space-y-6"
         >
           {filteredAndSortedTweets.length === 0 ? (
             <div className="text-center py-12">
@@ -269,25 +279,15 @@ export default function RecentSubmissionsPage() {
               </p>
             </div>
           ) : (
-            filteredAndSortedTweets.map((tweet, index) => (
-              <motion.div
-                key={tweet.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
-              >
-                <TweetCard
-                  tweet={{
-                    ...tweet,
-                    createdAt: new Date(tweet.createdAt)
-                  }}
-                  showUser={true}
-                  isUpdating={isUpdating}
-                  onUpdateEngagement={handleUpdateSingleTweet}
-                  showUpdateButton={true}
-                />
-              </motion.div>
-            ))
+            <SmartTweetList
+              tweets={filteredAndSortedTweets}
+              isUpdating={isUpdating}
+              onUpdateEngagement={handleUpdateSingleTweet}
+              showUpdateButton={true}
+              containerHeight={800}
+              itemHeight={220}
+              overscan={3}
+            />
           )}
         </motion.div>
 
@@ -307,7 +307,8 @@ export default function RecentSubmissionsPage() {
             </button>
           </motion.div>
         )}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   )
 }

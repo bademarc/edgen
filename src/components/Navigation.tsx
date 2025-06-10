@@ -13,11 +13,19 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Home, BarChart3, MessageSquare, Trophy, HelpCircle, FileText, User, LogOut } from "lucide-react"
 import { cn } from '@/lib/utils'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { Badge } from "@/components/ui/badge"
 
 export function Navigation() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, isLoading, signInWithTwitter, signOut } = useAuth()
 
   return (
@@ -140,91 +148,100 @@ export function Navigation() {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
-        <button className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </nav>
+        {/* Mobile Menu Button - Enhanced with Sheet */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="md:hidden p-2">
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Open navigation menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <SheetHeader>
+              <SheetTitle className="flex items-center space-x-2">
+                <Image
+                  src="/icon/-AlLx9IW_400x400.png"
+                  alt="LayerEdge Logo"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6 rounded"
+                />
+                <span>LayerEdge</span>
+              </SheetTitle>
+              <SheetDescription>
+                Navigate the LayerEdge community platform
+              </SheetDescription>
+            </SheetHeader>
 
-      {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t">
-          <div className="container mx-auto px-4 py-4 space-y-3">
-            <Link href="/dashboard" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-              Dashboard
-            </Link>
-            <Link href="/submit-tweet" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-              Submit Tweet
-            </Link>
-            <Link href="/leaderboard" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-              Leaderboard
-            </Link>
-            <Link href="/recent" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-              Recent Activity
-            </Link>
-            <Link href="/helper" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-              Helper
-            </Link>
-            <Link href="/about" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-              About
-            </Link>
-            <Link href="/faq" className="block py-2 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-              FAQ
-            </Link>
+            <div className="mt-6 space-y-4">
+              {/* Navigation Links */}
+              <div className="space-y-2">
+                <MobileNavLink href="/" icon={Home} label="Home" />
+                <MobileNavLink href="/dashboard" icon={BarChart3} label="Dashboard" requiresAuth />
+                <MobileNavLink href="/submit-tweet" icon={MessageSquare} label="Submit Tweet" />
+                <MobileNavLink href="/leaderboard" icon={Trophy} label="Leaderboard" />
+                <MobileNavLink href="/recent" icon={FileText} label="Recent Activity" />
+                <MobileNavLink href="/helper" icon={HelpCircle} label="Helper" />
+                <MobileNavLink href="/about" icon={FileText} label="About" />
+                <MobileNavLink href="/faq" icon={HelpCircle} label="FAQ" />
+              </div>
 
-            {/* Mobile Auth */}
-            <div className="pt-4 border-t">
-              {user ? (
-                <div className="space-y-3">
-                  <div className="bg-card border rounded-lg p-4">
-                    <div className="flex items-center space-x-3">
-                      {user.image && (
-                        <Image
-                          src={user.image}
-                          alt={user.name || 'User'}
-                          width={40}
-                          height={40}
-                          className="h-10 w-10 rounded-full"
-                        />
-                      )}
-                      <div className="text-sm">
-                        <p className="font-medium">
-                          {user.name || user.xUsername}
-                        </p>
-                        {user.totalPoints !== undefined && (
-                          <p className="text-xs text-muted-foreground">
-                            {user.totalPoints} points
-                          </p>
+              {/* User Section */}
+              <div className="pt-4 border-t">
+                {isLoading ? (
+                  <div className="h-16 bg-muted animate-pulse rounded-lg" />
+                ) : user ? (
+                  <div className="space-y-4">
+                    <div className="bg-card border rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        {user.image && (
+                          <Image
+                            src={user.image}
+                            alt={user.name || 'User'}
+                            width={40}
+                            height={40}
+                            className="h-10 w-10 rounded-full"
+                          />
                         )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {user.name || user.xUsername}
+                          </p>
+                          {user.totalPoints !== undefined && (
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Badge variant="secondary" className="text-xs">
+                                {user.totalPoints} points
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => signOut()}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign out
+                    </Button>
                   </div>
+                ) : (
                   <Button
-                    variant="ghost"
                     className="w-full"
-                    onClick={() => {
-                      signOut()
-                      setMobileMenuOpen(false)
-                    }}
+                    onClick={() => signInWithTwitter()}
                   >
-                    Sign out
+                    <User className="h-4 w-4 mr-2" />
+                    Sign in with X
                   </Button>
-                </div>
-              ) : (
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    signInWithTwitter()
-                    setMobileMenuOpen(false)
-                  }}
-                >
-                  Sign in with X
-                </Button>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </SheetContent>
+        </Sheet>
+      </nav>
+
+
     </header>
   )
 }
@@ -257,5 +274,33 @@ const ListItem = ({
         </a>
       </NavigationMenuLink>
     </li>
+  )
+}
+
+const MobileNavLink = ({
+  href,
+  icon: Icon,
+  label,
+  requiresAuth = false,
+}: {
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  requiresAuth?: boolean
+}) => {
+  const { user } = useAuth()
+
+  if (requiresAuth && !user) {
+    return null
+  }
+
+  return (
+    <Link
+      href={href}
+      className="flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+    >
+      <Icon className="h-5 w-5" />
+      <span>{label}</span>
+    </Link>
   )
 }

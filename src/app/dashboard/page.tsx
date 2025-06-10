@@ -168,33 +168,33 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="py-8">
+      <div className="py-6 sm:py-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Header */}
+          {/* Header - Mobile Optimized */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-8"
+            className="mb-6 sm:mb-8"
           >
-            <h1 className="text-3xl font-bold text-foreground">Welcome back, {user.name || user.xUsername}</h1>
-            <p className="text-muted-foreground mt-2">Track your LayerEdge community engagement and points</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Welcome back, {user.name || user.xUsername}</h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">Track your LayerEdge community engagement and points</p>
           </motion.div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Stats Grid - Mobile Optimized */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <Card variant="professional">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Trust Score</CardTitle>
-                  <Shield className="h-4 w-4 text-muted-foreground" />
+              <Card variant="professional" className="touch-friendly">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Trust Score</CardTitle>
+                  <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">{trustScore.toLocaleString()}</div>
+                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-primary">{trustScore.toLocaleString()}</div>
                   <div className="flex items-center space-x-2 mt-2">
                     <Badge variant="layeredge" className="text-xs">{currentTier.name}</Badge>
                     <span className="text-xs text-muted-foreground">Tier</span>
@@ -209,13 +209,13 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <Card variant="professional">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Network Rank</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <Card variant="professional" className="touch-friendly">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Network Rank</CardTitle>
+                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">#{stats?.rank || 'N/A'}</div>
+                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold">#{stats?.rank || 'N/A'}</div>
                   <p className="text-xs text-muted-foreground mt-2">
                     Among all contributors
                   </p>
@@ -228,13 +228,13 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
-              <Card variant="professional">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Contributions</CardTitle>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
+              <Card variant="professional" className="touch-friendly">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Contributions</CardTitle>
+                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats?.tweetsSubmitted || 0}</div>
+                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold">{stats?.tweetsSubmitted || 0}</div>
                   <p className="text-xs text-muted-foreground mt-2">
                     Total submissions
                   </p>
@@ -247,13 +247,13 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <Card variant="professional">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">This Week</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Card variant="professional" className="touch-friendly">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium">This Week</CardTitle>
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">+{stats?.thisWeekPoints || 0}</div>
+                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-primary">+{stats?.thisWeekPoints || 0}</div>
                   <p className="text-xs text-muted-foreground mt-2">
                     Points earned
                   </p>

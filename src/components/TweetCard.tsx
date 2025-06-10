@@ -10,7 +10,7 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
 import { formatDate, formatNumber } from '@/lib/utils'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 
 interface TweetCardProps {
   tweet: {
@@ -36,7 +36,7 @@ interface TweetCardProps {
   showUpdateButton?: boolean
 }
 
-export function TweetCard({
+export const TweetCard = memo(function TweetCard({
   tweet,
   showUser = true,
   className = '',
@@ -90,11 +90,11 @@ export function TweetCard({
     })
   }, [tweet.likes, tweet.retweets, tweet.replies, tweet.totalPoints, previousMetrics])
 
-  const handleUpdateClick = async () => {
+  const handleUpdateClick = useCallback(async () => {
     if (onUpdateEngagement) {
       await onUpdateEngagement(tweet.id)
     }
-  }
+  }, [onUpdateEngagement, tweet.id])
 
   return (
     <motion.div
@@ -271,4 +271,4 @@ export function TweetCard({
       </div>
     </motion.div>
   )
-}
+})

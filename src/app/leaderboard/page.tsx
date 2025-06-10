@@ -154,26 +154,26 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-6 sm:py-8 md:py-12">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
-          <h1 className="text-4xl font-bold text-foreground">Community Leaderboard</h1>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">Community Leaderboard</h1>
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground px-2">
             Top community members ranked by total points earned
           </p>
         </motion.div>
 
-        {/* Top 3 Podium */}
+        {/* Top 3 Podium - Mobile Optimized */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12"
         >
           {Array.isArray(leaderboard) ? leaderboard.slice(0, 3).map((user, index) => (
             <motion.div
@@ -181,8 +181,8 @@ export default function LeaderboardPage() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
-              className={`relative bg-card border-2 rounded-lg p-6 text-center ${
-                user.rank === 1 ? 'border-yellow-500 md:order-2' :
+              className={`relative bg-card border-2 rounded-lg p-4 sm:p-6 text-center touch-friendly ${
+                user.rank === 1 ? 'border-yellow-500 md:order-2 sm:col-span-2 md:col-span-1' :
                 user.rank === 2 ? 'border-gray-400 md:order-1' :
                 'border-amber-600 md:order-3'
               }`}
@@ -208,17 +208,17 @@ export default function LeaderboardPage() {
                   </div>
                 )}
 
-                <h3 className="text-lg font-semibold text-foreground">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground">
                   {user.name || user.xUsername || 'Anonymous'}
                 </h3>
                 {user.xUsername && (
                   <p className="text-sm text-muted-foreground">@{user.xUsername}</p>
                 )}
 
-                <div className="mt-4 space-y-2">
+                <div className="mt-3 sm:mt-4 space-y-2">
                   <div className="flex items-center justify-center space-x-1">
                     <SparklesIcon className="h-4 w-4 text-primary" />
-                    <span className="text-2xl font-bold text-primary">
+                    <span className="text-xl sm:text-2xl font-bold text-primary">
                       {formatNumber(user.totalPoints)}
                     </span>
                     <span className="text-sm text-muted-foreground">points</span>
@@ -245,46 +245,46 @@ export default function LeaderboardPage() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4, delay: 0.7 + index * 0.1 }}
-              className="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors"
+              className="bg-card border border-border rounded-lg p-4 sm:p-6 hover:border-primary/50 transition-colors touch-friendly"
             >
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center justify-center w-12 h-12">
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
                   {getRankIcon(user.rank)}
                 </div>
 
-                <div className="flex-1 flex items-center space-x-4">
+                <div className="flex-1 flex items-center space-x-3 sm:space-x-4 min-w-0">
                   {user.image ? (
                     <Image
                       src={user.image}
                       alt={user.name || user.xUsername || 'User'}
                       width={40}
                       height={40}
-                      className="h-10 w-10 rounded-full"
+                      className="h-8 w-8 sm:h-10 sm:w-10 rounded-full flex-shrink-0"
                     />
                   ) : (
-                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                      <UserIcon className="h-5 w-5 text-muted-foreground" />
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                      <UserIcon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                     </div>
                   )}
 
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-foreground truncate">
                       {user.name || user.xUsername || 'Anonymous'}
                     </h3>
                     {user.xUsername && (
-                      <p className="text-sm text-muted-foreground">@{user.xUsername}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">@{user.xUsername}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right flex-shrink-0">
                   <div className="flex items-center space-x-1">
-                    <SparklesIcon className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold text-primary">
+                    <SparklesIcon className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                    <span className="text-base sm:text-lg md:text-xl font-bold text-primary">
                       {formatNumber(user.totalPoints)}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {user.tweetsCount} tweets
                   </p>
                 </div>
