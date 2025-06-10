@@ -185,7 +185,7 @@ const requiredEnvVars = {
   // Supabase Configuration
   'NEXT_PUBLIC_SUPABASE_URL': 'https://bzqayhnlogpaxfcmmrlq.supabase.co',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6cWF5aG5sb2dwYXhmY21tcmxxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgyMTk5MzgsImV4cCI6MjA2Mzc5NTkzOH0.Axa-qsNiIRoEGG18760uWNsxMrhNOV648snajCNenjU',
-  'SUPABASE_SERVICE_ROLE_KEY': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6cWF5aG5sb2dwYXhmY21tcmxxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODIxOTkzOCwiZXhwIjoyMDYzNzk1OTM4fQ.Rl2zEnwWoSrc-3QgDEbs0Uy-0SBeCpcOuTndIxFjdE4xmoJiAy',
+  'SUPABASE_SERVICE_ROLE_KEY': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6cWF5aG5sb2dwYXhmY21tcmxxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODIxOTkzOCwiZXhwIjoyMDYzNzk1OTM4fQ.El521R-8GXuyULGE6uj5U_Ci3DCISkPWuwvfOEQnBtQ',
   
   // Security
   'NEXTAUTH_SECRET': 'layeredge-nextauth-secret-2024-production',
