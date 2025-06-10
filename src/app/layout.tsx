@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   description: "Join the LayerEdge $EDGEN community platform. Engage with LayerEdge content on X/Twitter and earn points for your participation. Connect, compete, and climb the leaderboard.",
   keywords: ["LayerEdge", "EDGEN", "community", "Twitter", "X", "engagement", "points", "leaderboard", "cryptocurrency", "blockchain"],
   authors: [{ name: "LayerEdge Team" }],
+  manifest: "/manifest.json",
   openGraph: {
     title: "LayerEdge Community Platform - Earn Points for X/Twitter Engagement",
     description: "Join the LayerEdge $EDGEN community platform. Engage with LayerEdge content on X/Twitter and earn points for your participation.",
@@ -58,6 +59,23 @@ export default function RootLayout({
           <Toaster />
           <EdgenHelperChatbot />
         </Providers>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                      console.log('SW registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                      console.log('SW registration failed: ', registrationError);
+                    });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

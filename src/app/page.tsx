@@ -5,6 +5,8 @@ import { ArrowRight, Globe, Shield, Users, Zap } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { PlatformStatistics } from "@/components/ui/platform-statistics"
+import { HomepageFAQ } from "@/components/ui/homepage-faq"
 
 // Clickable Image Component with hover effects and modal
 interface ClickableImageProps {
@@ -246,6 +248,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Platform Statistics */}
+      <PlatformStatistics />
+
+      {/* FAQ Section */}
+      <HomepageFAQ />
 
       {/* CTA Section */}
       <section className="py-20 px-4 bg-muted/30">

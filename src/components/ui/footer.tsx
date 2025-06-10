@@ -6,7 +6,7 @@ export function Footer() {
   return (
     <footer className="border-t bg-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
           <div>
             <h3 className="font-semibold mb-3 text-foreground">Community</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
@@ -54,6 +54,26 @@ export function Footer() {
                 <a href="https://layeredge.io" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                   LayerEdge.io
                 </a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold mb-3 text-foreground">Legal</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link href="/terms" className="hover:text-primary transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-primary transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/cookies" className="hover:text-primary transition-colors">
+                  Cookie Policy
+                </Link>
               </li>
             </ul>
           </div>
