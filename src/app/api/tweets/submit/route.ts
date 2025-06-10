@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
 import { getAuthenticatedUser } from '@/lib/auth-utils'
+import { enhancedErrorHandler } from '@/lib/enhanced-error-handler'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,23 +39,79 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Submit tweet
-    const result = await submissionService.submitTweet(tweetUrl, authResult.userId)
-
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        message: result.message,
-        tweetId: result.tweetId,
-        points: result.points
-      })
-    } else {
+    // Check rate limiting before submission
+    const rateLimitCheck = enhancedErrorHandler.shouldRateLimit('tweet_submission', authResult.userId)
+    if (rateLimitCheck.limited) {
       return NextResponse.json(
-        { 
-          error: result.message,
-          details: result.error
+        {
+          error: 'Rate limited',
+          userMessage: 'Please wait before submitting another tweet',
+          retryAfter: rateLimitCheck.retryAfter
         },
-        { status: 400 }
+        { status: 429 }
+      )
+    }
+
+    // Submit tweet with enhanced error handling
+    try {
+      const result = await submissionService.submitTweet(tweetUrl, authResult.userId)
+
+      if (result.success) {
+        return NextResponse.json({
+          success: true,
+          message: result.message,
+          tweetId: result.tweetId,
+          points: result.points
+        })
+      } else {
+        // Handle submission failure with enhanced error handling
+        const errorResult = await enhancedErrorHandler.handleTwitterApiError(
+          new Error(result.message),
+          {
+            operation: 'tweet_submission',
+            userId: authResult.userId,
+            tweetUrl,
+            attempt: 1,
+            timestamp: new Date()
+          }
+        )
+
+        const uiError = enhancedErrorHandler.formatErrorForUI(errorResult)
+
+        return NextResponse.json(
+          {
+            error: result.message,
+            userMessage: uiError.message,
+            suggestions: errorResult.error?.suggestions || [],
+            retryable: errorResult.error?.retryable || false,
+            details: result.error
+          },
+          { status: 400 }
+        )
+      }
+    } catch (submissionError) {
+      // Handle unexpected submission errors
+      const errorResult = await enhancedErrorHandler.handleTwitterApiError(
+        submissionError,
+        {
+          operation: 'tweet_submission',
+          userId: authResult.userId,
+          tweetUrl,
+          attempt: 1,
+          timestamp: new Date()
+        }
+      )
+
+      const uiError = enhancedErrorHandler.formatErrorForUI(errorResult)
+
+      return NextResponse.json(
+        {
+          error: 'Submission failed',
+          userMessage: uiError.message,
+          suggestions: errorResult.error?.suggestions || [],
+          retryable: errorResult.error?.retryable || false
+        },
+        { status: errorResult.error?.retryable ? 429 : 500 }
       )
     }
 

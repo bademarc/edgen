@@ -58,6 +58,9 @@
     "audit:users": "tsx src/scripts/audit-user-sync.ts",
     "check:auth-sessions": "tsx src/scripts/check-auth-sessions.ts",
     "fix:user-sync": "tsx src/scripts/fix-user-sync.ts",
+    "diagnose:twitter-api": "tsx src/scripts/diagnose-twitter-api.ts",
+    "test:tweet-functionality": "tsx src/scripts/test-tweet-functionality.ts",
+    "fix:twitter-api": "tsx src/scripts/fix-twitter-api-integration.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
