@@ -168,10 +168,19 @@ export class TwitterApiService {
 
       console.log(`Twitter API response status: ${response.status}`)
 
-      // Handle rate limiting with exponential backoff
+      // Handle rate limiting and usage caps
       if (response.status === 429) {
         const resetTime = response.headers.get('x-rate-limit-reset')
         const remainingRequests = response.headers.get('x-rate-limit-remaining')
+
+        // Get response body to check for usage cap errors
+        const errorData = await response.json().catch(() => null)
+
+        // Check if this is a usage cap exceeded error (monthly limit)
+        if (errorData?.title === 'UsageCapExceeded' || errorData?.detail?.includes('Usage cap exceeded')) {
+          console.error('❌ Twitter API monthly usage cap exceeded:', errorData)
+          throw new Error('Twitter API monthly usage limit exceeded. Please upgrade your Twitter API plan or wait until next month.')
+        }
 
         console.warn(`Rate limited! Remaining requests: ${remainingRequests}, Reset time: ${resetTime}`)
 

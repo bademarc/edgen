@@ -65,6 +65,44 @@ export async function POST(request: NextRequest) {
         })
       } else {
         // Handle submission failure with enhanced error handling
+        let errorMessage = result.message
+        let suggestions: string[] = []
+        let retryable = false
+
+        // Provide specific guidance based on error type
+        if (result.message.includes('monthly usage limit exceeded')) {
+          errorMessage = 'Twitter API monthly limit reached'
+          suggestions = [
+            'This is a temporary service limitation',
+            'Our team is working to resolve this issue',
+            'Please try again in a few hours',
+            'Contact support if this persists'
+          ]
+          retryable = true
+        } else if (result.message.includes('rate limit exceeded')) {
+          errorMessage = 'Too many requests, please wait'
+          suggestions = [
+            'Wait 5-10 minutes before trying again',
+            'This helps prevent service overload'
+          ]
+          retryable = true
+        } else if (result.message.includes('authentication')) {
+          errorMessage = 'Service authentication issue'
+          suggestions = [
+            'This is a temporary service issue',
+            'Please contact support if this persists'
+          ]
+          retryable = false
+        } else if (result.message.includes('not found') || result.message.includes('not accessible')) {
+          errorMessage = 'Tweet not found or private'
+          suggestions = [
+            'Make sure the tweet URL is correct',
+            'Ensure the tweet is public (not private)',
+            'Check that the tweet has not been deleted'
+          ]
+          retryable = false
+        }
+
         const errorResult = await enhancedErrorHandler.handleTwitterApiError(
           new Error(result.message),
           {
@@ -80,13 +118,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(
           {
-            error: result.message,
-            userMessage: uiError.message,
-            suggestions: errorResult.error?.suggestions || [],
-            retryable: errorResult.error?.retryable || false,
+            error: errorMessage,
+            userMessage: uiError.message || errorMessage,
+            suggestions: suggestions.length > 0 ? suggestions : (errorResult.error?.suggestions || []),
+            retryable: retryable || (errorResult.error?.retryable || false),
             details: result.error
           },
-          { status: 400 }
+          { status: retryable ? 429 : 400 }
         )
       }
     } catch (submissionError) {

@@ -3,6 +3,7 @@ import { TwitterApiService } from './twitter-api'
 import { TwitterUserApiService } from './twitter-user-api'
 import { validateTweetContent, calculatePoints } from './utils'
 import { validateTweetURL } from './url-validator'
+import { getSimplifiedFallbackService } from './simplified-fallback-service'
 
 const prisma = new PrismaClient()
 
@@ -107,14 +108,85 @@ export class ManualTweetSubmissionService {
         }
       }
 
-      // Fetch tweet data using Twitter API
-      const tweetData = await this.twitterApi.getTweetData(tweetUrl)
+      // Fetch tweet data using Twitter API with fallback
+      let tweetData
+      let apiError: Error | null = null
+
+      try {
+        tweetData = await this.twitterApi.getTweetData(tweetUrl)
+      } catch (error) {
+        console.error('Twitter API error in manual submission:', error)
+        apiError = error instanceof Error ? error : new Error(String(error))
+
+        // Check for specific error types that should not use fallback
+        if (apiError.message.includes('monthly usage limit exceeded')) {
+          console.log('🔄 Twitter API monthly limit exceeded, trying fallback service...')
+
+          // Try fallback service
+          try {
+            const fallbackService = getSimplifiedFallbackService({
+              preferApi: false, // Skip API since it's capped
+              apiTimeoutMs: 10000
+            })
+
+            const fallbackData = await fallbackService.getTweetData(tweetUrl)
+            if (fallbackData) {
+              console.log('✅ Successfully fetched tweet data via fallback service')
+              tweetData = {
+                id: fallbackData.id,
+                content: fallbackData.content,
+                likes: fallbackData.likes,
+                retweets: fallbackData.retweets,
+                replies: fallbackData.replies,
+                author: fallbackData.author,
+                createdAt: fallbackData.createdAt
+              }
+            }
+          } catch (fallbackError) {
+            console.error('Fallback service also failed:', fallbackError)
+            return {
+              isValid: false,
+              isOwnTweet: false,
+              containsRequiredMentions: false,
+              error: 'Twitter API monthly limit exceeded and fallback service unavailable. Manual tweet submission is temporarily unavailable. Please try again later.'
+            }
+          }
+        }
+
+        if (!tweetData && apiError.message.includes('rate limit exceeded')) {
+          return {
+            isValid: false,
+            isOwnTweet: false,
+            containsRequiredMentions: false,
+            error: 'Twitter API rate limit exceeded. Please wait a few minutes and try again.'
+          }
+        }
+
+        if (!tweetData && (apiError.message.includes('401') || apiError.message.includes('403'))) {
+          return {
+            isValid: false,
+            isOwnTweet: false,
+            containsRequiredMentions: false,
+            error: 'Twitter API authentication issue. Please contact support.'
+          }
+        }
+
+        if (!tweetData) {
+          return {
+            isValid: false,
+            isOwnTweet: false,
+            containsRequiredMentions: false,
+            error: 'Could not fetch tweet data from Twitter API. Please check that the tweet is public and try again.'
+          }
+        }
+      }
+
       if (!tweetData) {
         return {
           isValid: false,
           isOwnTweet: false,
           containsRequiredMentions: false,
-          error: 'Could not fetch tweet data from Twitter API'
+          error: 'Could not fetch tweet data. Please check that the tweet is public and accessible.'
         }
       }
 
