@@ -1,5 +1,7 @@
 import { extractTweetId } from './utils'
 import { getEnhancedCacheService } from './cache-integration'
+import { getEnhancedRateLimiter } from './enhanced-rate-limiter'
+import { getCircuitBreaker } from './improved-circuit-breaker'
 
 interface TwitterTweetData {
   id: string
@@ -51,20 +53,16 @@ interface RateLimitInfo {
 export class TwitterApiService {
   private bearerToken: string
   private rateLimitInfo: RateLimitInfo | null = null
-  private lastRequestTime: number = 0
-  private requestCount: number = 0
-  private readonly MAX_REQUESTS_PER_MINUTE = 25 // Further reduced to prevent rate limit exhaustion
   private isHealthy: boolean = true
   private lastHealthCheck: number = 0
   private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
   private cache = getEnhancedCacheService()
-
-  // Circuit breaker pattern for rate limit management
-  private circuitBreakerOpen: boolean = false
-  private circuitBreakerOpenTime: number = 0
-  private readonly CIRCUIT_BREAKER_TIMEOUT = 60 * 60 * 1000 // 60 minutes for better recovery
-  private consecutiveFailures: number = 0
-  private readonly MAX_CONSECUTIVE_FAILURES = 3
+  private rateLimiter = getEnhancedRateLimiter()
+  private circuitBreaker = getCircuitBreaker('twitter-api', {
+    failureThreshold: 8, // Less aggressive than before
+    recoveryTimeout: 10 * 60 * 1000, // 10 minutes instead of 60
+    degradationMode: true // Enable graceful degradation
+  })
 
   constructor() {
     this.bearerToken = process.env.TWITTER_BEARER_TOKEN || ''
@@ -117,184 +115,92 @@ export class TwitterApiService {
     return this.isHealthy
   }
 
-  // Circuit breaker check
-  private checkCircuitBreaker(): boolean {
-    const now = Date.now()
-
-    // If circuit breaker is open, check if timeout has passed
-    if (this.circuitBreakerOpen) {
-      if (now - this.circuitBreakerOpenTime > this.CIRCUIT_BREAKER_TIMEOUT) {
-        console.log('🔄 Circuit breaker timeout expired, attempting to close')
-        this.circuitBreakerOpen = false
-        this.consecutiveFailures = 0
-        return true
-      } else {
-        const remainingTime = Math.ceil((this.CIRCUIT_BREAKER_TIMEOUT - (now - this.circuitBreakerOpenTime)) / 1000 / 60)
-        console.warn(`🚫 Circuit breaker is OPEN - blocking requests for ${remainingTime} more minutes`)
-        return false
-      }
-    }
-
-    return true
+  /**
+   * Create a fallback function for graceful degradation
+   */
+  private createFallback<T>(operation: string): (() => Promise<T>) | undefined {
+    // For now, we don't have fallbacks for all operations
+    // This can be extended to include cached responses or simplified data
+    return undefined
   }
 
-  // Handle circuit breaker on failures
-  private handleCircuitBreakerFailure(): void {
-    this.consecutiveFailures++
-    console.warn(`⚠️ API failure ${this.consecutiveFailures}/${this.MAX_CONSECUTIVE_FAILURES}`)
-
-    if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
-      this.circuitBreakerOpen = true
-      this.circuitBreakerOpenTime = Date.now()
-      console.error(`🚫 Circuit breaker OPENED - blocking API requests for ${this.CIRCUIT_BREAKER_TIMEOUT / 1000 / 60} minutes`)
-    }
+  private async makeRequest(url: string, operation: string = 'tweet_lookup'): Promise<TwitterApiResponse | TwitterUserApiResponse> {
+    // Use the enhanced rate limiter and circuit breaker
+    return this.rateLimiter.queueRequest(
+      operation,
+      () => this.circuitBreaker.execute(
+        () => this.executeRequest(url),
+        this.createFallback(operation)
+      ),
+      1, // Normal priority
+      3  // Max retries
+    )
   }
 
-  // Reset circuit breaker on success
-  private handleCircuitBreakerSuccess(): void {
-    if (this.consecutiveFailures > 0) {
-      console.log('✅ API request successful - resetting failure count')
-      this.consecutiveFailures = 0
-    }
-  }
-
-  // Rate limiting check
-  private async checkRateLimit(): Promise<boolean> {
-    const now = Date.now()
-
-    // Check circuit breaker first
-    if (!this.checkCircuitBreaker()) {
-      throw new Error('Circuit breaker is open - API requests blocked due to repeated failures')
-    }
-
-    // Reset request count every minute
-    if (now - this.lastRequestTime > 60000) {
-      this.requestCount = 0
-      this.lastRequestTime = now
-    }
-
-    // Check if we're approaching rate limits (more conservative)
-    if (this.requestCount >= this.MAX_REQUESTS_PER_MINUTE) {
-      console.warn('Approaching rate limit, delaying request')
-      const waitTime = 60000 - (now - this.lastRequestTime)
-      if (waitTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, waitTime))
-        this.requestCount = 0
-        this.lastRequestTime = Date.now()
-      }
-    }
-
-    // Check API-provided rate limit info (very conservative threshold)
-    if (this.rateLimitInfo && this.rateLimitInfo.remaining <= 20 && now < this.rateLimitInfo.resetTime) {
-      const waitTime = this.rateLimitInfo.resetTime - now
-      console.warn(`Rate limit nearly exceeded (${this.rateLimitInfo.remaining} remaining), waiting ${waitTime}ms`)
-      await new Promise(resolve => setTimeout(resolve, waitTime))
-    }
-
-    this.requestCount++
-    return true
-  }
-
-  private async makeRequest(url: string, retryCount: number = 0): Promise<TwitterApiResponse | TwitterUserApiResponse> {
-    const maxRetries = 3
-    const baseDelay = 1000 // 1 second
-
+  private async executeRequest(url: string): Promise<TwitterApiResponse | TwitterUserApiResponse> {
     // Check API health before making request
     if (!await this.checkApiHealth()) {
       throw new Error('Twitter API is currently unhealthy')
     }
 
-    // Check rate limits
-    await this.checkRateLimit()
+    console.log(`Making Twitter API request to: ${url}`)
 
-    try {
-      console.log(`Making Twitter API request to: ${url} (attempt ${retryCount + 1})`)
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${this.bearerToken}`,
+        'Content-Type': 'application/json',
+      },
+      // Add timeout to prevent hanging requests
+      signal: AbortSignal.timeout(15000) // 15 second timeout
+    })
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${this.bearerToken}`,
-          'Content-Type': 'application/json',
-        },
-        // Add timeout to prevent hanging requests
-        signal: AbortSignal.timeout(15000) // 15 second timeout
-      })
+    console.log(`Twitter API response status: ${response.status}`)
 
-      console.log(`Twitter API response status: ${response.status}`)
-
-      // Handle rate limiting and usage caps
-      if (response.status === 429) {
-        const resetTime = response.headers.get('x-rate-limit-reset')
-        const remainingRequests = response.headers.get('x-rate-limit-remaining')
-
-        // Get response body to check for usage cap errors
-        const errorData = await response.json().catch(() => null)
-
-        // Check if this is a usage cap exceeded error (monthly limit)
-        if (errorData?.title === 'UsageCapExceeded' || errorData?.detail?.includes('Usage cap exceeded')) {
-          console.error('❌ Twitter API monthly usage cap exceeded:', errorData)
-          this.handleCircuitBreakerFailure()
-          throw new Error('Twitter API monthly usage limit exceeded. Please upgrade your Twitter API plan or wait until next month.')
-        }
-
-        console.warn(`Rate limited! Remaining requests: ${remainingRequests}, Reset time: ${resetTime}`)
-        this.handleCircuitBreakerFailure()
-
-        if (retryCount < maxRetries) {
-          // Exponential backoff with jitter to avoid thundering herd
-          const jitter = Math.random() * 1000 // 0-1 second jitter
-          const delay = Math.min(baseDelay * Math.pow(2, retryCount) + jitter, 60000) // Max 60 seconds
-          console.log(`Retrying after ${Math.round(delay)}ms with jitter...`)
-          await new Promise(resolve => setTimeout(resolve, delay))
-          return this.makeRequest(url, retryCount + 1)
-        } else {
-          throw new Error(`Twitter API rate limit exceeded after ${maxRetries} retries`)
-        }
+    // Update rate limit info from headers
+    if (response.headers.get('x-rate-limit-limit')) {
+      this.rateLimitInfo = {
+        limit: parseInt(response.headers.get('x-rate-limit-limit') || '0'),
+        remaining: parseInt(response.headers.get('x-rate-limit-remaining') || '0'),
+        resetTime: parseInt(response.headers.get('x-rate-limit-reset') || '0') * 1000
       }
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`Twitter API error: ${response.status} ${response.statusText}`, errorText)
-
-        // For certain errors, don't retry
-        if (response.status === 401 || response.status === 403 || response.status === 404) {
-          throw new Error(`Twitter API error: ${response.status} ${response.statusText} - ${errorText}`)
-        }
-
-        // For server errors, retry with backoff
-        if (response.status >= 500 && retryCount < maxRetries) {
-          const delay = baseDelay * Math.pow(2, retryCount)
-          console.log(`Server error, retrying after ${delay}ms...`)
-          await new Promise(resolve => setTimeout(resolve, delay))
-          return this.makeRequest(url, retryCount + 1)
-        }
-
-        throw new Error(`Twitter API error: ${response.status} ${response.statusText} - ${errorText}`)
-      }
-
-      const data = await response.json()
-      console.log('Twitter API response data:', JSON.stringify(data, null, 2))
-
-      // Handle successful response
-      this.handleCircuitBreakerSuccess()
-
-      return data
-    } catch (error) {
-      console.error(`Error in makeRequest (attempt ${retryCount + 1}):`, error)
-
-      // Retry on network errors
-      if (retryCount < maxRetries && (
-        error instanceof TypeError || // Network error
-        (error instanceof Error && error.name === 'AbortError') || // Timeout
-        (error instanceof Error && error.message.includes('fetch'))
-      )) {
-        const delay = baseDelay * Math.pow(2, retryCount)
-        console.log(`Network error, retrying after ${delay}ms...`)
-        await new Promise(resolve => setTimeout(resolve, delay))
-        return this.makeRequest(url, retryCount + 1)
-      }
-
-      throw error
     }
+
+    // Handle rate limiting and usage caps
+    if (response.status === 429) {
+      const resetTime = response.headers.get('x-rate-limit-reset')
+      const remainingRequests = response.headers.get('x-rate-limit-remaining')
+
+      // Get response body to check for usage cap errors
+      const errorData = await response.json().catch(() => null)
+
+      // Check if this is a usage cap exceeded error (monthly limit)
+      if (errorData?.title === 'UsageCapExceeded' || errorData?.detail?.includes('Usage cap exceeded')) {
+        console.error('❌ Twitter API monthly usage cap exceeded:', errorData)
+        throw new Error('Twitter API monthly usage limit exceeded. Please upgrade your Twitter API plan or wait until next month.')
+      }
+
+      console.warn(`Rate limited! Remaining requests: ${remainingRequests}, Reset time: ${resetTime}`)
+
+      // Create a specific rate limit error that the rate limiter can handle
+      const rateLimitError = new Error(`Twitter API rate limit exceeded. Reset time: ${resetTime}`)
+      ;(rateLimitError as any).status = 429
+      ;(rateLimitError as any).resetTime = resetTime
+      throw rateLimitError
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`Twitter API error: ${response.status} ${response.statusText}`, errorText)
+
+      const apiError = new Error(`Twitter API error: ${response.status} ${response.statusText} - ${errorText}`)
+      ;(apiError as any).status = response.status
+      throw apiError
+    }
+
+    const data = await response.json()
+    console.log('Twitter API response data:', JSON.stringify(data, null, 2))
+
+    return data
   }
 
   async getTweetData(tweetUrl: string): Promise<{
@@ -324,7 +230,7 @@ export class TwitterApiService {
 
       const url = `https://api.twitter.com/2/tweets/${tweetId}?expansions=author_id&tweet.fields=public_metrics,created_at&user.fields=username,name,profile_image_url`
 
-      const response = await this.makeRequest(url) as TwitterApiResponse
+      const response = await this.makeRequest(url, 'tweet_lookup') as TwitterApiResponse
 
       if (response.errors && response.errors.length > 0) {
         console.error('Twitter API returned errors:', response.errors)
@@ -411,7 +317,7 @@ export class TwitterApiService {
   async getUserData(username: string): Promise<TwitterUserData | null> {
     try {
       const url = `https://api.twitter.com/2/users/by/username/${username}?user.fields=profile_image_url`
-      const response = await this.makeRequest(url) as TwitterUserApiResponse
+      const response = await this.makeRequest(url, 'user_lookup') as TwitterUserApiResponse
 
       if (response.errors || !response.data) {
         console.error('Twitter API errors:', response.errors)
@@ -448,7 +354,7 @@ export class TwitterApiService {
       console.log(`🔍 Fetching fresh engagement metrics for URL: ${tweetUrl}`)
 
       const url = `https://api.twitter.com/2/tweets/${tweetId}?tweet.fields=public_metrics`
-      const response = await this.makeRequest(url) as TwitterApiResponse
+      const response = await this.makeRequest(url, 'tweet_lookup') as TwitterApiResponse
 
       if (response.errors && response.errors.length > 0) {
         console.error('Twitter API returned errors:', response.errors)

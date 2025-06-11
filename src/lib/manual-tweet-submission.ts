@@ -4,6 +4,8 @@ import { TwitterUserApiService } from './twitter-user-api'
 import { validateTweetContent, calculatePoints } from './utils'
 import { validateTweetURL } from './url-validator'
 import { getSimplifiedFallbackService } from './simplified-fallback-service'
+import { enhancedErrorHandler } from './enhanced-error-handler'
+import { getCircuitBreaker } from './improved-circuit-breaker'
 
 const prisma = new PrismaClient()
 
@@ -42,6 +44,11 @@ export class ManualTweetSubmissionService {
   private userApi: TwitterUserApiService
   private lastSubmissionTime: Map<string, number> = new Map()
   private readonly SUBMISSION_COOLDOWN_MS = 5 * 60 * 1000 // 5 minutes between submissions per user
+  private circuitBreaker = getCircuitBreaker('manual-tweet-submission', {
+    failureThreshold: 5, // Allow more failures for user-facing operations
+    recoveryTimeout: 5 * 60 * 1000, // 5 minutes recovery
+    degradationMode: true // Enable fallback to simplified service
+  })
 
   constructor() {
     try {
@@ -228,6 +235,16 @@ export class ManualTweetSubmissionService {
    * Submit a tweet for points calculation
    */
   async submitTweet(tweetUrl: string, userId: string): Promise<TweetSubmissionResult> {
+    return this.circuitBreaker.execute(
+      () => this.executeSubmission(tweetUrl, userId),
+      () => this.fallbackSubmission(tweetUrl, userId)
+    )
+  }
+
+  /**
+   * Execute the main submission logic
+   */
+  private async executeSubmission(tweetUrl: string, userId: string): Promise<TweetSubmissionResult> {
     try {
       // Check submission cooldown
       const lastSubmission = this.lastSubmissionTime.get(userId)
@@ -239,9 +256,9 @@ export class ManualTweetSubmissionService {
         }
       }
 
-      // Verify tweet ownership and validity
-      const verification = await this.verifyTweetOwnership(tweetUrl, userId)
-      
+      // Verify tweet ownership and validity with enhanced error handling
+      const verification = await this.verifyTweetOwnershipWithErrorHandling(tweetUrl, userId)
+
       if (!verification.isValid) {
         return {
           success: false,
@@ -332,11 +349,136 @@ export class ManualTweetSubmissionService {
       }
 
     } catch (error) {
-      console.error('Error submitting tweet:', error)
+      console.error('Error in executeSubmission:', error)
+
+      // Use enhanced error handler for better user feedback
+      const errorResult = await enhancedErrorHandler.handleTwitterApiError(
+        error,
+        {
+          operation: 'manual_tweet_submission',
+          userId,
+          tweetUrl,
+          attempt: 1,
+          timestamp: new Date()
+        }
+      )
+
+      const uiError = enhancedErrorHandler.formatErrorForUI(errorResult)
+
       return {
         success: false,
-        message: 'An error occurred while submitting your tweet. Please try again.',
-        error: error instanceof Error ? error.message : 'Unknown submission error'
+        message: uiError.message,
+        error: errorResult.error?.message || 'Unknown submission error'
+      }
+    }
+  }
+
+  /**
+   * Fallback submission using simplified service
+   */
+  private async fallbackSubmission(tweetUrl: string, userId: string): Promise<TweetSubmissionResult> {
+    try {
+      console.log('🔄 Using fallback submission service due to circuit breaker')
+
+      const fallbackService = getSimplifiedFallbackService()
+      const fallbackResult = await fallbackService.getTweetData(tweetUrl)
+
+      if (!fallbackResult.success || !fallbackResult.data) {
+        return {
+          success: false,
+          message: 'Tweet verification failed. Please try again later or contact support.'
+        }
+      }
+
+      // Basic validation for fallback
+      const tweetData = fallbackResult.data
+      if (!validateTweetContent(tweetData.content)) {
+        return {
+          success: false,
+          message: 'Tweet must contain "@layeredge" or "$EDGEN" mentions to earn points.'
+        }
+      }
+
+      // Simplified points calculation for fallback
+      const basePoints = 3 // Reduced points for fallback mode
+      const totalPoints = basePoints
+
+      // Save with fallback flag
+      await prisma.tweet.create({
+        data: {
+          tweetId: tweetData.id,
+          content: tweetData.content,
+          likes: tweetData.likes || 0,
+          retweets: tweetData.retweets || 0,
+          replies: tweetData.replies || 0,
+          basePoints: basePoints,
+          bonusPoints: 0, // No bonus points in fallback mode
+          totalPoints: totalPoints,
+          userId: userId,
+          isAutoDiscovered: false,
+          url: tweetUrl,
+          submittedAt: new Date(),
+          // Add a flag to indicate this was processed in fallback mode
+          notes: 'Processed in fallback mode due to API limitations'
+        }
+      })
+
+      // Update user points
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          totalPoints: {
+            increment: totalPoints
+          }
+        }
+      })
+
+      // Update submission cooldown
+      this.lastSubmissionTime.set(userId, Date.now())
+
+      return {
+        success: true,
+        message: `Tweet submitted successfully in fallback mode! You earned ${totalPoints} points. (Reduced points due to service limitations)`,
+        tweetId: tweetData.id,
+        points: totalPoints
+      }
+
+    } catch (error) {
+      console.error('Error in fallback submission:', error)
+      return {
+        success: false,
+        message: 'All submission methods failed. Please try again later.',
+        error: error instanceof Error ? error.message : 'Fallback submission error'
+      }
+    }
+  }
+
+  /**
+   * Enhanced tweet ownership verification with error handling
+   */
+  private async verifyTweetOwnershipWithErrorHandling(tweetUrl: string, userId: string): Promise<TweetOwnershipVerification> {
+    try {
+      return await this.verifyTweetOwnership(tweetUrl, userId)
+    } catch (error) {
+      console.error('Error in tweet ownership verification:', error)
+
+      // Use enhanced error handler
+      const errorResult = await enhancedErrorHandler.handleTwitterApiError(
+        error,
+        {
+          operation: 'tweet_verification',
+          userId,
+          tweetUrl,
+          attempt: 1,
+          timestamp: new Date()
+        }
+      )
+
+      return {
+        isValid: false,
+        isOwnTweet: false,
+        containsRequiredMentions: false,
+        error: errorResult.error?.userMessage || 'Tweet verification failed'
       }
     }
   }
