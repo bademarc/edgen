@@ -205,8 +205,30 @@ class CacheService {
 
       if (this.useUpstash && this.upstashRedis) {
         console.log('🔍 Getting from Upstash Redis:', key)
-        value = await this.upstashRedis.get(key)
+        const rawValue = await this.upstashRedis.get(key)
         this.commandCount++
+
+        // Enhanced Upstash data validation
+        if (rawValue !== null) {
+          // Ensure we have a string value
+          if (typeof rawValue === 'object') {
+            console.warn(`🚨 Upstash returned object instead of string for key ${key}:`, rawValue)
+            // Try to extract string value if it's wrapped
+            value = rawValue.toString()
+          } else {
+            value = rawValue as string
+          }
+
+          // Additional validation for corrupted data
+          if (value === '[object Object]' || value === 'undefined' || value === 'null') {
+            console.warn(`🚨 Corrupted data detected from Upstash for key ${key}: ${value}`)
+            await this.upstashRedis.del(key) // Clean up corrupted data
+            value = null
+          }
+        } else {
+          value = null
+        }
+
         console.log('✅ Upstash get result:', value ? 'found' : 'not found')
       } else if (this.redis) {
         console.log('🔍 Getting from traditional Redis:', key)
@@ -291,40 +313,108 @@ class CacheService {
     }
 
     try {
-      // Enhanced JSON serialization with validation
+      // Enhanced JSON serialization with comprehensive validation
       let serializedValue: string
       try {
-        serializedValue = JSON.stringify(value)
+        // Pre-serialization validation
+        if (value === undefined) {
+          console.warn(`⚠️ Attempting to cache undefined value for key: ${key}`)
+          return false
+        }
 
-        // Validate serialization worked correctly
-        if (serializedValue === '[object Object]' || serializedValue === 'undefined') {
+        // Handle null values explicitly
+        if (value === null) {
+          serializedValue = 'null'
+        } else {
+          // Perform JSON serialization
+          serializedValue = JSON.stringify(value)
+        }
+
+        // Comprehensive validation of serialization result
+        if (!serializedValue ||
+            serializedValue === '[object Object]' ||
+            serializedValue === 'undefined' ||
+            serializedValue === '[object Promise]' ||
+            serializedValue === '[object Function]') {
           throw new Error(`Invalid serialization result: ${serializedValue}`)
         }
 
         // Test deserialization to ensure data integrity
-        const testParse = JSON.parse(serializedValue)
-        if (typeof testParse !== typeof value) {
-          throw new Error('Serialization type mismatch')
+        try {
+          const testParse = JSON.parse(serializedValue)
+
+          // Type validation
+          if (value !== null && typeof testParse !== typeof value) {
+            throw new Error(`Serialization type mismatch: original=${typeof value}, parsed=${typeof testParse}`)
+          }
+
+          // Deep validation for objects
+          if (typeof value === 'object' && value !== null) {
+            if (Array.isArray(value) !== Array.isArray(testParse)) {
+              throw new Error('Array type mismatch after serialization')
+            }
+          }
+
+        } catch (parseError) {
+          throw new Error(`Deserialization test failed: ${parseError.message}`)
         }
 
       } catch (serializationError) {
         console.error('❌ JSON serialization failed for key:', key, 'Error:', serializationError)
-        console.error('❌ Value that failed to serialize:', value)
+        console.error('❌ Value that failed to serialize:', {
+          value,
+          type: typeof value,
+          isArray: Array.isArray(value),
+          constructor: value?.constructor?.name,
+          keys: typeof value === 'object' && value !== null ? Object.keys(value) : 'N/A'
+        })
 
-        // Try to create a safe fallback representation
+        // Create a safe fallback representation with more details
         serializedValue = JSON.stringify({
           error: 'serialization_failed',
           originalType: typeof value,
+          isArray: Array.isArray(value),
+          constructor: value?.constructor?.name,
           timestamp: Date.now(),
-          key: key
+          key: key,
+          errorMessage: serializationError.message
         })
+
+        console.warn(`⚠️ Using fallback serialization for key: ${key}`)
       }
 
       if (this.useUpstash && this.upstashRedis) {
         console.log('💾 Setting in Upstash Redis:', key, 'TTL:', ttlSeconds)
-        await this.upstashRedis.setex(key, ttlSeconds, serializedValue)
-        this.commandCount++
-        console.log('✅ Upstash set successful')
+
+        // Enhanced Upstash Redis operation with validation
+        try {
+          // Ensure we're passing a string to Upstash
+          if (typeof serializedValue !== 'string') {
+            console.error(`❌ Upstash requires string value, got ${typeof serializedValue} for key: ${key}`)
+            serializedValue = String(serializedValue)
+          }
+
+          // Final validation before storing
+          if (serializedValue === '[object Object]') {
+            throw new Error('Refusing to store corrupted "[object Object]" data')
+          }
+
+          await this.upstashRedis.setex(key, ttlSeconds, serializedValue)
+          this.commandCount++
+          console.log('✅ Upstash set successful')
+
+          // Verification read to ensure data integrity
+          const verifyValue = await this.upstashRedis.get(key)
+          if (verifyValue !== serializedValue) {
+            console.warn(`⚠️ Data integrity check failed for key ${key}`)
+            console.warn(`Expected: ${serializedValue.substring(0, 100)}...`)
+            console.warn(`Got: ${verifyValue?.toString().substring(0, 100)}...`)
+          }
+
+        } catch (upstashError) {
+          console.error(`❌ Upstash set operation failed for key ${key}:`, upstashError)
+          throw upstashError
+        }
       } else if (this.redis) {
         console.log('💾 Setting in traditional Redis:', key, 'TTL:', ttlSeconds)
         await this.redis.setex(key, ttlSeconds, serializedValue)

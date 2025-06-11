@@ -4,6 +4,7 @@
  */
 
 import { getCacheService } from './cache'
+import { getRedisDataValidator } from './redis-data-validator'
 
 export enum CircuitState {
   CLOSED = 'CLOSED',
@@ -30,6 +31,7 @@ interface CircuitBreakerStatus {
 
 export class ImprovedCircuitBreaker {
   private cache = getCacheService()
+  private validator = getRedisDataValidator()
   private config: CircuitBreakerConfig
   private cacheKey: string
 
@@ -260,7 +262,7 @@ export class ImprovedCircuitBreaker {
   async getStatus(): Promise<CircuitBreakerStatus> {
     try {
       const cached = await this.cache.get<CircuitBreakerStatus>(this.cacheKey)
-      
+
       if (!cached) {
         // Initialize with default status
         const defaultStatus: CircuitBreakerStatus = {
@@ -271,14 +273,47 @@ export class ImprovedCircuitBreaker {
           isManuallyOverridden: false,
           degradationActive: false
         }
-        
+
         await this.cache.set(this.cacheKey, defaultStatus, 3600) // 1 hour TTL
         return defaultStatus
       }
-      
+
+      // Validate the cached data for corruption
+      const validation = this.validator.validateCircuitBreakerStatus(cached)
+
+      if (!validation.isValid) {
+        console.warn(`🚨 Corrupted circuit breaker data detected for ${this.name}:`, validation.errorMessage)
+        console.warn(`🚨 Original corrupted data:`, cached)
+
+        // Use corrected value if available, otherwise use default
+        const correctedStatus = validation.correctedValue || {
+          state: CircuitState.CLOSED,
+          failureCount: 0,
+          lastFailureTime: 0,
+          nextAttemptTime: 0,
+          isManuallyOverridden: false,
+          degradationActive: false
+        }
+
+        // Update cache with corrected data
+        await this.cache.set(this.cacheKey, correctedStatus, 3600)
+        console.log(`✅ Fixed corrupted circuit breaker data for ${this.name}`)
+
+        return correctedStatus
+      }
+
       return cached
     } catch (error) {
       console.warn(`Failed to get circuit breaker status for ${this.name}:`, error)
+
+      // Emergency recovery - validate and fix if needed
+      try {
+        console.log(`🚨 Attempting emergency recovery for circuit breaker ${this.name}`)
+        await this.validator.validateAndFixCacheData(this.cacheKey)
+      } catch (validationError) {
+        console.error(`Emergency validation failed for ${this.name}:`, validationError)
+      }
+
       // Return safe default
       return {
         state: CircuitState.CLOSED,
