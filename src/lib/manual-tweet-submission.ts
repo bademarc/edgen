@@ -63,10 +63,15 @@ export class ManualTweetSubmissionService {
   private twitterApi: TwitterApiService | null = null
   private userApi: TwitterUserApiService
   private lastSubmissionTime: Map<string, number> = new Map()
-  private readonly SUBMISSION_COOLDOWN_MS = 5 * 60 * 1000 // 5 minutes between submissions per user
+  private readonly SUBMISSION_COOLDOWN_MS = 3 * 60 * 1000 // 3 minutes between submissions per user (reduced for manual)
+  private manualSubmissionRateLimit: Map<string, { count: number, resetTime: number }> = new Map()
+  private readonly MANUAL_RATE_LIMIT = 10 // 10 submissions per hour per user
+  private readonly MANUAL_RATE_WINDOW_MS = 60 * 60 * 1000 // 1 hour
   private circuitBreaker = getCircuitBreaker('manual-tweet-submission', {
-    failureThreshold: 5, // Allow more failures for user-facing operations
-    recoveryTimeout: 5 * 60 * 1000, // 5 minutes recovery
+    failureThreshold: 10, // Allow more failures for user-facing operations
+    recoveryTimeout: 2 * 60 * 1000, // 2 minutes recovery (shorter for manual submissions)
+    monitoringPeriod: 10 * 60 * 1000, // 10 minutes monitoring window
+    halfOpenMaxCalls: 5, // Allow more test calls for manual submissions
     degradationMode: true // Enable fallback to simplified service
   })
 
@@ -252,9 +257,19 @@ export class ManualTweetSubmissionService {
   }
 
   /**
-   * Submit a tweet for points calculation
+   * Submit a tweet for points calculation with bypass option
    */
-  async submitTweet(tweetUrl: string, userId: string): Promise<TweetSubmissionResult> {
+  async submitTweet(tweetUrl: string, userId: string, bypassCircuitBreaker: boolean = false): Promise<TweetSubmissionResult> {
+    if (bypassCircuitBreaker) {
+      console.log('🔓 Bypassing circuit breaker for manual submission')
+      try {
+        return await this.executeSubmission(tweetUrl, userId)
+      } catch (error) {
+        console.log('🔄 Bypass failed, trying fallback...')
+        return await this.fallbackSubmission(tweetUrl, userId)
+      }
+    }
+
     return this.circuitBreaker.execute(
       () => this.executeSubmission(tweetUrl, userId),
       () => this.fallbackSubmission(tweetUrl, userId)
@@ -266,13 +281,22 @@ export class ManualTweetSubmissionService {
    */
   private async executeSubmission(tweetUrl: string, userId: string): Promise<TweetSubmissionResult> {
     try {
-      // Check submission cooldown
-      const lastSubmission = this.lastSubmissionTime.get(userId)
-      if (lastSubmission && Date.now() - lastSubmission < this.SUBMISSION_COOLDOWN_MS) {
-        const remainingTime = Math.ceil((this.SUBMISSION_COOLDOWN_MS - (Date.now() - lastSubmission)) / 1000 / 60)
-        return {
-          success: false,
-          message: `Please wait ${remainingTime} minutes before submitting another tweet.`
+      // Check submission cooldown and rate limits
+      const submissionStatus = this.getSubmissionStatus(userId)
+      if (!submissionStatus.canSubmit) {
+        if (submissionStatus.cooldownRemaining) {
+          return {
+            success: false,
+            message: `Please wait ${submissionStatus.cooldownRemaining} minutes before submitting another tweet.`
+          }
+        }
+        if (submissionStatus.rateLimitResetTime) {
+          const resetTime = new Date(submissionStatus.rateLimitResetTime)
+          const waitTime = Math.ceil((submissionStatus.rateLimitResetTime - Date.now()) / 1000 / 60)
+          return {
+            success: false,
+            message: `You've reached the hourly submission limit (${this.MANUAL_RATE_LIMIT} tweets/hour). Please wait ${waitTime} minutes.`
+          }
         }
       }
 
@@ -355,7 +379,7 @@ export class ManualTweetSubmissionService {
             userId: userId,
             isAutoDiscovered: false, // Manual submission
             url: tweetUrl,
-            submittedAt: new Date()
+            createdAt: new Date()
           }
         })
 
@@ -380,7 +404,7 @@ export class ManualTweetSubmissionService {
             pointsAwarded: totalPoints,
             reason: `Manual tweet submission: ${verification.tweetData!.id}`,
             tweetId: createdTweet.id,
-            metadata: JSON.stringify({
+            description: JSON.stringify({
               tweetId: verification.tweetData!.id,
               tweetUrl: tweetUrl,
               engagement: verification.tweetData!.engagement,
@@ -402,8 +426,9 @@ export class ManualTweetSubmissionService {
 
       console.log(`🎉 Transaction completed successfully for tweet ${verification.tweetData.id}`)
 
-      // Update submission cooldown
+      // Update submission cooldown and rate limit
       this.lastSubmissionTime.set(userId, Date.now())
+      this.incrementManualRateLimit(userId)
 
       console.log(`✅ Manual tweet submission successful: ${verification.tweetData.id} (+${totalPoints} points)`)
 
@@ -461,7 +486,7 @@ export class ManualTweetSubmissionService {
       const fallbackService = getSimplifiedFallbackService()
       const fallbackResult = await fallbackService.getTweetData(tweetUrl)
 
-      if (!fallbackResult.success || !fallbackResult.data) {
+      if (!fallbackResult || typeof fallbackResult !== 'object') {
         return {
           success: false,
           message: 'Tweet verification failed. Please try again later or contact support.'
@@ -469,7 +494,7 @@ export class ManualTweetSubmissionService {
       }
 
       // Basic validation for fallback
-      const tweetData = fallbackResult.data
+      const tweetData = fallbackResult as any
       if (!validateTweetContent(tweetData.content)) {
         return {
           success: false,
@@ -505,7 +530,7 @@ export class ManualTweetSubmissionService {
             userId: userId,
             isAutoDiscovered: false,
             url: tweetUrl,
-            submittedAt: new Date(),
+            createdAt: new Date(),
             // Add a flag to indicate this was processed in fallback mode
             notes: 'Processed in fallback mode due to API limitations'
           }
@@ -532,7 +557,7 @@ export class ManualTweetSubmissionService {
             pointsAwarded: totalPoints,
             reason: `Manual tweet submission (fallback mode): ${tweetData.id}`,
             tweetId: createdTweet.id,
-            metadata: JSON.stringify({
+            description: JSON.stringify({
               tweetId: tweetData.id,
               tweetUrl: tweetUrl,
               basePoints,
@@ -554,8 +579,9 @@ export class ManualTweetSubmissionService {
 
       console.log(`🎉 Fallback transaction completed successfully for tweet ${tweetData.id}`)
 
-      // Update submission cooldown
+      // Update submission cooldown and rate limit
       this.lastSubmissionTime.set(userId, Date.now())
+      this.incrementManualRateLimit(userId)
 
       return {
         success: true,
@@ -666,27 +692,88 @@ export class ManualTweetSubmissionService {
   }
 
   /**
+   * Check manual submission rate limits (separate from automated systems)
+   */
+  private checkManualRateLimit(userId: string): {
+    allowed: boolean
+    remaining: number
+    resetTime: number
+  } {
+    const now = Date.now()
+    const userLimit = this.manualSubmissionRateLimit.get(userId)
+
+    if (!userLimit || now >= userLimit.resetTime) {
+      // Reset or initialize rate limit window
+      this.manualSubmissionRateLimit.set(userId, {
+        count: 0,
+        resetTime: now + this.MANUAL_RATE_WINDOW_MS
+      })
+      return {
+        allowed: true,
+        remaining: this.MANUAL_RATE_LIMIT - 1,
+        resetTime: now + this.MANUAL_RATE_WINDOW_MS
+      }
+    }
+
+    if (userLimit.count >= this.MANUAL_RATE_LIMIT) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: userLimit.resetTime
+      }
+    }
+
+    return {
+      allowed: true,
+      remaining: this.MANUAL_RATE_LIMIT - userLimit.count - 1,
+      resetTime: userLimit.resetTime
+    }
+  }
+
+  /**
+   * Increment manual submission rate limit counter
+   */
+  private incrementManualRateLimit(userId: string): void {
+    const userLimit = this.manualSubmissionRateLimit.get(userId)
+    if (userLimit) {
+      userLimit.count++
+      this.manualSubmissionRateLimit.set(userId, userLimit)
+    }
+  }
+
+  /**
    * Get submission status for a user
    */
   getSubmissionStatus(userId: string): {
     canSubmit: boolean
     cooldownRemaining?: number
+    rateLimitRemaining?: number
+    rateLimitResetTime?: number
   } {
+    // Check cooldown
     const lastSubmission = this.lastSubmissionTime.get(userId)
-    
-    if (!lastSubmission) {
-      return { canSubmit: true }
+    const now = Date.now()
+
+    if (lastSubmission && now - lastSubmission < this.SUBMISSION_COOLDOWN_MS) {
+      return {
+        canSubmit: false,
+        cooldownRemaining: Math.ceil((this.SUBMISSION_COOLDOWN_MS - (now - lastSubmission)) / 1000 / 60)
+      }
     }
 
-    const timeSinceLastSubmission = Date.now() - lastSubmission
-    
-    if (timeSinceLastSubmission >= this.SUBMISSION_COOLDOWN_MS) {
-      return { canSubmit: true }
+    // Check rate limit
+    const rateLimit = this.checkManualRateLimit(userId)
+    if (!rateLimit.allowed) {
+      return {
+        canSubmit: false,
+        rateLimitRemaining: rateLimit.remaining,
+        rateLimitResetTime: rateLimit.resetTime
+      }
     }
 
     return {
-      canSubmit: false,
-      cooldownRemaining: Math.ceil((this.SUBMISSION_COOLDOWN_MS - timeSinceLastSubmission) / 1000 / 60)
+      canSubmit: true,
+      rateLimitRemaining: rateLimit.remaining
     }
   }
 }

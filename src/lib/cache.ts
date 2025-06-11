@@ -218,7 +218,43 @@ class CacheService {
         return this.get(key) // Retry with memory cache
       }
 
-      return value ? JSON.parse(value) : null
+      // Enhanced JSON parsing with corruption detection
+      if (!value) {
+        console.log('❌ Cache miss for key:', key)
+        return null
+      }
+
+      try {
+        // Check for corrupted data patterns
+        if (value === '[object Object]' || value === 'undefined' || value === 'null') {
+          console.warn(`🚨 Corrupted cache data detected for key ${key}: ${value}`)
+          // Delete the corrupted entry
+          await this.delete(key)
+          return null
+        }
+
+        const parsed = JSON.parse(value)
+
+        // Additional validation for circuit breaker status objects
+        if (key.includes('circuit_breaker') && parsed && typeof parsed === 'object') {
+          const status = parsed as any
+          if (status.error === 'serialization_failed') {
+            console.warn(`🚨 Found serialization error marker for key ${key}, removing corrupted entry`)
+            await this.delete(key)
+            return null
+          }
+        }
+
+        console.log('✅ Cache hit for key:', key)
+        return parsed
+      } catch (parseError) {
+        console.error(`❌ JSON parse error for key ${key}:`, parseError)
+        console.error(`❌ Corrupted data: ${value}`)
+
+        // Delete the corrupted entry
+        await this.delete(key)
+        return null
+      }
     } catch (error) {
       console.error('❌ Cache get error for key:', key, 'Error:', error)
       console.log('🔄 Falling back to memory cache due to Redis error')
@@ -255,7 +291,34 @@ class CacheService {
     }
 
     try {
-      const serializedValue = JSON.stringify(value)
+      // Enhanced JSON serialization with validation
+      let serializedValue: string
+      try {
+        serializedValue = JSON.stringify(value)
+
+        // Validate serialization worked correctly
+        if (serializedValue === '[object Object]' || serializedValue === 'undefined') {
+          throw new Error(`Invalid serialization result: ${serializedValue}`)
+        }
+
+        // Test deserialization to ensure data integrity
+        const testParse = JSON.parse(serializedValue)
+        if (typeof testParse !== typeof value) {
+          throw new Error('Serialization type mismatch')
+        }
+
+      } catch (serializationError) {
+        console.error('❌ JSON serialization failed for key:', key, 'Error:', serializationError)
+        console.error('❌ Value that failed to serialize:', value)
+
+        // Try to create a safe fallback representation
+        serializedValue = JSON.stringify({
+          error: 'serialization_failed',
+          originalType: typeof value,
+          timestamp: Date.now(),
+          key: key
+        })
+      }
 
       if (this.useUpstash && this.upstashRedis) {
         console.log('💾 Setting in Upstash Redis:', key, 'TTL:', ttlSeconds)
@@ -280,12 +343,55 @@ class CacheService {
     }
   }
 
+  /**
+   * Delete a key from cache
+   */
+  async delete(key: string): Promise<boolean> {
+    if (!this.isEnabled) {
+      console.log('🚫 Cache disabled, skipping delete for key:', key)
+      return false
+    }
+
+    // Delete from memory cache if using fallback
+    if (this.useMemoryFallback) {
+      const deleted = this.memoryCache.delete(key)
+      console.log(`🧠 Memory cache delete for key: ${key} - ${deleted ? 'found' : 'not found'}`)
+      return deleted
+    }
+
+    try {
+      if (this.useUpstash && this.upstashRedis) {
+        console.log('🗑️ Deleting from Upstash Redis:', key)
+        await this.upstashRedis.del(key)
+        this.commandCount++
+        console.log('✅ Upstash delete successful')
+      } else if (this.redis) {
+        console.log('🗑️ Deleting from traditional Redis:', key)
+        await this.redis.del(key)
+        console.log('✅ Redis delete successful')
+      } else {
+        console.warn('⚠️ No Redis client available, using memory fallback')
+        this.useMemoryFallback = true
+        return this.delete(key) // Retry with memory cache
+      }
+      return true
+    } catch (error) {
+      console.error('❌ Cache delete error for key:', key, 'Error:', error)
+      console.log('🔄 Falling back to memory cache due to Redis error')
+      this.useMemoryFallback = true
+      return this.delete(key) // Retry with memory cache
+    }
+  }
+
   // Clean up expired memory cache entries
   private cleanupMemoryCache(): void {
     const now = Date.now()
     let cleaned = 0
 
-    for (const [key, cached] of this.memoryCache.entries()) {
+    // Convert to array to avoid iterator issues
+    const entries = Array.from(this.memoryCache.entries())
+
+    for (const [key, cached] of entries) {
       if (now >= cached.expiry) {
         this.memoryCache.delete(key)
         cleaned++

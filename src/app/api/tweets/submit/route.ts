@@ -27,13 +27,28 @@ export async function POST(request: NextRequest) {
     // Get manual submission service
     const submissionService = getManualTweetSubmissionService()
 
-    // Check submission status
+    // Check submission status with enhanced feedback
     const submissionStatus = submissionService.getSubmissionStatus(authResult.userId)
     if (!submissionStatus.canSubmit) {
+      let errorMessage = 'Submission temporarily unavailable'
+      let retryAfter = 300 // Default 5 minutes
+
+      if (submissionStatus.cooldownRemaining) {
+        errorMessage = `Please wait ${submissionStatus.cooldownRemaining} minutes before submitting another tweet.`
+        retryAfter = submissionStatus.cooldownRemaining * 60
+      } else if (submissionStatus.rateLimitResetTime) {
+        const waitTime = Math.ceil((submissionStatus.rateLimitResetTime - Date.now()) / 1000 / 60)
+        errorMessage = `You've reached the hourly submission limit. Please wait ${waitTime} minutes.`
+        retryAfter = waitTime * 60
+      }
+
       return NextResponse.json(
         {
-          error: `Please wait ${submissionStatus.cooldownRemaining} minutes before submitting another tweet.`,
-          cooldownRemaining: submissionStatus.cooldownRemaining
+          error: errorMessage,
+          cooldownRemaining: submissionStatus.cooldownRemaining,
+          rateLimitRemaining: submissionStatus.rateLimitRemaining,
+          retryAfter,
+          userMessage: 'Rate limiting helps ensure fair usage and system stability.'
         },
         { status: 429 }
       )
@@ -52,16 +67,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check for bypass mode (admin or emergency situations)
+    const bypassHeader = request.headers.get('x-bypass-circuit-breaker')
+    const bypassCircuitBreaker = bypassHeader === process.env.ADMIN_SECRET
+
+    if (bypassCircuitBreaker) {
+      console.log('🔓 Circuit breaker bypass enabled for manual submission')
+    }
+
     // Submit tweet with enhanced error handling
     try {
-      const result = await submissionService.submitTweet(tweetUrl, authResult.userId)
+      const result = await submissionService.submitTweet(tweetUrl, authResult.userId, bypassCircuitBreaker)
 
       if (result.success) {
         return NextResponse.json({
           success: true,
           message: result.message,
           tweetId: result.tweetId,
-          points: result.points
+          points: result.points,
+          bypassUsed: bypassCircuitBreaker
         })
       } else {
         // Handle submission failure with enhanced error handling
