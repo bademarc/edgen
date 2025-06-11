@@ -36,7 +36,7 @@ export class TweetTracker {
   private isRunning: boolean
   private twitterApi: TwitterApiService | null
   private lastSearchTime: number = 0
-  private readonly SEARCH_INTERVAL_MS = 15 * 60 * 1000 // 15 minutes to respect rate limits
+  private readonly SEARCH_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes to reduce rate limit pressure
 
   constructor() {
     this.keywords = ['@layeredge', '$EDGEN'] // Simplified to only required mentions
@@ -62,7 +62,7 @@ export class TweetTracker {
       return []
     }
 
-    // Respect rate limits - don't search more than once every 15 minutes
+    // Respect rate limits - don't search more than once every 30 minutes
     const now = Date.now()
     if (now - this.lastSearchTime < this.SEARCH_INTERVAL_MS) {
       console.log('Skipping search due to rate limit cooldown')
@@ -136,8 +136,8 @@ export class TweetTracker {
   async setupTwitterApiMonitoring(): Promise<void> {
     console.log('🔄 Setting up Twitter API monitoring system...')
 
-    // Run Twitter API search every 15 minutes to respect rate limits
-    cron.schedule('*/15 * * * *', async () => {
+    // Run Twitter API search every 30 minutes to reduce rate limit pressure
+    cron.schedule('*/30 * * * *', async () => {
       if (!this.isRunning) return
 
       const startTime = Date.now()
@@ -421,7 +421,7 @@ export class TweetTracker {
 
     console.log('✅ Tweet tracking system is now active!')
     console.log('📊 Monitoring method: Twitter API v1.1 only')
-    console.log('⏰ Search interval: Every 15 minutes (respecting rate limits)')
+    console.log('⏰ Search interval: Every 30 minutes (optimized for rate limits)')
   }
 
   /**

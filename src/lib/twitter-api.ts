@@ -53,11 +53,18 @@ export class TwitterApiService {
   private rateLimitInfo: RateLimitInfo | null = null
   private lastRequestTime: number = 0
   private requestCount: number = 0
-  private readonly MAX_REQUESTS_PER_MINUTE = 75 // Conservative limit
+  private readonly MAX_REQUESTS_PER_MINUTE = 50 // Reduced from 75 to be more conservative
   private isHealthy: boolean = true
   private lastHealthCheck: number = 0
   private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
   private cache = getEnhancedCacheService()
+
+  // Circuit breaker pattern for rate limit management
+  private circuitBreakerOpen: boolean = false
+  private circuitBreakerOpenTime: number = 0
+  private readonly CIRCUIT_BREAKER_TIMEOUT = 30 * 60 * 1000 // 30 minutes
+  private consecutiveFailures: number = 0
+  private readonly MAX_CONSECUTIVE_FAILURES = 3
 
   constructor() {
     this.bearerToken = process.env.TWITTER_BEARER_TOKEN || ''
@@ -110,9 +117,55 @@ export class TwitterApiService {
     return this.isHealthy
   }
 
+  // Circuit breaker check
+  private checkCircuitBreaker(): boolean {
+    const now = Date.now()
+
+    // If circuit breaker is open, check if timeout has passed
+    if (this.circuitBreakerOpen) {
+      if (now - this.circuitBreakerOpenTime > this.CIRCUIT_BREAKER_TIMEOUT) {
+        console.log('🔄 Circuit breaker timeout expired, attempting to close')
+        this.circuitBreakerOpen = false
+        this.consecutiveFailures = 0
+        return true
+      } else {
+        const remainingTime = Math.ceil((this.CIRCUIT_BREAKER_TIMEOUT - (now - this.circuitBreakerOpenTime)) / 1000 / 60)
+        console.warn(`🚫 Circuit breaker is OPEN - blocking requests for ${remainingTime} more minutes`)
+        return false
+      }
+    }
+
+    return true
+  }
+
+  // Handle circuit breaker on failures
+  private handleCircuitBreakerFailure(): void {
+    this.consecutiveFailures++
+    console.warn(`⚠️ API failure ${this.consecutiveFailures}/${this.MAX_CONSECUTIVE_FAILURES}`)
+
+    if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
+      this.circuitBreakerOpen = true
+      this.circuitBreakerOpenTime = Date.now()
+      console.error(`🚫 Circuit breaker OPENED - blocking API requests for ${this.CIRCUIT_BREAKER_TIMEOUT / 1000 / 60} minutes`)
+    }
+  }
+
+  // Reset circuit breaker on success
+  private handleCircuitBreakerSuccess(): void {
+    if (this.consecutiveFailures > 0) {
+      console.log('✅ API request successful - resetting failure count')
+      this.consecutiveFailures = 0
+    }
+  }
+
   // Rate limiting check
   private async checkRateLimit(): Promise<boolean> {
     const now = Date.now()
+
+    // Check circuit breaker first
+    if (!this.checkCircuitBreaker()) {
+      throw new Error('Circuit breaker is open - API requests blocked due to repeated failures')
+    }
 
     // Reset request count every minute
     if (now - this.lastRequestTime > 60000) {
@@ -120,7 +173,7 @@ export class TwitterApiService {
       this.lastRequestTime = now
     }
 
-    // Check if we're approaching rate limits
+    // Check if we're approaching rate limits (more conservative)
     if (this.requestCount >= this.MAX_REQUESTS_PER_MINUTE) {
       console.warn('Approaching rate limit, delaying request')
       const waitTime = 60000 - (now - this.lastRequestTime)
@@ -131,8 +184,8 @@ export class TwitterApiService {
       }
     }
 
-    // Check API-provided rate limit info
-    if (this.rateLimitInfo && this.rateLimitInfo.remaining <= 5 && now < this.rateLimitInfo.resetTime) {
+    // Check API-provided rate limit info (more conservative threshold)
+    if (this.rateLimitInfo && this.rateLimitInfo.remaining <= 10 && now < this.rateLimitInfo.resetTime) {
       const waitTime = this.rateLimitInfo.resetTime - now
       console.warn(`Rate limit nearly exceeded, waiting ${waitTime}ms`)
       await new Promise(resolve => setTimeout(resolve, waitTime))
@@ -179,14 +232,18 @@ export class TwitterApiService {
         // Check if this is a usage cap exceeded error (monthly limit)
         if (errorData?.title === 'UsageCapExceeded' || errorData?.detail?.includes('Usage cap exceeded')) {
           console.error('❌ Twitter API monthly usage cap exceeded:', errorData)
+          this.handleCircuitBreakerFailure()
           throw new Error('Twitter API monthly usage limit exceeded. Please upgrade your Twitter API plan or wait until next month.')
         }
 
         console.warn(`Rate limited! Remaining requests: ${remainingRequests}, Reset time: ${resetTime}`)
+        this.handleCircuitBreakerFailure()
 
         if (retryCount < maxRetries) {
-          const delay = Math.min(baseDelay * Math.pow(2, retryCount), 30000) // Max 30 seconds
-          console.log(`Retrying after ${delay}ms...`)
+          // Exponential backoff with jitter to avoid thundering herd
+          const jitter = Math.random() * 1000 // 0-1 second jitter
+          const delay = Math.min(baseDelay * Math.pow(2, retryCount) + jitter, 60000) // Max 60 seconds
+          console.log(`Retrying after ${Math.round(delay)}ms with jitter...`)
           await new Promise(resolve => setTimeout(resolve, delay))
           return this.makeRequest(url, retryCount + 1)
         } else {
@@ -216,6 +273,10 @@ export class TwitterApiService {
 
       const data = await response.json()
       console.log('Twitter API response data:', JSON.stringify(data, null, 2))
+
+      // Handle successful response
+      this.handleCircuitBreakerSuccess()
+
       return data
     } catch (error) {
       console.error(`Error in makeRequest (attempt ${retryCount + 1}):`, error)
@@ -377,10 +438,10 @@ export class TwitterApiService {
         return null
       }
 
-      // Check cache first (4-hour TTL for engagement metrics)
+      // Check cache first (6-hour TTL for engagement metrics to reduce API calls)
       const cached = await this.cache.getTweetEngagement(tweetId)
       if (cached) {
-        console.log(`🎯 Returning cached engagement metrics for tweet ${tweetId}`)
+        console.log(`🎯 Returning cached engagement metrics for tweet ${tweetId} (reducing API calls)`)
         return cached
       }
 
@@ -406,9 +467,9 @@ export class TwitterApiService {
         replies: tweet.public_metrics?.reply_count || 0,
       }
 
-      // Cache the engagement metrics for 4 hours
-      await this.cache.cacheTweetEngagement(tweetId, metrics, 14400)
-      console.log(`💾 Cached engagement metrics for tweet ${tweetId}`)
+      // Cache the engagement metrics for 6 hours (21600 seconds) to reduce API calls
+      await this.cache.cacheTweetEngagement(tweetId, metrics, 21600)
+      console.log(`💾 Cached engagement metrics for tweet ${tweetId} for 6 hours (rate limit optimization)`)
 
       return metrics
     } catch (error) {

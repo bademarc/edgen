@@ -51,6 +51,14 @@ class CacheService {
           console.log('🔗 Using Upstash Redis FREE tier (10k commands/day)')
           console.log('✅ Upstash Redis client initialized successfully')
 
+          // Test the connection to ensure it works
+          try {
+            await this.upstashRedis.ping()
+            console.log('🎯 Upstash Redis connection test successful - WRONGPASS errors should be resolved')
+          } catch (testError) {
+            console.warn('⚠️ Upstash Redis connection test failed:', testError)
+          }
+
           // Note: Upstash uses REST API, not traditional Redis protocol
           // So we don't set up a traditional Redis connection here
         } catch (upstashError) {
