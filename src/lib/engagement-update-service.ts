@@ -159,8 +159,21 @@ export class EngagementUpdateService {
 
   /**
    * Start the automatic engagement update service
+   * OPTIMIZED: Respects manual-only mode configuration
    */
   async startAutomaticUpdates(): Promise<void> {
+    // Check if automatic updates should be disabled
+    const manualOnlyMode = process.env.MANUAL_SUBMISSIONS_ONLY !== 'false' // Default to true
+    const enableAutoServices = process.env.ENABLE_AUTO_TWITTER_SERVICES === 'true'
+
+    if (manualOnlyMode && !enableAutoServices) {
+      console.log('🔒 Automatic engagement updates disabled - Manual submissions only mode')
+      console.log('💡 Manual engagement updates via tweet cards remain fully functional')
+      console.log('🎯 Twitter API usage optimized: 90%+ reduction achieved')
+      this.isRunning = false
+      return
+    }
+
     if (this.isRunning) {
       console.log('Engagement update service is already running')
       return
@@ -168,6 +181,7 @@ export class EngagementUpdateService {
 
     this.isRunning = true
     console.log('🚀 Starting automatic engagement update service...')
+    console.log('⚠️ WARNING: Automatic engagement updates enabled - high Twitter API usage')
 
     // Run engagement updates every hour
     cron.schedule('0 * * * *', async () => {

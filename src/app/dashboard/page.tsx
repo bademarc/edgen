@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { SubmitTweetCTA } from '@/components/ui/submit-tweet-cta'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { DateTooltip } from '@/components/ui/tooltip'
 
 
 interface DashboardStats {
@@ -36,7 +37,9 @@ interface RecentTweet {
   retweets: number
   replies: number
   totalPoints: number
-  createdAt: string
+  createdAt: string // This is now the original tweet date from API transformation
+  submittedAt?: string // When submitted to our system
+  originalTweetDate?: string // Original tweet creation date
   user: {
     id: string
     name: string | null
@@ -290,23 +293,65 @@ export default function DashboardPage() {
               <CardContent>
                 {recentTweets.length > 0 ? (
                   <div className="space-y-4">
-                    {recentTweets.slice(0, 3).map((tweet) => (
-                      <div key={tweet.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(tweet.createdAt).toLocaleDateString()}
-                          </p>
-                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                            <span>❤️ {tweet.likes}</span>
-                            <span>🔄 {tweet.retweets}</span>
-                            <span>💬 {tweet.replies}</span>
+                    {recentTweets.slice(0, 3).map((tweet) => {
+                      // FIXED: Better date formatting and display
+                      const tweetDate = new Date(tweet.createdAt)
+                      const submittedDate = tweet.submittedAt ? new Date(tweet.submittedAt) : null
+
+                      const formatDate = (date: Date) => {
+                        const now = new Date()
+                        const diffTime = Math.abs(now.getTime() - date.getTime())
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+                        if (diffDays === 1) return 'Today'
+                        if (diffDays === 2) return 'Yesterday'
+                        if (diffDays <= 7) return `${diffDays - 1} days ago`
+
+                        return date.toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+                        })
+                      }
+
+                      return (
+                        <div key={tweet.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <DateTooltip
+                                originalDate={tweetDate}
+                                submittedDate={submittedDate || undefined}
+                                className="text-sm text-muted-foreground"
+                              >
+                                {formatDate(tweetDate)}
+                                {submittedDate && (
+                                  <span className="ml-1 text-xs text-muted-foreground/70">
+                                    ℹ️
+                                  </span>
+                                )}
+                              </DateTooltip>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <span className="text-red-500">❤️</span>
+                                {tweet.likes.toLocaleString()}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="text-green-500">🔄</span>
+                                {tweet.retweets.toLocaleString()}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="text-blue-500">💬</span>
+                                {tweet.replies.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="points">+{tweet.totalPoints} points</Badge>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <Badge variant="points">+{tweet.totalPoints} points</Badge>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8">

@@ -84,6 +84,17 @@ export async function GET(request: NextRequest) {
 
     console.log('Storing encrypted tokens for user:', twitterUser.username)
 
+    // OPTIMIZED: Check if automatic monitoring should be enabled
+    const manualOnlyMode = process.env.MANUAL_SUBMISSIONS_ONLY !== 'false' // Default to true
+    const enableAutoServices = process.env.ENABLE_AUTO_TWITTER_SERVICES === 'true'
+    const autoMonitoringEnabled = !manualOnlyMode || enableAutoServices
+
+    if (manualOnlyMode && !enableAutoServices) {
+      console.log('🔒 Auto-monitoring disabled for user (manual-only mode)')
+    } else {
+      console.log('⚠️ Auto-monitoring enabled for user (high API usage)')
+    }
+
     // Create or update user in database
     const user = await prisma.user.upsert({
       where: { xUserId: twitterUser.id },
@@ -91,7 +102,7 @@ export async function GET(request: NextRequest) {
         name: twitterUser.name,
         xUsername: twitterUser.username,
         image: twitterUser.profile_image_url || null,
-        autoMonitoringEnabled: true,
+        autoMonitoringEnabled: autoMonitoringEnabled,
         // Update encrypted token information
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken,
@@ -106,7 +117,7 @@ export async function GET(request: NextRequest) {
         xUserId: twitterUser.id,
         image: twitterUser.profile_image_url || null,
         totalPoints: 0,
-        autoMonitoringEnabled: true,
+        autoMonitoringEnabled: autoMonitoringEnabled,
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken,
         tokenExpiresAt: tokenResponse.expires_in
@@ -115,19 +126,38 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Initialize tweet monitoring
-    await prisma.tweetMonitoring.upsert({
-      where: { userId: user.id },
-      update: {
-        status: 'active',
-        errorMessage: null
-      },
-      create: {
-        userId: user.id,
-        status: 'active',
-        tweetsFound: 0
-      }
-    })
+    // OPTIMIZED: Initialize tweet monitoring only if auto-services are enabled
+    if (autoMonitoringEnabled) {
+      console.log('📡 Initializing automatic tweet monitoring for user')
+      await prisma.tweetMonitoring.upsert({
+        where: { userId: user.id },
+        update: {
+          status: 'active',
+          errorMessage: null
+        },
+        create: {
+          userId: user.id,
+          status: 'active',
+          tweetsFound: 0
+        }
+      })
+    } else {
+      console.log('🔒 Skipping automatic tweet monitoring (manual-only mode)')
+      // Ensure monitoring is disabled if it exists
+      await prisma.tweetMonitoring.upsert({
+        where: { userId: user.id },
+        update: {
+          status: 'disabled',
+          errorMessage: 'Manual submissions only mode - automatic monitoring disabled'
+        },
+        create: {
+          userId: user.id,
+          status: 'disabled',
+          tweetsFound: 0,
+          errorMessage: 'Manual submissions only mode - automatic monitoring disabled'
+        }
+      })
+    }
 
     // Clear OAuth cookies
     cookieStore.delete('twitter_code_verifier')

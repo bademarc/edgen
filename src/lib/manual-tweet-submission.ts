@@ -365,7 +365,7 @@ export class ManualTweetSubmissionService {
       const result = await prisma.$transaction(async (tx) => {
         console.log(`💾 Starting database transaction for user ${userId}`)
 
-        // 1. Create tweet record
+        // 1. Create tweet record with proper date handling
         const createdTweet = await tx.tweet.create({
           data: {
             tweetId: verification.tweetData!.id,
@@ -379,7 +379,9 @@ export class ManualTweetSubmissionService {
             userId: userId,
             isAutoDiscovered: false, // Manual submission
             url: tweetUrl,
-            createdAt: new Date()
+            originalTweetDate: verification.tweetData!.createdAt ? new Date(verification.tweetData!.createdAt) : new Date(),
+            submittedAt: new Date(), // When user submitted to our system
+            createdAt: new Date() // Database record creation
           }
         })
 
@@ -516,7 +518,7 @@ export class ManualTweetSubmissionService {
       const result = await prisma.$transaction(async (tx) => {
         console.log(`💾 Starting fallback database transaction for user ${userId}`)
 
-        // 1. Create tweet record with fallback flag
+        // 1. Create tweet record with fallback flag and proper date handling
         const createdTweet = await tx.tweet.create({
           data: {
             tweetId: tweetData.id,
@@ -530,9 +532,9 @@ export class ManualTweetSubmissionService {
             userId: userId,
             isAutoDiscovered: false,
             url: tweetUrl,
-            createdAt: new Date(),
-            // Add a flag to indicate this was processed in fallback mode
-            notes: 'Processed in fallback mode due to API limitations'
+            originalTweetDate: tweetData.createdAt ? new Date(tweetData.createdAt) : new Date(),
+            submittedAt: new Date(), // When user submitted to our system
+            createdAt: new Date() // Database record creation
           }
         })
 

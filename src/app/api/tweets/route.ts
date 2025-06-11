@@ -26,12 +26,21 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        submittedAt: 'desc', // FIXED: Sort by submission date for recent contributions
       },
       take: limit,
     })
 
-    return NextResponse.json(tweets)
+    // FIXED: Transform tweets to use original tweet date for display
+    const transformedTweets = tweets.map(tweet => ({
+      ...tweet,
+      // Use originalTweetDate for display if available, fallback to submittedAt
+      createdAt: tweet.originalTweetDate || tweet.submittedAt,
+      submittedAt: tweet.submittedAt, // Keep submission date for sorting
+      originalTweetDate: tweet.originalTweetDate
+    }))
+
+    return NextResponse.json(transformedTweets)
   } catch (error) {
     console.error('Error fetching tweets:', error)
     return NextResponse.json(

@@ -652,3 +652,84 @@ a:focus-visible,
     padding-bottom: 8px;
   }
 }
+
+/* FIXED: Tooltip and hover state improvements */
+/* Ensure tooltips appear above all other elements */
+[data-radix-tooltip-content] {
+  z-index: 9999 !important;
+  pointer-events: none;
+  max-width: 320px;
+  word-wrap: break-word;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Prevent tooltip clipping in containers */
+[data-radix-tooltip-portal] {
+  z-index: 9999 !important;
+}
+
+/* Fix overflow issues that might clip tooltips */
+.tooltip-container {
+  overflow: visible !important;
+}
+
+/* Ensure cards don't clip hover elements */
+.card {
+  overflow: visible;
+}
+
+/* Fix z-index stacking for interactive elements */
+.interactive-element {
+  position: relative;
+  z-index: 1;
+}
+
+.interactive-element:hover,
+.interactive-element:focus {
+  z-index: 10;
+}
+
+/* Improve button accessibility and hover states */
+.btn-with-tooltip {
+  position: relative;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-with-tooltip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced date tooltip styling */
+.date-tooltip-trigger {
+  cursor: help;
+  border-bottom: 1px dotted hsl(var(--muted-foreground));
+  transition: border-color 0.2s ease;
+}
+
+.date-tooltip-trigger:hover {
+  border-color: hsl(var(--primary));
+}
+
+/* Mobile tooltip adjustments */
+@media (max-width: 768px) {
+  [data-radix-tooltip-content] {
+    max-width: 280px;
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  /* Ensure tooltips don't interfere with touch interactions */
+  .touch-device [data-radix-tooltip-content] {
+    display: none;
+  }
+}
+
+/* High contrast mode tooltip support */
+@media (prefers-contrast: high) {
+  [data-radix-tooltip-content] {
+    border: 2px solid currentColor;
+    background: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+}

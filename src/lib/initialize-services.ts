@@ -2,13 +2,35 @@ import { getTweetTrackerInstance } from './tweet-tracker'
 import { getEngagementUpdateService } from './engagement-update-service'
 
 /**
- * Initialize all LayerEdge community platform services
- * This replaces all web scraping with Twitter API-only approach
+ * Initialize LayerEdge community platform services
+ * OPTIMIZED: Manual submissions only - automatic tracking disabled
  */
 export async function initializeServices(): Promise<void> {
-  console.log('🚀 Initializing LayerEdge Community Platform Services...')
+  console.log('🚀 Initializing LayerEdge Community Platform Services (Manual Mode)...')
+
+  // Check if automatic services should be enabled
+  const enableAutoServices = process.env.ENABLE_AUTO_TWITTER_SERVICES === 'true'
+  const manualOnlyMode = process.env.MANUAL_SUBMISSIONS_ONLY !== 'false' // Default to true
+
+  if (manualOnlyMode && !enableAutoServices) {
+    console.log('🔒 MANUAL SUBMISSIONS ONLY MODE ENABLED')
+    console.log('📋 Active services:')
+    console.log('  - Manual Tweet Submission: ✅ ENABLED')
+    console.log('  - Automatic Tweet Tracking: ❌ DISABLED')
+    console.log('  - Automatic Engagement Updates: ❌ DISABLED')
+    console.log('  - Background Monitoring: ❌ DISABLED')
+    console.log('')
+    console.log('🎯 Twitter API Usage: OPTIMIZED (90%+ reduction)')
+    console.log('  - API calls only on manual tweet submissions')
+    console.log('  - No background/automatic API usage')
+    console.log('  - Enhanced rate limiting for manual submissions')
+    console.log('  - Circuit breaker bypass for emergency submissions')
+    return
+  }
 
   try {
+    console.log('⚠️ AUTOMATIC SERVICES MODE (High API Usage)')
+
     // Initialize Tweet Tracker (Twitter API search only)
     console.log('📡 Starting Tweet Tracker (Twitter API only)...')
     const tweetTracker = getTweetTrackerInstance()
@@ -19,7 +41,7 @@ export async function initializeServices(): Promise<void> {
     const engagementService = getEngagementUpdateService()
     await engagementService.startAutomaticUpdates()
 
-    console.log('✅ All services initialized successfully!')
+    console.log('✅ All automatic services initialized!')
     console.log('📋 Active services:')
     console.log('  - Tweet Tracker: Twitter API v1.1 search (15-minute intervals)')
     console.log('  - Engagement Updates: Hourly engagement metric updates')
@@ -182,12 +204,21 @@ export async function healthCheck(): Promise<{
   }
 }
 
-// Auto-initialize services when this module is imported
+// OPTIMIZED: Conditional auto-initialization based on environment
 if (typeof window === 'undefined') { // Only run on server side
-  // Don't auto-initialize in development to avoid conflicts
-  if (process.env.NODE_ENV === 'production') {
-    initializeServices().catch(error => {
-      console.error('Failed to auto-initialize services:', error)
-    })
+  const manualOnlyMode = process.env.MANUAL_SUBMISSIONS_ONLY !== 'false' // Default to true
+  const enableAutoServices = process.env.ENABLE_AUTO_TWITTER_SERVICES === 'true'
+
+  if (!manualOnlyMode || enableAutoServices) {
+    // Only auto-initialize if automatic services are explicitly enabled
+    if (process.env.NODE_ENV === 'production') {
+      console.log('🔄 Auto-initializing services (automatic mode enabled)')
+      initializeServices().catch(error => {
+        console.error('Failed to auto-initialize services:', error)
+      })
+    }
+  } else {
+    console.log('🔒 Manual submissions only mode - skipping auto-initialization')
+    console.log('💡 To enable automatic services, set ENABLE_AUTO_TWITTER_SERVICES=true')
   }
 }

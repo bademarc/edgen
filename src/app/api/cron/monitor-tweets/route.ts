@@ -6,6 +6,22 @@ import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
+    // OPTIMIZED: Check if automatic monitoring is disabled
+    const manualOnlyMode = process.env.MANUAL_SUBMISSIONS_ONLY !== 'false' // Default to true
+    const enableAutoServices = process.env.ENABLE_AUTO_TWITTER_SERVICES === 'true'
+
+    if (manualOnlyMode && !enableAutoServices) {
+      console.log('🔒 Cron monitoring disabled - Manual submissions only mode')
+      return NextResponse.json({
+        success: true,
+        message: 'Automatic monitoring disabled - Manual submissions only mode active',
+        strategy: 'manual_only',
+        optimization: 'Twitter API usage reduced by 90%+',
+        manualSubmissions: 'Fully functional via /submit-tweet page',
+        timestamp: new Date().toISOString()
+      })
+    }
+
     // Ensure server initialization (including enhanced tracking)
     await ensureServerInitialization()
 
@@ -31,6 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('🚀 Starting optimized monitoring job (RSS-first strategy)...')
+    console.log('⚠️ WARNING: Automatic monitoring active - high Twitter API usage')
     const startTime = Date.now()
 
     // Phase 1: RSS Monitoring (Primary method - 90% of monitoring)

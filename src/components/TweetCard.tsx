@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { useState, useEffect, useCallback, memo } from 'react'
+import { DateTooltip, ButtonTooltip } from '@/components/ui/tooltip'
 
 interface TweetCardProps {
   tweet: {
@@ -22,6 +23,8 @@ interface TweetCardProps {
     replies: number
     totalPoints: number
     createdAt: Date
+    submittedAt?: Date // FIXED: Add submitted date for tooltip
+    originalTweetDate?: Date // FIXED: Add original tweet date
     user: {
       id: string
       name?: string | null
@@ -171,14 +174,15 @@ export const TweetCard = memo(function TweetCard({
             </AnimatePresence>
           </motion.div>
           {showUpdateButton && (
-            <button
+            <ButtonTooltip
+              tooltip={isUpdating ? 'Fetching latest engagement data...' : 'Refresh likes, retweets, and replies from X/Twitter'}
+              side="top"
+              className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50 btn-with-tooltip"
               onClick={handleUpdateClick}
               disabled={isUpdating}
-              className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
-              title="Update engagement metrics"
             >
               <ArrowPathIcon className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
-            </button>
+            </ButtonTooltip>
           )}
         </div>
       </div>
@@ -254,19 +258,27 @@ export const TweetCard = memo(function TweetCard({
           </motion.div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+        <div className="flex items-center justify-between">
+          <DateTooltip
+            originalDate={tweet.originalTweetDate || tweet.createdAt}
+            submittedDate={tweet.submittedAt}
+            className="flex items-center space-x-2 text-sm text-muted-foreground"
+          >
             <CalendarIcon className="h-4 w-4" />
-            <span>{formatDate(tweet.createdAt)}</span>
-          </div>
-          <a
-            href={tweet.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-layeredge-ghost px-4 py-2 rounded-lg text-sm font-semibold hover-lift"
+            <span>{formatDate(tweet.originalTweetDate || tweet.createdAt)}</span>
+            {tweet.submittedAt && tweet.originalTweetDate && (
+              <span className="text-xs text-muted-foreground/70 ml-1">ℹ️</span>
+            )}
+          </DateTooltip>
+
+          <ButtonTooltip
+            tooltip="View original tweet on X/Twitter"
+            side="top"
+            className="btn-layeredge-ghost px-4 py-2 rounded-lg text-sm font-semibold hover-lift btn-with-tooltip"
+            onClick={() => window.open(tweet.url, '_blank', 'noopener,noreferrer')}
           >
             View Tweet →
-          </a>
+          </ButtonTooltip>
         </div>
       </div>
     </motion.div>

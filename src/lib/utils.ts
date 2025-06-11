@@ -5,15 +5,39 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Date formatting utilities
+// FIXED: Enhanced date formatting utilities
 export function formatDate(date: Date | string): string {
   const d = new Date(date)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - d.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  // Show relative time for recent dates
+  if (diffDays === 1) return 'Today'
+  if (diffDays === 2) return 'Yesterday'
+  if (diffDays <= 7) return `${diffDays - 1} days ago`
+
+  // Show formatted date for older tweets
   return d.toLocaleDateString('en-US', {
-    year: 'numeric',
+    year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
+  })
+}
+
+// Absolute date formatting for tooltips and detailed views
+export function formatAbsoluteDate(date: Date | string): string {
+  const d = new Date(date)
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short'
   })
 }
 
