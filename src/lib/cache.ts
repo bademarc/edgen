@@ -22,6 +22,10 @@ class CacheService {
   private commandCount: number = 0
   private dailyLimit: number = 10000 // Upstash free tier limit
 
+  // In-memory cache fallback for when Redis fails
+  private memoryCache: Map<string, { value: any, expiry: number }> = new Map()
+  private useMemoryFallback: boolean = false
+
   constructor() {
     this.initializeRedis()
   }
@@ -55,12 +59,22 @@ class CacheService {
           try {
             await this.upstashRedis.ping()
             console.log('🎯 Upstash Redis connection test successful - WRONGPASS errors should be resolved')
+
+            // Additional test: set and get a test value
+            await this.upstashRedis.set('test:connection', 'success', { ex: 60 })
+            const testValue = await this.upstashRedis.get('test:connection')
+            if (testValue === 'success') {
+              console.log('✅ Upstash Redis read/write operations verified')
+              await this.upstashRedis.del('test:connection')
+            }
           } catch (testError) {
             console.warn('⚠️ Upstash Redis connection test failed:', testError)
+            throw testError // Re-throw to trigger fallback
           }
 
           // Note: Upstash uses REST API, not traditional Redis protocol
           // So we don't set up a traditional Redis connection here
+          return // CRITICAL: Return here to prevent fallback to traditional Redis
         } catch (upstashError) {
           console.error('❌ Upstash Redis initialization failed:', upstashError)
           console.log('🔄 Falling back to traditional Redis...')
@@ -118,7 +132,9 @@ class CacheService {
 
     } catch (error) {
       console.error('⚠️ Redis cache initialization failed:', error)
-      this.isEnabled = false
+      console.log('🔄 Enabling in-memory cache fallback...')
+      this.useMemoryFallback = true
+      this.isEnabled = true // Enable cache with memory fallback
     }
   }
 
@@ -128,10 +144,26 @@ class CacheService {
       return null
     }
 
+    // Check memory cache first if using fallback
+    if (this.useMemoryFallback) {
+      const cached = this.memoryCache.get(key)
+      if (cached) {
+        if (Date.now() < cached.expiry) {
+          console.log('🧠 Memory cache hit for key:', key)
+          return cached.value
+        } else {
+          this.memoryCache.delete(key)
+        }
+      }
+      console.log('🧠 Memory cache miss for key:', key)
+      return null
+    }
+
     // Check daily limit for Upstash
     if (this.useUpstash && this.commandCount >= this.dailyLimit) {
-      console.warn('⚠️ Upstash daily limit reached, cache disabled')
-      return null
+      console.warn('⚠️ Upstash daily limit reached, falling back to memory cache')
+      this.useMemoryFallback = true
+      return this.get(key) // Retry with memory cache
     }
 
     try {
@@ -147,21 +179,17 @@ class CacheService {
         value = await this.redis.get(key)
         console.log('✅ Redis get result:', value ? 'found' : 'not found')
       } else {
-        console.warn('⚠️ No Redis client available')
-        return null
+        console.warn('⚠️ No Redis client available, using memory fallback')
+        this.useMemoryFallback = true
+        return this.get(key) // Retry with memory cache
       }
 
       return value ? JSON.parse(value) : null
     } catch (error) {
       console.error('❌ Cache get error for key:', key, 'Error:', error)
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          name: error.name
-        })
-      }
-      return null
+      console.log('🔄 Falling back to memory cache due to Redis error')
+      this.useMemoryFallback = true
+      return this.get(key) // Retry with memory cache
     }
   }
 
@@ -171,10 +199,25 @@ class CacheService {
       return false
     }
 
+    // Use memory cache if fallback is enabled
+    if (this.useMemoryFallback) {
+      const expiry = Date.now() + (ttlSeconds * 1000)
+      this.memoryCache.set(key, { value, expiry })
+      console.log('🧠 Memory cache set for key:', key, 'TTL:', ttlSeconds)
+
+      // Clean up expired entries periodically
+      if (this.memoryCache.size > 1000) {
+        this.cleanupMemoryCache()
+      }
+
+      return true
+    }
+
     // Check daily limit for Upstash
     if (this.useUpstash && this.commandCount >= this.dailyLimit) {
-      console.warn('⚠️ Upstash daily limit reached, cache disabled')
-      return false
+      console.warn('⚠️ Upstash daily limit reached, falling back to memory cache')
+      this.useMemoryFallback = true
+      return this.set(key, value, ttlSeconds) // Retry with memory cache
     }
 
     try {
@@ -190,20 +233,33 @@ class CacheService {
         await this.redis.setex(key, ttlSeconds, serializedValue)
         console.log('✅ Redis set successful')
       } else {
-        console.warn('⚠️ No Redis client available for set operation')
-        return false
+        console.warn('⚠️ No Redis client available, using memory fallback')
+        this.useMemoryFallback = true
+        return this.set(key, value, ttlSeconds) // Retry with memory cache
       }
       return true
     } catch (error) {
       console.error('❌ Cache set error for key:', key, 'Error:', error)
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          name: error.name
-        })
+      console.log('🔄 Falling back to memory cache due to Redis error')
+      this.useMemoryFallback = true
+      return this.set(key, value, ttlSeconds) // Retry with memory cache
+    }
+  }
+
+  // Clean up expired memory cache entries
+  private cleanupMemoryCache(): void {
+    const now = Date.now()
+    let cleaned = 0
+
+    for (const [key, cached] of this.memoryCache.entries()) {
+      if (now >= cached.expiry) {
+        this.memoryCache.delete(key)
+        cleaned++
       }
-      return false
+    }
+
+    if (cleaned > 0) {
+      console.log(`🧹 Cleaned up ${cleaned} expired memory cache entries`)
     }
   }
 

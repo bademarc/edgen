@@ -131,7 +131,7 @@ export class TwitterUserApiService {
   ): Promise<UserApiResult<TwitterUserTimelineResponse>> {
     try {
       // Get user's access token
-      const { accessToken, refreshed } = await getUserAccessToken(userId)
+      const { accessToken, refreshed } = await this.getUserAccessToken(userId)
       
       if (!accessToken) {
         return {

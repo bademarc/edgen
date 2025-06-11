@@ -36,10 +36,10 @@ export class TweetTracker {
   private isRunning: boolean
   private twitterApi: TwitterApiService | null
   private lastSearchTime: number = 0
-  private readonly SEARCH_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes to reduce rate limit pressure
+  private readonly SEARCH_INTERVAL_MS = 60 * 60 * 1000 // 60 minutes to prevent rate limit exhaustion
 
   constructor() {
-    this.keywords = ['@layeredge', '$EDGEN'] // Simplified to only required mentions
+    this.keywords = ['@layeredge', 'EDGEN'] // Fixed: removed $ to avoid cashtag syntax errors
     this.trackedUsers = new Set()
     this.isRunning = false
 
@@ -62,7 +62,7 @@ export class TweetTracker {
       return []
     }
 
-    // Respect rate limits - don't search more than once every 30 minutes
+    // Respect rate limits - don't search more than once every 60 minutes
     const now = Date.now()
     if (now - this.lastSearchTime < this.SEARCH_INTERVAL_MS) {
       console.log('Skipping search due to rate limit cooldown')
@@ -70,8 +70,10 @@ export class TweetTracker {
     }
 
     try {
-      const query = this.keywords.join(' OR ')
-      console.log(`🔍 Searching tweets with Twitter API: ${query}`)
+      // Build proper Twitter API v2 search query
+      // Use quoted strings for exact matches and avoid cashtag syntax issues
+      const query = '@layeredge OR "EDGEN" OR "$EDGEN"'
+      console.log(`🔍 Searching tweets with Twitter API v2: ${query}`)
 
       // Use Twitter API to search for recent tweets
       const searchResults = await this.twitterApi.searchTweets(query, {
@@ -136,8 +138,8 @@ export class TweetTracker {
   async setupTwitterApiMonitoring(): Promise<void> {
     console.log('🔄 Setting up Twitter API monitoring system...')
 
-    // Run Twitter API search every 30 minutes to reduce rate limit pressure
-    cron.schedule('*/30 * * * *', async () => {
+    // Run Twitter API search every 60 minutes to prevent rate limit exhaustion
+    cron.schedule('0 * * * *', async () => {
       if (!this.isRunning) return
 
       const startTime = Date.now()
@@ -421,7 +423,7 @@ export class TweetTracker {
 
     console.log('✅ Tweet tracking system is now active!')
     console.log('📊 Monitoring method: Twitter API v1.1 only')
-    console.log('⏰ Search interval: Every 30 minutes (optimized for rate limits)')
+    console.log('⏰ Search interval: Every 60 minutes (prevents rate limit exhaustion)')
   }
 
   /**

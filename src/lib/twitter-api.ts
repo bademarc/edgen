@@ -53,7 +53,7 @@ export class TwitterApiService {
   private rateLimitInfo: RateLimitInfo | null = null
   private lastRequestTime: number = 0
   private requestCount: number = 0
-  private readonly MAX_REQUESTS_PER_MINUTE = 50 // Reduced from 75 to be more conservative
+  private readonly MAX_REQUESTS_PER_MINUTE = 25 // Further reduced to prevent rate limit exhaustion
   private isHealthy: boolean = true
   private lastHealthCheck: number = 0
   private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
@@ -62,7 +62,7 @@ export class TwitterApiService {
   // Circuit breaker pattern for rate limit management
   private circuitBreakerOpen: boolean = false
   private circuitBreakerOpenTime: number = 0
-  private readonly CIRCUIT_BREAKER_TIMEOUT = 30 * 60 * 1000 // 30 minutes
+  private readonly CIRCUIT_BREAKER_TIMEOUT = 60 * 60 * 1000 // 60 minutes for better recovery
   private consecutiveFailures: number = 0
   private readonly MAX_CONSECUTIVE_FAILURES = 3
 
@@ -184,10 +184,10 @@ export class TwitterApiService {
       }
     }
 
-    // Check API-provided rate limit info (more conservative threshold)
-    if (this.rateLimitInfo && this.rateLimitInfo.remaining <= 10 && now < this.rateLimitInfo.resetTime) {
+    // Check API-provided rate limit info (very conservative threshold)
+    if (this.rateLimitInfo && this.rateLimitInfo.remaining <= 20 && now < this.rateLimitInfo.resetTime) {
       const waitTime = this.rateLimitInfo.resetTime - now
-      console.warn(`Rate limit nearly exceeded, waiting ${waitTime}ms`)
+      console.warn(`Rate limit nearly exceeded (${this.rateLimitInfo.remaining} remaining), waiting ${waitTime}ms`)
       await new Promise(resolve => setTimeout(resolve, waitTime))
     }
 
@@ -438,10 +438,10 @@ export class TwitterApiService {
         return null
       }
 
-      // Check cache first (6-hour TTL for engagement metrics to reduce API calls)
+      // Check cache first (12-hour TTL for engagement metrics to drastically reduce API calls)
       const cached = await this.cache.getTweetEngagement(tweetId)
       if (cached) {
-        console.log(`🎯 Returning cached engagement metrics for tweet ${tweetId} (reducing API calls)`)
+        console.log(`🎯 Returning cached engagement metrics for tweet ${tweetId} (12-hour cache, reducing API calls)`)
         return cached
       }
 
@@ -467,9 +467,9 @@ export class TwitterApiService {
         replies: tweet.public_metrics?.reply_count || 0,
       }
 
-      // Cache the engagement metrics for 6 hours (21600 seconds) to reduce API calls
-      await this.cache.cacheTweetEngagement(tweetId, metrics, 21600)
-      console.log(`💾 Cached engagement metrics for tweet ${tweetId} for 6 hours (rate limit optimization)`)
+      // Cache the engagement metrics for 12 hours (43200 seconds) to drastically reduce API calls
+      await this.cache.cacheTweetEngagement(tweetId, metrics, 43200)
+      console.log(`💾 Cached engagement metrics for tweet ${tweetId} for 12 hours (aggressive rate limit optimization)`)
 
       return metrics
     } catch (error) {
