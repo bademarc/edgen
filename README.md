@@ -81,9 +81,7 @@ A comprehensive React.js web application for the LayerEdge $Edgen token communit
 
    Update `.env.local` with your configuration:
    ```env
-   # Database - Supabase PostgreSQL (already configured)
-   DATABASE_URL="postgres://postgres.bzqayhnlogpaxfcmmrlq:d234A879a1%23@aws-0-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
-   DIRECT_URL="postgres://postgres.bzqayhnlogpaxfcmmrlq:d234A879a1%23@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
+   # Database - Supabase PostgreSQL 
 
    NEXTAUTH_URL="http://localhost:3000"
    NEXTAUTH_SECRET="your-secret-key-here"
