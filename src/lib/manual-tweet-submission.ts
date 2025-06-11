@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client'
 import { TwitterApiService } from './twitter-api'
 import { TwitterUserApiService } from './twitter-user-api'
 import { validateTweetContent, calculatePoints } from './utils'
@@ -6,8 +5,7 @@ import { validateTweetURL } from './url-validator'
 import { getSimplifiedFallbackService } from './simplified-fallback-service'
 import { enhancedErrorHandler } from './enhanced-error-handler'
 import { getCircuitBreaker } from './improved-circuit-breaker'
-
-const prisma = new PrismaClient()
+import { prisma } from './db'
 
 export interface TweetSubmissionResult {
   success: boolean
@@ -18,6 +16,28 @@ export interface TweetSubmissionResult {
 }
 
 export interface TweetVerificationResult {
+  isValid: boolean
+  isOwnTweet: boolean
+  containsRequiredMentions: boolean
+  tweetData?: {
+    id: string
+    content: string
+    author: {
+      id: string
+      username: string
+      name: string
+    }
+    engagement: {
+      likes: number
+      retweets: number
+      replies: number
+    }
+    createdAt: Date
+  }
+  error?: string
+}
+
+export interface TweetOwnershipVerification {
   isValid: boolean
   isOwnTweet: boolean
   containsRequiredMentions: boolean
@@ -308,33 +328,79 @@ export class ManualTweetSubmissionService {
       }) - basePoints
       const totalPoints = basePoints + bonusPoints
 
-      // Save tweet to database
-      await prisma.tweet.create({
-        data: {
-          tweetId: verification.tweetData.id,
-          content: verification.tweetData.content,
-          likes: verification.tweetData.engagement.likes,
-          retweets: verification.tweetData.engagement.retweets,
-          replies: verification.tweetData.engagement.replies,
-          basePoints: basePoints,
-          bonusPoints: bonusPoints,
-          totalPoints: totalPoints,
-          userId: userId,
-          isAutoDiscovered: false, // Manual submission
-          url: tweetUrl,
-          submittedAt: new Date()
+      console.log(`📊 Points calculation for tweet ${verification.tweetData.id}:`, {
+        likes: verification.tweetData.engagement.likes,
+        retweets: verification.tweetData.engagement.retweets,
+        replies: verification.tweetData.engagement.replies,
+        basePoints,
+        bonusPoints,
+        totalPoints
+      })
+
+      // Use atomic transaction to ensure data consistency
+      const result = await prisma.$transaction(async (tx) => {
+        console.log(`💾 Starting database transaction for user ${userId}`)
+
+        // 1. Create tweet record
+        const createdTweet = await tx.tweet.create({
+          data: {
+            tweetId: verification.tweetData!.id,
+            content: verification.tweetData!.content,
+            likes: verification.tweetData!.engagement.likes,
+            retweets: verification.tweetData!.engagement.retweets,
+            replies: verification.tweetData!.engagement.replies,
+            basePoints: basePoints,
+            bonusPoints: bonusPoints,
+            totalPoints: totalPoints,
+            userId: userId,
+            isAutoDiscovered: false, // Manual submission
+            url: tweetUrl,
+            submittedAt: new Date()
+          }
+        })
+
+        console.log(`✅ Tweet record created: ${createdTweet.id}`)
+
+        // 2. Update user points
+        const updatedUser = await tx.user.update({
+          where: { id: userId },
+          data: {
+            totalPoints: {
+              increment: totalPoints
+            }
+          }
+        })
+
+        console.log(`✅ User points updated: ${updatedUser.totalPoints} (+${totalPoints})`)
+
+        // 3. Create points history record
+        const pointsHistory = await tx.pointsHistory.create({
+          data: {
+            userId: userId,
+            pointsAwarded: totalPoints,
+            reason: `Manual tweet submission: ${verification.tweetData!.id}`,
+            tweetId: createdTweet.id,
+            metadata: JSON.stringify({
+              tweetId: verification.tweetData!.id,
+              tweetUrl: tweetUrl,
+              engagement: verification.tweetData!.engagement,
+              basePoints,
+              bonusPoints,
+              submissionType: 'manual'
+            })
+          }
+        })
+
+        console.log(`✅ Points history record created: ${pointsHistory.id}`)
+
+        return {
+          tweet: createdTweet,
+          user: updatedUser,
+          pointsHistory
         }
       })
 
-      // Update user points
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          totalPoints: {
-            increment: totalPoints
-          }
-        }
-      })
+      console.log(`🎉 Transaction completed successfully for tweet ${verification.tweetData.id}`)
 
       // Update submission cooldown
       this.lastSubmissionTime.set(userId, Date.now())
@@ -349,7 +415,19 @@ export class ManualTweetSubmissionService {
       }
 
     } catch (error) {
-      console.error('Error in executeSubmission:', error)
+      console.error('❌ Error in executeSubmission:', error)
+      console.error('❌ Error details:', {
+        userId,
+        tweetUrl,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      })
+
+      // Check if this is a database transaction error
+      if (error instanceof Error && error.message.includes('transaction')) {
+        console.error('💾 Database transaction failed - this could indicate a points awarding issue')
+      }
 
       // Use enhanced error handler for better user feedback
       const errorResult = await enhancedErrorHandler.handleTwitterApiError(
@@ -403,35 +481,78 @@ export class ManualTweetSubmissionService {
       const basePoints = 3 // Reduced points for fallback mode
       const totalPoints = basePoints
 
-      // Save with fallback flag
-      await prisma.tweet.create({
-        data: {
-          tweetId: tweetData.id,
-          content: tweetData.content,
-          likes: tweetData.likes || 0,
-          retweets: tweetData.retweets || 0,
-          replies: tweetData.replies || 0,
-          basePoints: basePoints,
-          bonusPoints: 0, // No bonus points in fallback mode
-          totalPoints: totalPoints,
-          userId: userId,
-          isAutoDiscovered: false,
-          url: tweetUrl,
-          submittedAt: new Date(),
-          // Add a flag to indicate this was processed in fallback mode
-          notes: 'Processed in fallback mode due to API limitations'
+      console.log(`📊 Fallback points calculation for tweet ${tweetData.id}:`, {
+        basePoints,
+        totalPoints,
+        mode: 'fallback'
+      })
+
+      // Use atomic transaction for fallback submission too
+      const result = await prisma.$transaction(async (tx) => {
+        console.log(`💾 Starting fallback database transaction for user ${userId}`)
+
+        // 1. Create tweet record with fallback flag
+        const createdTweet = await tx.tweet.create({
+          data: {
+            tweetId: tweetData.id,
+            content: tweetData.content,
+            likes: tweetData.likes || 0,
+            retweets: tweetData.retweets || 0,
+            replies: tweetData.replies || 0,
+            basePoints: basePoints,
+            bonusPoints: 0, // No bonus points in fallback mode
+            totalPoints: totalPoints,
+            userId: userId,
+            isAutoDiscovered: false,
+            url: tweetUrl,
+            submittedAt: new Date(),
+            // Add a flag to indicate this was processed in fallback mode
+            notes: 'Processed in fallback mode due to API limitations'
+          }
+        })
+
+        console.log(`✅ Fallback tweet record created: ${createdTweet.id}`)
+
+        // 2. Update user points
+        const updatedUser = await tx.user.update({
+          where: { id: userId },
+          data: {
+            totalPoints: {
+              increment: totalPoints
+            }
+          }
+        })
+
+        console.log(`✅ Fallback user points updated: ${updatedUser.totalPoints} (+${totalPoints})`)
+
+        // 3. Create points history record for fallback
+        const pointsHistory = await tx.pointsHistory.create({
+          data: {
+            userId: userId,
+            pointsAwarded: totalPoints,
+            reason: `Manual tweet submission (fallback mode): ${tweetData.id}`,
+            tweetId: createdTweet.id,
+            metadata: JSON.stringify({
+              tweetId: tweetData.id,
+              tweetUrl: tweetUrl,
+              basePoints,
+              bonusPoints: 0,
+              submissionType: 'manual_fallback',
+              fallbackReason: 'API limitations'
+            })
+          }
+        })
+
+        console.log(`✅ Fallback points history record created: ${pointsHistory.id}`)
+
+        return {
+          tweet: createdTweet,
+          user: updatedUser,
+          pointsHistory
         }
       })
 
-      // Update user points
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          totalPoints: {
-            increment: totalPoints
-          }
-        }
-      })
+      console.log(`🎉 Fallback transaction completed successfully for tweet ${tweetData.id}`)
 
       // Update submission cooldown
       this.lastSubmissionTime.set(userId, Date.now())
@@ -444,7 +565,20 @@ export class ManualTweetSubmissionService {
       }
 
     } catch (error) {
-      console.error('Error in fallback submission:', error)
+      console.error('❌ Error in fallback submission:', error)
+      console.error('❌ Fallback error details:', {
+        userId,
+        tweetUrl,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      })
+
+      // Check if this is a database transaction error
+      if (error instanceof Error && error.message.includes('transaction')) {
+        console.error('💾 Fallback database transaction failed - points may not have been awarded')
+      }
+
       return {
         success: false,
         message: 'All submission methods failed. Please try again later.',
