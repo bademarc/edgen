@@ -55,22 +55,8 @@ class CacheService {
           console.log('🔗 Using Upstash Redis FREE tier (10k commands/day)')
           console.log('✅ Upstash Redis client initialized successfully')
 
-          // Test the connection to ensure it works
-          try {
-            await this.upstashRedis.ping()
-            console.log('🎯 Upstash Redis connection test successful - WRONGPASS errors should be resolved')
-
-            // Additional test: set and get a test value
-            await this.upstashRedis.set('test:connection', 'success', { ex: 60 })
-            const testValue = await this.upstashRedis.get('test:connection')
-            if (testValue === 'success') {
-              console.log('✅ Upstash Redis read/write operations verified')
-              await this.upstashRedis.del('test:connection')
-            }
-          } catch (testError) {
-            console.warn('⚠️ Upstash Redis connection test failed:', testError)
-            throw testError // Re-throw to trigger fallback
-          }
+          // Note: Connection testing is done asynchronously via testConnection() method
+          // to avoid blocking the constructor with await statements
 
           // Note: Upstash uses REST API, not traditional Redis protocol
           // So we don't set up a traditional Redis connection here
@@ -135,6 +121,54 @@ class CacheService {
       console.log('🔄 Enabling in-memory cache fallback...')
       this.useMemoryFallback = true
       this.isEnabled = true // Enable cache with memory fallback
+    }
+  }
+
+  /**
+   * Test Redis connection asynchronously
+   * This method can be called after initialization to verify connectivity
+   */
+  async testConnection(): Promise<boolean> {
+    if (!this.isEnabled) {
+      console.log('🚫 Cache disabled, skipping connection test')
+      return false
+    }
+
+    try {
+      if (this.useUpstash && this.upstashRedis) {
+        console.log('🧪 Testing Upstash Redis connection...')
+
+        // Test ping
+        await this.upstashRedis.ping()
+        console.log('🎯 Upstash Redis connection test successful - WRONGPASS errors should be resolved')
+
+        // Additional test: set and get a test value
+        await this.upstashRedis.set('test:connection', 'success', { ex: 60 })
+        const testValue = await this.upstashRedis.get('test:connection')
+        if (testValue === 'success') {
+          console.log('✅ Upstash Redis read/write operations verified')
+          await this.upstashRedis.del('test:connection')
+          return true
+        } else {
+          console.warn('⚠️ Upstash Redis read/write test failed')
+          return false
+        }
+      } else if (this.redis) {
+        console.log('🧪 Testing traditional Redis connection...')
+        const result = await this.redis.ping()
+        const success = result === 'PONG'
+        console.log(success ? '✅ Traditional Redis connection test successful' : '❌ Traditional Redis connection test failed')
+        return success
+      } else {
+        console.log('🧠 Using memory cache fallback - no Redis connection to test')
+        return this.useMemoryFallback
+      }
+    } catch (error) {
+      console.error('❌ Redis connection test failed:', error)
+      console.log('🔄 Falling back to memory cache due to connection test failure')
+      this.useMemoryFallback = true
+      this.isEnabled = true // Keep cache enabled with memory fallback
+      return false
     }
   }
 
@@ -344,11 +378,11 @@ class CacheService {
 
   // Health check
   async healthCheck(): Promise<boolean> {
-    if (!this.isEnabled || !this.redis) return false
+    if (!this.isEnabled) return false
 
     try {
-      const result = await this.redis.ping()
-      return result === 'PONG'
+      // Use the new testConnection method for both Upstash and traditional Redis
+      return await this.testConnection()
     } catch (error) {
       console.error('Cache health check failed:', error)
       return false
