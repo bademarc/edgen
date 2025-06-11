@@ -63,17 +63,17 @@ const requiredEnvVars = {
     defaultValue: 'layeredge-cron-secret-2024-auto-monitoring'
   },
   
-  // Optional Twitter OAuth (for enhanced features)
+  // Optional Twitter OAuth (for enhanced features) - UPDATED WITH NEW CREDENTIALS
   TWITTER_CLIENT_ID: {
     required: false,
     description: 'Twitter OAuth Client ID',
-    example: 'QlEtZHlyVzFqaHhkXzNLNVN3bE06MTpjaQ'
+    example: 'TXdBWXdPQWNMMjdpcHRGblIyaVg6MTpjaQ'
   },
-  
+
   TWITTER_CLIENT_SECRET: {
     required: false,
     description: 'Twitter OAuth Client Secret',
-    example: '5xgAU__WADOOdRteatLt9tpm62HwaiDkDW-cK47fWNJviUvYsu'
+    example: 'nsN3ICJpwMHpfxYCAP6EG5hC4Q9jmaOGgiKq3v1XB8LTAm2-xJ'
   }
 }
 

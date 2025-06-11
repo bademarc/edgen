@@ -50,11 +50,18 @@ export class TwitterOAuthService {
       throw new Error('Twitter OAuth credentials are not configured')
     }
 
+    // Log configuration for debugging (mask sensitive data)
     console.log('Twitter OAuth Config:', {
-      clientId: this.config.clientId,
+      clientId: this.config.clientId.substring(0, 10) + '...',
+      clientSecret: this.config.clientSecret.substring(0, 10) + '...',
       redirectUri: this.config.redirectUri,
       environment: process.env.NODE_ENV
     })
+
+    // Validate new credentials format
+    if (!this.config.clientId.includes(':')) {
+      console.warn('⚠️ Twitter Client ID format may be incorrect - expected format with colon separator')
+    }
   }
 
   /**

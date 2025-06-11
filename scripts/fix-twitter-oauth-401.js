@@ -347,14 +347,14 @@ The "Token exchange failed: 401 Unauthorized" error indicates a mismatch between
 
 ### STEP 4: Verify Client Credentials
 
-**Your current Koyeb environment variables:**
-- \`TWITTER_CLIENT_ID=QlEtZHlyVzFqaHhkXzNLNVN3bE06MTpjaQ\`
-- \`TWITTER_CLIENT_SECRET=Rl2zEnwWoSrc-3QgDEbs0Uy-0SBeCpcOuTndIxFjdE4xmoJiAy\`
+**Your current Koyeb environment variables (UPDATED):**
+- \`TWITTER_CLIENT_ID=TXdBWXdPQWNMMjdpcHRGblIyaVg6MTpjaQ\`
+- \`TWITTER_CLIENT_SECRET=nsN3ICJpwMHpfxYCAP6EG5hC4Q9jmaOGgiKq3v1XB8LTAm2-xJ\`
 
 **VERIFY:** These match exactly in Twitter Developer Portal:
 1. Go to "Keys and tokens" tab
-2. Check "OAuth 2.0 Client ID" matches: \`QlEtZHlyVzFqaHhkXzNLNVN3bE06MTpjaQ\`
-3. Check "OAuth 2.0 Client Secret" matches: \`Rl2zEnwWoSrc-3QgDEbs0Uy-0SBeCpcOuTndIxFjdE4xmoJiAy\`
+2. Check "OAuth 2.0 Client ID" matches: \`TXdBWXdPQWNMMjdpcHRGblIyaVg6MTpjaQ\`
+3. Check "OAuth 2.0 Client Secret" matches: \`nsN3ICJpwMHpfxYCAP6EG5hC4Q9jmaOGgiKq3v1XB8LTAm2-xJ\`
 
 ### STEP 5: Common Issues & Fixes
 

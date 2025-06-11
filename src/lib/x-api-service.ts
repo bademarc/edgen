@@ -72,6 +72,17 @@ export class XApiService {
       throw new Error('X API credentials are required (API Key and API Secret)')
     }
 
+    // Log configuration for debugging (mask sensitive data)
+    console.log('X API Service Configuration:', {
+      hasApiKey: !!this.config.apiKey,
+      hasApiSecret: !!this.config.apiSecret,
+      hasBearerToken: !!this.config.bearerToken,
+      hasAccessToken: !!this.config.accessToken,
+      hasAccessSecret: !!this.config.accessSecret,
+      apiKeyPreview: this.config.apiKey.substring(0, 10) + '...',
+      bearerTokenPreview: this.config.bearerToken ? this.config.bearerToken.substring(0, 20) + '...' : 'not set'
+    })
+
     // Initialize Twitter API client
     try {
       if (this.config.bearerToken) {
