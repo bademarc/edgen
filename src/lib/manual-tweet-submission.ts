@@ -260,19 +260,43 @@ export class ManualTweetSubmissionService {
    * Submit a tweet for points calculation with bypass option
    */
   async submitTweet(tweetUrl: string, userId: string, bypassCircuitBreaker: boolean = false): Promise<TweetSubmissionResult> {
+    // Enhanced input validation
+    if (!tweetUrl || typeof tweetUrl !== 'string') {
+      return {
+        success: false,
+        message: 'Tweet URL is required and must be a valid string'
+      }
+    }
+
+    if (!userId || typeof userId !== 'string') {
+      return {
+        success: false,
+        message: 'User ID is required for tweet submission'
+      }
+    }
+
+    // Normalize and validate URL before processing
+    const normalizedUrl = tweetUrl.trim()
+    if (!normalizedUrl) {
+      return {
+        success: false,
+        message: 'Tweet URL cannot be empty'
+      }
+    }
+
     if (bypassCircuitBreaker) {
       console.log('🔓 Bypassing circuit breaker for manual submission')
       try {
-        return await this.executeSubmission(tweetUrl, userId)
+        return await this.executeSubmission(normalizedUrl, userId)
       } catch (error) {
         console.log('🔄 Bypass failed, trying fallback...')
-        return await this.fallbackSubmission(tweetUrl, userId)
+        return await this.fallbackSubmission(normalizedUrl, userId)
       }
     }
 
     return this.circuitBreaker.execute(
-      () => this.executeSubmission(tweetUrl, userId),
-      () => this.fallbackSubmission(tweetUrl, userId)
+      () => this.executeSubmission(normalizedUrl, userId),
+      () => this.fallbackSubmission(normalizedUrl, userId)
     )
   }
 
@@ -331,15 +355,38 @@ export class ManualTweetSubmissionService {
         }
       }
 
-      // Check if tweet already exists
+      // Check if tweet already exists with enhanced duplicate detection
       const existingTweet = await prisma.tweet.findFirst({
-        where: { tweetId: verification.tweetData.id }
+        where: {
+          OR: [
+            { tweetId: verification.tweetData.id },
+            { url: tweetUrl }
+          ]
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+              xUsername: true
+            }
+          }
+        }
       })
 
       if (existingTweet) {
-        return {
-          success: false,
-          message: 'This tweet has already been submitted.'
+        const submitterInfo = existingTweet.user.name || existingTweet.user.xUsername || 'another user'
+        const isOwnSubmission = existingTweet.userId === userId
+
+        if (isOwnSubmission) {
+          return {
+            success: false,
+            message: 'You have already submitted this tweet and earned points for it.'
+          }
+        } else {
+          return {
+            success: false,
+            message: `This tweet has already been submitted by ${submitterInfo}. Each tweet can only be submitted once.`
+          }
         }
       }
 
@@ -361,18 +408,32 @@ export class ManualTweetSubmissionService {
         totalPoints
       })
 
-      // Use atomic transaction to ensure data consistency
+      // Use atomic transaction with enhanced error handling and verification
       const result = await prisma.$transaction(async (tx) => {
         console.log(`💾 Starting database transaction for user ${userId}`)
 
-        // 1. Create tweet record with proper date handling
+        // Double-check for duplicates within transaction to prevent race conditions
+        const duplicateCheck = await tx.tweet.findFirst({
+          where: {
+            OR: [
+              { tweetId: verification.tweetData!.id },
+              { url: tweetUrl }
+            ]
+          }
+        })
+
+        if (duplicateCheck) {
+          throw new Error('Tweet was submitted by another user during processing. Please try again.')
+        }
+
+        // 1. Create tweet record with proper date handling and validation
         const createdTweet = await tx.tweet.create({
           data: {
             tweetId: verification.tweetData!.id,
             content: verification.tweetData!.content,
-            likes: verification.tweetData!.engagement.likes,
-            retweets: verification.tweetData!.engagement.retweets,
-            replies: verification.tweetData!.engagement.replies,
+            likes: Math.max(0, verification.tweetData!.engagement.likes), // Ensure non-negative
+            retweets: Math.max(0, verification.tweetData!.engagement.retweets),
+            replies: Math.max(0, verification.tweetData!.engagement.replies),
             basePoints: basePoints,
             bonusPoints: bonusPoints,
             totalPoints: totalPoints,
@@ -385,9 +446,22 @@ export class ManualTweetSubmissionService {
           }
         })
 
+        if (!createdTweet || !createdTweet.id) {
+          throw new Error('Failed to create tweet record in database')
+        }
+
         console.log(`✅ Tweet record created: ${createdTweet.id}`)
 
-        // 2. Update user points
+        // 2. Update user points with verification
+        const userBeforeUpdate = await tx.user.findUnique({
+          where: { id: userId },
+          select: { totalPoints: true }
+        })
+
+        if (!userBeforeUpdate) {
+          throw new Error('User not found during points update')
+        }
+
         const updatedUser = await tx.user.update({
           where: { id: userId },
           data: {
@@ -397,9 +471,15 @@ export class ManualTweetSubmissionService {
           }
         })
 
+        // Verify points were added correctly
+        const expectedPoints = (userBeforeUpdate.totalPoints || 0) + totalPoints
+        if (updatedUser.totalPoints !== expectedPoints) {
+          throw new Error(`Points calculation error: expected ${expectedPoints}, got ${updatedUser.totalPoints}`)
+        }
+
         console.log(`✅ User points updated: ${updatedUser.totalPoints} (+${totalPoints})`)
 
-        // 3. Create points history record
+        // 3. Create points history record with enhanced metadata
         const pointsHistory = await tx.pointsHistory.create({
           data: {
             userId: userId,
@@ -412,10 +492,17 @@ export class ManualTweetSubmissionService {
               engagement: verification.tweetData!.engagement,
               basePoints,
               bonusPoints,
-              submissionType: 'manual'
+              submissionType: 'manual',
+              timestamp: new Date().toISOString(),
+              userPointsBefore: userBeforeUpdate.totalPoints,
+              userPointsAfter: updatedUser.totalPoints
             })
           }
         })
+
+        if (!pointsHistory || !pointsHistory.id) {
+          throw new Error('Failed to create points history record')
+        }
 
         console.log(`✅ Points history record created: ${pointsHistory.id}`)
 
@@ -424,6 +511,9 @@ export class ManualTweetSubmissionService {
           user: updatedUser,
           pointsHistory
         }
+      }, {
+        maxWait: 10000, // 10 seconds max wait
+        timeout: 15000, // 15 seconds timeout
       })
 
       console.log(`🎉 Transaction completed successfully for tweet ${verification.tweetData.id}`)

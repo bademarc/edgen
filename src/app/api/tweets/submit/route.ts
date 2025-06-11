@@ -2,14 +2,49 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
 import { getAuthenticatedUser } from '@/lib/auth-utils'
 import { enhancedErrorHandler } from '@/lib/enhanced-error-handler'
+import { validateTweetURL, URLValidator } from '@/lib/url-validator'
 
 export async function POST(request: NextRequest) {
   try {
-    const { tweetUrl } = await request.json()
+    // Enhanced request validation
+    let requestBody
+    try {
+      requestBody = await request.json()
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: 'Invalid JSON in request body',
+          userMessage: 'Please check your request format and try again.',
+          suggestions: ['Ensure the request contains valid JSON data']
+        },
+        { status: 400 }
+      )
+    }
+
+    const { tweetUrl } = requestBody
 
     if (!tweetUrl) {
       return NextResponse.json(
-        { error: 'Tweet URL is required' },
+        {
+          error: 'Tweet URL is required',
+          userMessage: 'Please provide a valid tweet URL to submit.',
+          suggestions: [
+            'Copy the URL from a tweet on X/Twitter',
+            'Ensure the URL includes "/status/" followed by numbers',
+            'Example: https://x.com/username/status/1234567890'
+          ]
+        },
+        { status: 400 }
+      )
+    }
+
+    if (typeof tweetUrl !== 'string') {
+      return NextResponse.json(
+        {
+          error: 'Tweet URL must be a string',
+          userMessage: 'The tweet URL format is invalid.',
+          suggestions: ['Provide the URL as text, not as a number or other format']
+        },
         { status: 400 }
       )
     }
@@ -19,8 +54,53 @@ export async function POST(request: NextRequest) {
 
     if (!authResult.isAuthenticated || !authResult.userId) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        {
+          error: 'Authentication required',
+          userMessage: 'Please log in to submit tweets.',
+          suggestions: [
+            'Sign in with your X/Twitter account',
+            'Refresh the page if you were recently logged in',
+            'Check if your session has expired'
+          ]
+        },
         { status: 401 }
+      )
+    }
+
+    // Enhanced URL validation
+    const urlValidation = validateTweetURL(tweetUrl.trim())
+
+    if (!urlValidation.isValid) {
+      const errorMessage = URLValidator.getErrorMessage(tweetUrl)
+      return NextResponse.json(
+        {
+          error: 'Invalid tweet URL',
+          userMessage: 'The provided URL is not a valid tweet URL.',
+          suggestions: [
+            'Make sure the URL is from X.com or Twitter.com',
+            'The URL should contain "/status/" followed by numbers',
+            'Copy the URL directly from the tweet you want to submit',
+            'Example: https://x.com/username/status/1234567890'
+          ],
+          details: errorMessage
+        },
+        { status: 400 }
+      )
+    }
+
+    // Additional validation for tweet ID
+    if (!urlValidation.tweetId) {
+      return NextResponse.json(
+        {
+          error: 'Could not extract tweet ID',
+          userMessage: 'Unable to identify the tweet from this URL.',
+          suggestions: [
+            'Ensure the URL contains a valid tweet ID',
+            'Try copying the URL again from the original tweet',
+            'Check that the URL is complete and not truncated'
+          ]
+        },
+        { status: 400 }
       )
     }
 
