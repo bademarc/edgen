@@ -313,8 +313,9 @@ async function main() {
     // Step 1: Generate Prisma client
     await generatePrismaClient();
 
-    // Step 2: Deploy migrations
-    deployMigrations();
+    // Step 2: Skip migrations during build - they will be handled at runtime
+    logStep('MIGRATE', 'Skipping database migrations during build phase...');
+    logSuccess('Migrations will be handled during application startup');
 
     // Step 3: Build Next.js
     buildNextJS();
@@ -324,6 +325,7 @@ async function main() {
 
     log(`\n${colors.green}${colors.bright}🎉 Build completed successfully!${colors.reset}`);
     log(`${colors.cyan}📦 Production build is ready in .next/ directory${colors.reset}`);
+    log(`${colors.cyan}🚀 Database migrations will be handled at runtime${colors.reset}`);
     log(`${colors.cyan}🚀 You can now run: npm start${colors.reset}\n`);
 
   } catch (error) {

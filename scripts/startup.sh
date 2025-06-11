@@ -90,14 +90,37 @@ if [ "$NODE_ENV" = "production" ]; then
         echo "✅ Supabase URL configured"
     fi
 
-    # Run database migrations
-    echo "🗄️  Running database migrations..."
-    npx prisma migrate deploy || {
-        echo "❌ Database migration failed"
-        exit 1
-    }
+    # Handle database migrations with baseline support
+    echo "🗄️  Setting up database schema..."
 
-    # Generate Prisma client
+    # First, try standard migration deployment
+    echo "   Attempting standard migration deployment..."
+    if npx prisma migrate deploy 2>/dev/null; then
+        echo "✅ Standard migrations deployed successfully"
+    else
+        echo "⚠️  Standard migration failed - checking for P3005 error..."
+
+        # Check if it's the P3005 error (database not empty)
+        MIGRATION_OUTPUT=$(npx prisma migrate deploy 2>&1 || true)
+        if echo "$MIGRATION_OUTPUT" | grep -q "P3005"; then
+            echo "🔧 Detected P3005 error - running database baseline..."
+
+            # Use our baseline script to resolve the issue
+            if node scripts/baseline-database.js; then
+                echo "✅ Database baseline completed successfully"
+            else
+                echo "❌ Database baseline failed"
+                echo "   Migration output: $MIGRATION_OUTPUT"
+                exit 1
+            fi
+        else
+            echo "❌ Migration failed with different error:"
+            echo "$MIGRATION_OUTPUT"
+            exit 1
+        fi
+    fi
+
+    # Ensure Prisma client is generated
     echo "🔧 Generating Prisma client..."
     npx prisma generate || {
         echo "❌ Prisma client generation failed"

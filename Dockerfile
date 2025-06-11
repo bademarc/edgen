@@ -101,8 +101,9 @@ RUN chown -R nextjs:nodejs ./.next
 # Copy node_modules with Playwright
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-# Copy startup script
+# Copy startup script and database baseline script
 COPY --chown=nextjs:nodejs scripts/startup.sh ./startup.sh
+COPY --chown=nextjs:nodejs scripts/baseline-database.js ./scripts/baseline-database.js
 RUN chmod +x ./startup.sh
 
 USER nextjs
