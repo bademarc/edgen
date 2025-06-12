@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCircuitBreaker, getAllCircuitBreakers } from '@/lib/improved-circuit-breaker'
-import { getEnhancedRateLimiter } from '@/lib/enhanced-rate-limiter'
+import { getSimplifiedCircuitBreaker } from '@/lib/simplified-circuit-breaker'
 
 /**
  * Admin API for managing circuit breakers and rate limiters
@@ -80,8 +79,8 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        const circuitBreaker = getCircuitBreaker(circuitBreakerName)
-        await circuitBreaker.setManualOverride(true, durationMs || 300000) // Default 5 minutes
+        const circuitBreaker = getSimplifiedCircuitBreaker(circuitBreakerName)
+        await circuitBreaker.setManualOverride(true) // Enable manual override
 
         return NextResponse.json({
           success: true,
@@ -97,7 +96,7 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        const cbToReset = getCircuitBreaker(circuitBreakerName)
+        const cbToReset = getSimplifiedCircuitBreaker(circuitBreakerName)
         await cbToReset.reset()
 
         return NextResponse.json({
@@ -113,7 +112,7 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        const cbToDisable = getCircuitBreaker(circuitBreakerName)
+        const cbToDisable = getSimplifiedCircuitBreaker(circuitBreakerName)
         await cbToDisable.setManualOverride(false)
 
         return NextResponse.json({
@@ -176,7 +175,7 @@ export async function PUT(request: NextRequest) {
 
     // Note: This would require extending the circuit breaker to support config updates
     // For now, we'll return the current configuration
-    const circuitBreaker = getCircuitBreaker(circuitBreakerName)
+    const circuitBreaker = getSimplifiedCircuitBreaker(circuitBreakerName)
     const metrics = await circuitBreaker.getMetrics()
 
     return NextResponse.json({

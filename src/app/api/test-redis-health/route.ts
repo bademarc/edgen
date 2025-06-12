@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getRedisDataValidator } from '@/lib/redis-data-validator'
-import { getCircuitBreaker } from '@/lib/improved-circuit-breaker'
-import { getCacheService } from '@/lib/cache'
+import { getSimplifiedCircuitBreaker } from '@/lib/simplified-circuit-breaker'
+import { getSimplifiedCacheService } from '@/lib/simplified-cache'
 
 /**
  * API endpoint to test Redis health and data integrity
@@ -9,8 +8,7 @@ import { getCacheService } from '@/lib/cache'
  */
 export async function GET() {
   try {
-    const validator = getRedisDataValidator()
-    const cache = getCacheService()
+    const cache = getSimplifiedCacheService()
     
     // Test basic Redis connectivity
     const connectivityTest = {
@@ -46,18 +44,13 @@ export async function GET() {
     
     for (const name of circuitBreakerNames) {
       try {
-        const circuitBreaker = getCircuitBreaker(name)
-        const status = await circuitBreaker.getStatus()
-        const metrics = await circuitBreaker.getMetrics()
+        const circuitBreaker = getSimplifiedCircuitBreaker(name)
+        const state = await circuitBreaker.getState()
         
         circuitBreakerTests.push({
           name,
           status: 'healthy',
-          state: status.state,
-          failureCount: status.failureCount,
-          healthScore: metrics.healthScore,
-          isManuallyOverridden: status.isManuallyOverridden,
-          degradationActive: status.degradationActive
+          state: state
         })
         
       } catch (error) {
@@ -186,7 +179,7 @@ export async function POST(request: Request) {
         
         for (const name of circuitBreakerNames) {
           try {
-            const circuitBreaker = getCircuitBreaker(name)
+            const circuitBreaker = getSimplifiedCircuitBreaker(name)
             await circuitBreaker.reset()
             resetResults.push({ name, status: 'reset' })
           } catch (error) {

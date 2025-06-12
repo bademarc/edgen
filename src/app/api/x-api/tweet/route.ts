@@ -4,8 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getXApiService } from '@/lib/x-api-service'
-import { validateTweetURL } from '@/lib/url-validator'
+import { getSimplifiedXApiService } from '@/lib/simplified-x-api'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,11 +19,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`🐦 Fetching tweet data via X API: ${tweetUrl || tweetId}`)
 
-    const xApiService = getXApiService()
+    const xApiService = getSimplifiedXApiService()
 
     if (!xApiService.isReady()) {
       return NextResponse.json(
-        { 
+        {
           error: 'X API service not available',
           details: 'X API credentials may not be configured correctly'
         },
@@ -124,11 +123,11 @@ export async function GET(request: NextRequest) {
 
     console.log(`📝 Fetching user tweets for @${username}`)
 
-    const xApiService = getXApiService()
+    const xApiService = getSimplifiedXApiService()
 
     if (!xApiService.isReady()) {
       return NextResponse.json(
-        { 
+        {
           error: 'X API service not available',
           details: 'X API credentials may not be configured correctly'
         },

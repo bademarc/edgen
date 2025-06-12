@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getXApiService } from '@/lib/x-api-service'
+import { getSimplifiedXApiService } from '@/lib/simplified-x-api'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,11 +22,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔐 Verifying login for user: @${cleanUsername}`)
 
-    const xApiService = getXApiService()
+    const xApiService = getSimplifiedXApiService()
 
     if (!xApiService.isReady()) {
       return NextResponse.json(
-        { 
+        {
           error: 'X API service not available',
           details: 'X API credentials may not be configured correctly'
         },
@@ -84,15 +84,13 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const xApiService = getXApiService()
-    const status = xApiService.getStatus()
+    const xApiService = getSimplifiedXApiService()
+    const isReady = xApiService.isReady()
 
     return NextResponse.json({
       service: 'X API Login Verification',
-      status: status.ready ? 'ready' : 'not ready',
-      authenticated: status.authenticated,
-      apiKey: status.apiKey,
-      hasBearer: status.hasBearer,
+      status: isReady ? 'ready' : 'not ready',
+      authenticated: isReady,
       timestamp: new Date().toISOString()
     })
   } catch (error) {

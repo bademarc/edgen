@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserId } from '@/lib/auth-utils'
-import { TwitterApiService } from '@/lib/twitter-api'
-import { getSimplifiedFallbackService } from '@/lib/simplified-fallback-service'
-import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
-import { getEngagementUpdateService } from '@/lib/engagement-update-service'
+import { getSimplifiedXApiService } from '@/lib/simplified-x-api'
+import { getSimplifiedTweetSubmissionService } from '@/lib/simplified-tweet-submission'
+import { getSimplifiedCacheService } from '@/lib/simplified-cache'
 
 interface EnvironmentCheck {
   twitterBearerToken: boolean
@@ -80,7 +79,7 @@ export async function GET() {
     }
 
     try {
-      const submissionService = getManualTweetSubmissionService()
+      const submissionService = getSimplifiedTweetSubmissionService()
       manualSubmissionHealth.available = true
       manualSubmissionHealth.status = 'healthy'
     } catch (error) {

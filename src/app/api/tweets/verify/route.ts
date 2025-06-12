@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
+import { getSimplifiedTweetSubmissionService } from '@/lib/simplified-tweet-submission'
 import { getAuthenticatedUser } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get manual submission service
-    const submissionService = getManualTweetSubmissionService()
+    const submissionService = getSimplifiedTweetSubmissionService()
 
     // Verify tweet ownership
     const verification = await submissionService.verifyTweetOwnership(tweetUrl, authResult.userId)

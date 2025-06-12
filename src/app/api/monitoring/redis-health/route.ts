@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { enhancedCache } from '@/lib/cache-integration'
-import { getCacheService } from '@/lib/cache'
+import { getSimplifiedCacheService } from '@/lib/simplified-cache'
 
 /**
  * Redis Health Check API
