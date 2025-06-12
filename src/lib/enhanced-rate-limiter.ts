@@ -35,12 +35,12 @@ export class EnhancedRateLimiter {
   private processing = false
   private requestId = 0
 
-  // Twitter API v2 Rate Limits (Conservative)
+  // Twitter API v2 Rate Limits (Ultra Conservative for Free Tier)
   private readonly RATE_LIMITS: Record<string, RateLimitConfig> = {
-    'tweet_lookup': { maxRequests: 300, windowMs: 15 * 60 * 1000, burstLimit: 10 },
-    'user_lookup': { maxRequests: 300, windowMs: 15 * 60 * 1000, burstLimit: 10 },
-    'search': { maxRequests: 180, windowMs: 15 * 60 * 1000, burstLimit: 5 },
-    'tweet_submission': { maxRequests: 50, windowMs: 15 * 60 * 1000, burstLimit: 3 }
+    'tweet_lookup': { maxRequests: 1, windowMs: 15 * 60 * 1000, burstLimit: 1 },
+    'user_lookup': { maxRequests: 1, windowMs: 15 * 60 * 1000, burstLimit: 1 },
+    'search': { maxRequests: 1, windowMs: 15 * 60 * 1000, burstLimit: 1 },
+    'tweet_submission': { maxRequests: 1, windowMs: 15 * 60 * 1000, burstLimit: 1 }
   }
 
   constructor() {

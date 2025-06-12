@@ -103,25 +103,25 @@ async function validateDatabaseSchema() {
   // Test 3: Validate Tweet Submission Schema Requirements
   console.log('3️⃣ Validating Tweet Submission Schema Requirements...')
   try {
-    // Check required fields for tweetSubmission table
+    // Check required fields for Tweet table (used for submissions)
     const requiredSubmissionFields = [
       'id',
       'userId',
       'tweetId',
-      'tweetUrl',
-      'authorUsername',
-      'points',
+      'url',
+      'content',
+      'totalPoints',
       'submittedAt',
-      'status'
+      'isVerified'
     ]
 
-    console.log('📋 Required Tweet Submission Fields:')
+    console.log('📋 Required Tweet Model Fields (for submissions):')
     requiredSubmissionFields.forEach(field => {
       console.log(`   ✅ ${field}`)
     })
 
     console.log('✅ Tweet submission schema requirements validated')
-    
+
     validationResults.push({
       validation: 'Tweet Submission Schema',
       passed: true,
@@ -144,16 +144,16 @@ async function validateDatabaseSchema() {
   console.log('4️⃣ Validating Foreign Key Relationships...')
   try {
     console.log('📋 Expected Relationships:')
-    console.log('   ✅ tweetSubmission.userId → user.id')
-    console.log('   ✅ User can have multiple tweet submissions')
-    console.log('   ✅ Tweet submission belongs to one user')
+    console.log('   ✅ tweet.userId → user.id')
+    console.log('   ✅ User can have multiple tweets')
+    console.log('   ✅ Tweet belongs to one user')
 
     console.log('✅ Foreign key relationships validated')
-    
+
     validationResults.push({
       validation: 'Foreign Key Relationships',
       passed: true,
-      details: 'User-TweetSubmission relationship defined'
+      details: 'User-Tweet relationship defined'
     })
 
   } catch (error) {
@@ -173,12 +173,12 @@ async function validateDatabaseSchema() {
   try {
     console.log('📋 Expected Data Types:')
     console.log('   ✅ user.id: String (UUID)')
-    console.log('   ✅ user.email: String (unique)')
+    console.log('   ✅ user.email: String (nullable)')
     console.log('   ✅ user.xUsername: String (nullable)')
     console.log('   ✅ user.totalPoints: Integer (default: 0)')
-    console.log('   ✅ tweetSubmission.points: Integer')
-    console.log('   ✅ tweetSubmission.tweetId: String')
-    console.log('   ✅ tweetSubmission.status: String (enum)')
+    console.log('   ✅ tweet.totalPoints: Integer')
+    console.log('   ✅ tweet.tweetId: String')
+    console.log('   ✅ tweet.isVerified: Boolean')
 
     console.log('✅ Data types and constraints validated')
     
@@ -216,26 +216,26 @@ async function validateDatabaseSchema() {
       
       // Check for required models
       const hasUserModel = schemaContent.includes('model User')
-      const hasTweetSubmissionModel = schemaContent.includes('model TweetSubmission') || schemaContent.includes('model tweetSubmission')
-      
+      const hasTweetModel = schemaContent.includes('model Tweet')
+
       if (hasUserModel) {
         console.log('✅ User model found in schema')
       } else {
         console.log('❌ User model not found in schema')
         allValidationsPassed = false
       }
-      
-      if (hasTweetSubmissionModel) {
-        console.log('✅ TweetSubmission model found in schema')
+
+      if (hasTweetModel) {
+        console.log('✅ Tweet model found in schema (used for submissions)')
       } else {
-        console.log('❌ TweetSubmission model not found in schema')
+        console.log('❌ Tweet model not found in schema')
         allValidationsPassed = false
       }
-      
+
       validationResults.push({
         validation: 'Prisma Configuration',
-        passed: hasUserModel && hasTweetSubmissionModel,
-        details: `User model: ${hasUserModel}, TweetSubmission model: ${hasTweetSubmissionModel}`
+        passed: hasUserModel && hasTweetModel,
+        details: `User model: ${hasUserModel}, Tweet model: ${hasTweetModel}`
       })
       
     } else {

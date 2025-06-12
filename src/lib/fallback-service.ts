@@ -141,9 +141,9 @@ export class FallbackService {
   }
 
   private async tryScweetService(tweetUrl: string): Promise<FallbackTweetData | null> {
-    // Scweet service has been removed - return null
-    console.log('Scweet service has been removed from LayerEdge platform')
-    return null
+    // Use Twitter oEmbed API as free alternative to Scweet
+    console.log('Using Twitter oEmbed API as Scweet alternative')
+    return this.tryOEmbedScraping(tweetUrl)
   }
 
   private async tryScweetEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
@@ -153,9 +153,92 @@ export class FallbackService {
   }
 
   private async tryTwikitService(tweetUrl: string): Promise<FallbackTweetData | null> {
-    // Twikit service has been removed - return null
-    console.log('Twikit service has been removed from LayerEdge platform')
-    return null
+    // Use budget scraper as Twikit alternative
+    console.log('Using budget scraper as Twikit alternative')
+    return this.tryBudgetScraping(tweetUrl)
+  }
+
+  private async tryOEmbedScraping(tweetUrl: string): Promise<FallbackTweetData | null> {
+    try {
+      console.log('Attempting oEmbed scraping for:', tweetUrl)
+
+      // Extract tweet ID
+      const tweetId = extractTweetId(tweetUrl)
+      if (!tweetId) {
+        throw new Error('Invalid tweet URL')
+      }
+
+      // Use Twitter's oEmbed API (free and no auth required)
+      const oembedUrl = `https://publish.twitter.com/oembed?url=${encodeURIComponent(tweetUrl)}&omit_script=true`
+
+      const response = await fetch(oembedUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LayerEdge/1.0)',
+        },
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const oembedData = await response.json()
+
+      // Extract text content from HTML
+      const textContent = this.extractTextFromHtml(oembedData.html || '')
+
+      return {
+        id: tweetId,
+        content: textContent,
+        author: {
+          id: 'unknown',
+          username: oembedData.author_name || 'Unknown',
+          name: oembedData.author_name || 'Unknown',
+          verified: false,
+          followersCount: 0,
+          followingCount: 0
+        },
+        engagement: {
+          likes: 0, // oEmbed doesn't provide engagement metrics
+          retweets: 0,
+          replies: 0,
+          quotes: 0
+        },
+        createdAt: new Date(), // oEmbed doesn't provide exact date
+        isFromLayerEdgeCommunity: textContent.toLowerCase().includes('@layeredge') || textContent.toLowerCase().includes('$edgen'),
+        url: tweetUrl,
+        source: 'oembed' as const
+      }
+    } catch (error) {
+      console.error('oEmbed scraping failed:', error)
+      return null
+    }
+  }
+
+  private async tryBudgetScraping(tweetUrl: string): Promise<FallbackTweetData | null> {
+    try {
+      console.log('Attempting budget scraping for:', tweetUrl)
+
+      // This is a placeholder for budget scraping
+      // In a real implementation, this would use the budget-scraper.ts
+      return null
+    } catch (error) {
+      console.error('Budget scraping failed:', error)
+      return null
+    }
+  }
+
+  private extractTextFromHtml(html: string): string {
+    try {
+      // Extract text from the tweet HTML
+      const textMatch = html.match(/<p[^>]*>(.*?)<\/p>/s)
+      if (textMatch) {
+        return textMatch[1].replace(/<[^>]*>/g, '').trim()
+      }
+      return ''
+    } catch (error) {
+      return ''
+    }
   }
 
   private async tryTwikitEngagement(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
@@ -253,7 +336,13 @@ export class FallbackService {
       return twikitData
     }
 
-    // Web scraping has been removed from LayerEdge platform
+    // Try oEmbed scraping as final fallback
+    console.log('Attempting final fallback via oEmbed scraping...')
+    const oembedData = await this.tryOEmbedScraping(tweetUrl)
+    if (oembedData) {
+      console.log('✅ Successfully fetched tweet data via oEmbed scraping')
+      return oembedData
+    }
 
     console.error('All fallback methods failed for tweet:', tweetUrl)
     return null

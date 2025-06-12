@@ -19,11 +19,11 @@ class SmartRateLimiter {
   private requestQueue: QueuedRequest[] = []
   private processing = false
   
-  // Conservative limits for free Twitter API
+  // Ultra conservative limits for free Twitter API
   private readonly LIMITS = {
-    search: { maxRequests: 180, windowMs: 15 * 60 * 1000 }, // 180 per 15 min
-    userLookup: { maxRequests: 300, windowMs: 15 * 60 * 1000 }, // 300 per 15 min
-    tweetLookup: { maxRequests: 300, windowMs: 15 * 60 * 1000 } // 300 per 15 min
+    search: { maxRequests: 1, windowMs: 15 * 60 * 1000 }, // 1 per 15 min
+    userLookup: { maxRequests: 1, windowMs: 15 * 60 * 1000 }, // 1 per 15 min
+    tweetLookup: { maxRequests: 1, windowMs: 15 * 60 * 1000 } // 1 per 15 min
   }
 
   constructor() {

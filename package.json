@@ -74,6 +74,7 @@
     "test:database": "node scripts/comprehensive-database-test.cjs",
     "validate:schema": "node scripts/database-schema-validation.cjs",
     "test:e2e": "node scripts/end-to-end-test.cjs",
+    "validate:final": "node scripts/final-validation.cjs",
     "audit:users": "tsx src/scripts/audit-user-sync.ts",
     "check:auth-sessions": "tsx src/scripts/check-auth-sessions.ts",
     "fix:user-sync": "tsx src/scripts/fix-user-sync.ts",
