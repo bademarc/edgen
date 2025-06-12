@@ -12,7 +12,7 @@ interface Tweet {
   retweets: number
   replies: number
   totalPoints: number
-  createdAt: Date
+  createdAt: string | Date // HYDRATION FIX: Accept both string and Date to prevent mismatches
   user: {
     id: string
     name?: string | null
@@ -117,6 +117,20 @@ export function VirtualizedTweetList({
         >
           {visibleItems.map((tweet, index) => {
             const actualIndex = startIndex + index
+
+            // HYDRATION FIX: Safely handle date conversion to prevent hydration mismatches
+            const safeCreatedAt = (() => {
+              try {
+                if (tweet.createdAt instanceof Date) {
+                  return tweet.createdAt
+                }
+                return new Date(tweet.createdAt)
+              } catch (error) {
+                console.warn('Invalid date in tweet:', tweet.id, tweet.createdAt)
+                return new Date() // Fallback to current date
+              }
+            })()
+
             return (
               <motion.div
                 key={tweet.id}
@@ -132,7 +146,7 @@ export function VirtualizedTweetList({
                 <TweetCard
                   tweet={{
                     ...tweet,
-                    createdAt: new Date(tweet.createdAt)
+                    createdAt: safeCreatedAt
                   }}
                   showUser={true}
                   isUpdating={isUpdating}
@@ -178,25 +192,40 @@ export function SimpleTweetList({
 
   return (
     <div className="space-y-6">
-      {tweets.map((tweet, index) => (
-        <motion.div
-          key={tweet.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: index * 0.05 }}
-        >
-          <TweetCard
-            tweet={{
-              ...tweet,
-              createdAt: new Date(tweet.createdAt)
-            }}
-            showUser={true}
-            isUpdating={isUpdating}
-            onUpdateEngagement={onUpdateEngagement}
-            showUpdateButton={showUpdateButton}
-          />
-        </motion.div>
-      ))}
+      {tweets.map((tweet, index) => {
+        // HYDRATION FIX: Safely handle date conversion to prevent hydration mismatches
+        const safeCreatedAt = (() => {
+          try {
+            if (tweet.createdAt instanceof Date) {
+              return tweet.createdAt
+            }
+            return new Date(tweet.createdAt)
+          } catch (error) {
+            console.warn('Invalid date in tweet:', tweet.id, tweet.createdAt)
+            return new Date() // Fallback to current date
+          }
+        })()
+
+        return (
+          <motion.div
+            key={tweet.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: index * 0.05 }}
+          >
+            <TweetCard
+              tweet={{
+                ...tweet,
+                createdAt: safeCreatedAt
+              }}
+              showUser={true}
+              isUpdating={isUpdating}
+              onUpdateEngagement={onUpdateEngagement}
+              showUpdateButton={showUpdateButton}
+            />
+          </motion.div>
+        )
+      })}
     </div>
   )
 }

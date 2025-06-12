@@ -31,6 +31,14 @@ export async function GET(request: NextRequest) {
       take: limit,
     })
 
+    console.log(`📊 API: Returning ${tweets.length} tweets (limit: ${limit})`)
+
+    // Log the most recent tweet for debugging
+    if (tweets.length > 0) {
+      const mostRecent = tweets[0]
+      console.log(`🔝 Most recent tweet: ID ${mostRecent.tweetId}, submitted ${mostRecent.submittedAt}`)
+    }
+
     // FIXED: Transform tweets to use original tweet date for display
     const transformedTweets = tweets.map(tweet => ({
       ...tweet,

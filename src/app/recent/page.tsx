@@ -23,7 +23,8 @@ interface Tweet {
   retweets: number
   replies: number
   totalPoints: number
-  createdAt: string
+  createdAt: string | Date // HYDRATION FIX: Accept both string and Date
+  submittedAt?: string | Date // Add submitted date for proper sorting
   user: {
     id: string
     name: string | null
@@ -39,6 +40,12 @@ export default function RecentSubmissionsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'recent' | 'points' | 'engagement'>('recent')
   const [limit, setLimit] = useState(20)
+  const [isHydrated, setIsHydrated] = useState(false) // HYDRATION FIX: Track hydration state
+
+  // HYDRATION FIX: Ensure component is hydrated before rendering complex content
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   // Real-time engagement updates
   const {
@@ -55,16 +62,30 @@ export default function RecentSubmissionsPage() {
     updateInterval: 45000, // 45 seconds for all tweets
   })
 
-  const fetchTweets = useCallback(async () => {
+  const fetchTweets = useCallback(async (forceRefresh = false) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch(`/api/tweets?limit=${limit}`)
+      // Add cache-busting parameter for force refresh
+      const url = forceRefresh
+        ? `/api/tweets?limit=${limit}&_t=${Date.now()}`
+        : `/api/tweets?limit=${limit}`
+
+      const response = await fetch(url, {
+        // Disable caching for recent tweets to ensure fresh data
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+
       if (!response.ok) {
         throw new Error('Failed to fetch tweets')
       }
       const data = await response.json()
+
+      console.log(`📊 Fetched ${data.length} tweets from API`)
       setAllTweets(data)
     } catch (err) {
       console.error('Error fetching tweets:', err)
@@ -76,6 +97,22 @@ export default function RecentSubmissionsPage() {
 
   useEffect(() => {
     fetchTweets()
+  }, [fetchTweets])
+
+  // Auto-refresh every 30 seconds to catch new submissions
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing recent tweets...')
+      fetchTweets(true) // Force refresh
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [fetchTweets])
+
+  // Manual refresh handler
+  const handleManualRefresh = useCallback(() => {
+    console.log('🔄 Manual refresh triggered')
+    fetchTweets(true)
   }, [fetchTweets])
 
   // Optimized filter and sort tweets with memoization
@@ -94,7 +131,7 @@ export default function RecentSubmissionsPage() {
       })
     }
 
-    // Apply sorting
+    // HYDRATION FIX: Apply sorting with safe date handling
     return filtered.sort((a, b) => {
       switch (sortBy) {
         case 'points':
@@ -103,7 +140,24 @@ export default function RecentSubmissionsPage() {
           return (b.likes + b.retweets + b.replies) - (a.likes + a.retweets + a.replies)
         case 'recent':
         default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          // Use submittedAt if available, otherwise fall back to createdAt
+          const aDate = a.submittedAt || a.createdAt
+          const bDate = b.submittedAt || b.createdAt
+
+          try {
+            const aTime = new Date(aDate).getTime()
+            const bTime = new Date(bDate).getTime()
+
+            // Handle invalid dates
+            if (isNaN(aTime) && isNaN(bTime)) return 0
+            if (isNaN(aTime)) return 1
+            if (isNaN(bTime)) return -1
+
+            return bTime - aTime // Most recent first
+          } catch (error) {
+            console.warn('Date sorting error:', error)
+            return 0
+          }
       }
     })
   }, [updatedTweets, searchTerm, sortBy])
@@ -128,7 +182,8 @@ export default function RecentSubmissionsPage() {
   }, [])
 
   // Render loading and error states with optimized components
-  if (isLoading) {
+  // HYDRATION FIX: Show loading state during hydration
+  if (!isHydrated || isLoading) {
     return (
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
@@ -236,6 +291,18 @@ export default function RecentSubmissionsPage() {
                   {updateCount} updates
                 </div>
               )}
+
+              {/* Refresh Tweets Button */}
+              <button
+                onClick={handleManualRefresh}
+                disabled={isLoading}
+                className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
+                title="Refresh tweets list"
+              >
+                <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
+
+              {/* Update Engagement Button */}
               <button
                 onClick={forceUpdate}
                 disabled={isUpdating}
