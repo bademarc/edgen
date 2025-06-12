@@ -33,7 +33,7 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { TweetPreview } from '@/components/ui/tweet-preview'
 import { SubmissionHistory } from '@/components/ui/submission-history'
-import { RealTimeEngagement } from '@/components/ui/real-time-engagement'
+
 import { AchievementNotification, useAchievementNotifications } from '@/components/ui/achievement-notification'
 import { SocialSharingService } from '@/lib/social-sharing'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
@@ -614,26 +614,52 @@ export default function SubmitPage() {
               </CardContent>
             </Card>
 
-            {/* Real-time Engagement Tracking */}
-            {(submittedTweetId || showEngagementMetrics) && (
+            {/* Tweet Submission Success */}
+            {(submittedTweetId || showEngagementMetrics) && tweetData && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                <ErrorBoundary>
-                  <RealTimeEngagement
-                    tweetId={submittedTweetId || undefined}
-                    initialData={tweetData ? {
-                      likes: tweetData.likes || 0,
-                      retweets: tweetData.retweets || 0,
-                      replies: tweetData.replies || 0,
-                      points: tweetData.totalPoints || 0,
-                      lastUpdate: new Date().toISOString(),
-                    } : undefined}
-                    updateInterval={30000}
-                  />
-                </ErrorBoundary>
+                <div className="card-layeredge p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">Tweet Submitted Successfully!</h3>
+                      <p className="text-sm text-muted-foreground">Your tweet has been added to the database</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-500">{tweetData.likes || 0}</div>
+                      <div className="text-xs text-muted-foreground">Likes</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-500">{tweetData.retweets || 0}</div>
+                      <div className="text-xs text-muted-foreground">Retweets</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-500">{tweetData.replies || 0}</div>
+                      <div className="text-xs text-muted-foreground">Replies</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-layeredge-blue">{tweetData.totalPoints || 0}</div>
+                      <div className="text-xs text-muted-foreground">Points</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      📊 Engagement metrics are captured at submission time and stored in our database.
+                      No real-time updates needed!
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             )}
 

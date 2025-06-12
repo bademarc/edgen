@@ -1,20 +1,21 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChatBubbleLeftRightIcon,
   ArrowPathIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
+  ChevronDownIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline'
 import { TweetCard } from '@/components/TweetCard'
-import { useRealTimeEngagement } from '@/hooks/useRealTimeEngagement'
 import { formatNumber } from '@/lib/utils'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { ContentLoading, ApiLoading } from '@/components/ui/loading-states'
-import { SmartTweetList } from '@/components/ui/virtualized-tweet-list'
 
+// Simplified Tweet interface for database-only approach
 interface Tweet {
   id: string
   url: string
@@ -23,8 +24,11 @@ interface Tweet {
   retweets: number
   replies: number
   totalPoints: number
-  createdAt: string | Date // HYDRATION FIX: Accept both string and Date
-  submittedAt?: string | Date // Add submitted date for proper sorting
+  totalEngagement: number
+  createdAt: string
+  submittedAt: string
+  displayDate: string
+  lastEngagementUpdate?: string | null
   user: {
     id: string
     name: string | null
@@ -33,47 +37,70 @@ interface Tweet {
   }
 }
 
+interface ApiResponse {
+  success: boolean
+  tweets: Tweet[]
+  pagination: {
+    total: number
+    limit: number
+    offset: number
+    hasMore: boolean
+    page: number
+    totalPages: number
+  }
+  meta: {
+    sortBy: string
+    search: string | null
+    timestamp: string
+    source: string
+  }
+}
+
 export default function RecentSubmissionsPage() {
-  const [allTweets, setAllTweets] = useState<Tweet[]>([])
+  // Core state
+  const [tweets, setTweets] = useState<Tweet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  
+  // Filter and pagination state
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'recent' | 'points' | 'engagement'>('recent')
-  const [limit, setLimit] = useState(20)
-  const [isHydrated, setIsHydrated] = useState(false) // HYDRATION FIX: Track hydration state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pagination, setPagination] = useState<ApiResponse['pagination'] | null>(null)
+  
+  // UI state
+  const [isHydrated, setIsHydrated] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
-  // HYDRATION FIX: Ensure component is hydrated before rendering complex content
+  // Hydration fix
   useEffect(() => {
     setIsHydrated(true)
   }, [])
 
-  // Real-time engagement updates
-  const {
-    updatedTweets,
-    isUpdating,
-    lastUpdateTime,
-    updateCount,
-    error: engagementError,
-    forceUpdate,
-    retryCount
-  } = useRealTimeEngagement({
-    tweets: allTweets,
-    enabled: allTweets.length > 0,
-    updateInterval: 45000, // 45 seconds for all tweets
-  })
-
-  const fetchTweets = useCallback(async (forceRefresh = false) => {
-    setIsLoading(true)
+  // Fetch tweets from database-only API
+  const fetchTweets = useCallback(async (page = 1, isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     setError(null)
 
     try {
-      // Add cache-busting parameter for force refresh
-      const url = forceRefresh
-        ? `/api/tweets?limit=${limit}&_t=${Date.now()}`
-        : `/api/tweets?limit=${limit}`
+      const limit = 20
+      const offset = (page - 1) * limit
+      
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        offset: offset.toString(),
+        sortBy,
+        ...(searchTerm && { search: searchTerm })
+      })
 
-      const response = await fetch(url, {
-        // Disable caching for recent tweets to ensure fresh data
+      console.log(`🔍 Fetching tweets: page=${page}, sortBy=${sortBy}, search="${searchTerm}"`)
+
+      const response = await fetch(`/api/recent-tweets?${params}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache'
@@ -81,146 +108,127 @@ export default function RecentSubmissionsPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch tweets')
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
-      const data = await response.json()
 
-      console.log(`📊 Fetched ${data.length} tweets from API`)
-      setAllTweets(data)
+      const data: ApiResponse = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch tweets')
+      }
+
+      console.log(`✅ Fetched ${data.tweets.length} tweets (${data.pagination.total} total)`)
+
+      if (page === 1) {
+        setTweets(data.tweets)
+      } else {
+        // Append for pagination
+        setTweets(prev => [...prev, ...data.tweets])
+      }
+      
+      setPagination(data.pagination)
+      setCurrentPage(page)
+      setLastRefresh(new Date())
+
     } catch (err) {
-      console.error('Error fetching tweets:', err)
+      console.error('❌ Error fetching tweets:', err)
       setError(err instanceof Error ? err.message : 'Failed to load tweets')
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
-  }, [limit])
+  }, [sortBy, searchTerm])
 
+  // Initial load
   useEffect(() => {
-    fetchTweets()
+    fetchTweets(1)
   }, [fetchTweets])
 
-  // Auto-refresh every 30 seconds to catch new submissions
+  // Search with debounce
   useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('🔄 Auto-refreshing recent tweets...')
-      fetchTweets(true) // Force refresh
-    }, 30000) // 30 seconds
+    const timeoutId = setTimeout(() => {
+      if (isHydrated) {
+        setCurrentPage(1)
+        fetchTweets(1)
+      }
+    }, 500)
 
-    return () => clearInterval(interval)
-  }, [fetchTweets])
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm, isHydrated])
 
-  // Manual refresh handler
-  const handleManualRefresh = useCallback(() => {
+  // Sort change
+  useEffect(() => {
+    if (isHydrated) {
+      setCurrentPage(1)
+      fetchTweets(1)
+    }
+  }, [sortBy, isHydrated])
+
+  // Manual refresh
+  const handleRefresh = useCallback(() => {
     console.log('🔄 Manual refresh triggered')
-    fetchTweets(true)
+    fetchTweets(1, true)
   }, [fetchTweets])
 
-  // Optimized filter and sort tweets with memoization
-  const filteredAndSortedTweets = useMemo(() => {
-    let filtered = updatedTweets
-
-    // Apply search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      filtered = updatedTweets.filter(tweet => {
-        return (
-          tweet.content?.toLowerCase().includes(searchLower) ||
-          tweet.user.name?.toLowerCase().includes(searchLower) ||
-          tweet.user.xUsername?.toLowerCase().includes(searchLower)
-        )
-      })
+  // Load more (pagination)
+  const handleLoadMore = useCallback(() => {
+    if (pagination?.hasMore && !isLoading) {
+      fetchTweets(currentPage + 1)
     }
+  }, [pagination, currentPage, isLoading, fetchTweets])
 
-    // HYDRATION FIX: Apply sorting with safe date handling
-    return filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'points':
-          return b.totalPoints - a.totalPoints
-        case 'engagement':
-          return (b.likes + b.retweets + b.replies) - (a.likes + a.retweets + a.replies)
-        case 'recent':
-        default:
-          // Use submittedAt if available, otherwise fall back to createdAt
-          const aDate = a.submittedAt || a.createdAt
-          const bDate = b.submittedAt || b.createdAt
+  // Filter tweets based on search (client-side backup)
+  const filteredTweets = useMemo(() => {
+    if (!searchTerm.trim()) return tweets
+    
+    const searchLower = searchTerm.toLowerCase()
+    return tweets.filter(tweet => 
+      tweet.content?.toLowerCase().includes(searchLower) ||
+      tweet.user.name?.toLowerCase().includes(searchLower) ||
+      tweet.user.xUsername?.toLowerCase().includes(searchLower)
+    )
+  }, [tweets, searchTerm])
 
-          try {
-            const aTime = new Date(aDate).getTime()
-            const bTime = new Date(bDate).getTime()
-
-            // Handle invalid dates
-            if (isNaN(aTime) && isNaN(bTime)) return 0
-            if (isNaN(aTime)) return 1
-            if (isNaN(bTime)) return -1
-
-            return bTime - aTime // Most recent first
-          } catch (error) {
-            console.warn('Date sorting error:', error)
-            return 0
-          }
-      }
-    })
-  }, [updatedTweets, searchTerm, sortBy])
-
-  const handleUpdateSingleTweet = useCallback(async (tweetId: string) => {
-    try {
-      const response = await fetch(`/api/tweets/${tweetId}/engagement`, {
-        method: 'POST',
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success && result.changed && result.tweet) {
-          setAllTweets(prevTweets =>
-            prevTweets.map(t => t.id === tweetId ? result.tweet : t)
-          )
-        }
-      }
-    } catch (error) {
-      console.error('Error updating single tweet:', error)
-    }
-  }, [])
-
-  // Render loading and error states with optimized components
-  // HYDRATION FIX: Show loading state during hydration
-  if (!isHydrated || isLoading) {
+  // Loading state
+  if (!isHydrated || (isLoading && tweets.length === 0)) {
     return (
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <ContentLoading isLoading={true} fallback={
-            <div className="space-y-6">
-              <div className="h-8 bg-muted rounded w-1/3 mb-8"></div>
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="bg-card border border-border rounded-lg p-6">
-                  <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
-                  <div className="h-16 bg-muted rounded mb-4"></div>
-                  <div className="flex space-x-4">
-                    <div className="h-4 bg-muted rounded w-16"></div>
-                    <div className="h-4 bg-muted rounded w-16"></div>
-                    <div className="h-4 bg-muted rounded w-16"></div>
-                  </div>
+          <div className="space-y-6">
+            <div className="h-8 bg-muted rounded w-1/3 mb-8 animate-pulse"></div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-lg p-6 animate-pulse">
+                <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
+                <div className="h-16 bg-muted rounded mb-4"></div>
+                <div className="flex space-x-4">
+                  <div className="h-4 bg-muted rounded w-16"></div>
+                  <div className="h-4 bg-muted rounded w-16"></div>
+                  <div className="h-4 bg-muted rounded w-16"></div>
                 </div>
-              ))}
-            </div>
-          }>
-            {null}
-          </ContentLoading>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
   }
 
-  if (error) {
+  // Error state
+  if (error && tweets.length === 0) {
     return (
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <ApiLoading
-            isLoading={false}
-            error={error}
-            onRetry={fetchTweets}
-          >
-            {null}
-          </ApiLoading>
+          <div className="text-center py-12">
+            <ExclamationTriangleIcon className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2">Failed to Load Tweets</h2>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <button
+              onClick={handleRefresh}
+              className="btn-layeredge-primary px-6 py-3 rounded-lg font-semibold hover-lift"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -230,150 +238,189 @@ export default function RecentSubmissionsPage() {
     <ErrorBoundary>
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-bold text-foreground mb-2">Recent Submissions</h1>
-          <p className="text-muted-foreground">
-            Latest community tweets with real-time engagement metrics
-          </p>
-        </motion.div>
-
-        {/* Controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="card-layeredge p-6 mb-8"
-        >
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              {/* Search */}
-              <div className="relative flex-1 max-w-md">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search tweets or users..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="input-layeredge w-full pl-10 pr-4 py-2 text-sm"
-                />
-              </div>
-
-              {/* Sort */}
-              <div className="relative">
-                <FunnelIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'recent' | 'points' | 'engagement')}
-                  className="input-layeredge pl-10 pr-8 py-2 text-sm appearance-none bg-card"
-                >
-                  <option value="recent">Most Recent</option>
-                  <option value="points">Highest Points</option>
-                  <option value="engagement">Most Engagement</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Update Controls */}
-            <div className="flex items-center space-x-3">
-              {lastUpdateTime && (
-                <div className="text-xs text-muted-foreground">
-                  Updated: {lastUpdateTime.toLocaleTimeString()}
-                </div>
-              )}
-              {updateCount > 0 && (
-                <div className="text-xs text-layeredge-blue">
-                  {updateCount} updates
-                </div>
-              )}
-
-              {/* Refresh Tweets Button */}
-              <button
-                onClick={handleManualRefresh}
-                disabled={isLoading}
-                className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
-                title="Refresh tweets list"
-              >
-                <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </button>
-
-              {/* Update Engagement Button */}
-              <button
-                onClick={forceUpdate}
-                disabled={isUpdating}
-                className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
-                title="Update all engagement metrics"
-              >
-                <ArrowPathIcon className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                Showing {filteredAndSortedTweets.length} of {formatNumber(updatedTweets.length)} tweets
-              </span>
-              {engagementError && (
-                <span className="text-destructive">
-                  Update error: {engagementError}
-                  {retryCount > 0 && ` (Retry ${retryCount}/3)`}
-                </span>
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Tweets List - Optimized with Smart List */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          {filteredAndSortedTweets.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
-                <ChatBubbleLeftRightIcon className="h-12 w-12 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground">
-                {searchTerm ? 'No tweets found matching your search.' : 'No tweets available.'}
-              </p>
-            </div>
-          ) : (
-            <SmartTweetList
-              tweets={filteredAndSortedTweets}
-              isUpdating={isUpdating}
-              onUpdateEngagement={handleUpdateSingleTweet}
-              showUpdateButton={true}
-              containerHeight={800}
-              itemHeight={220}
-              overscan={3}
-            />
-          )}
-        </motion.div>
-
-        {/* Load More */}
-        {filteredAndSortedTweets.length >= limit && (
+          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-center mt-8"
+            transition={{ duration: 0.6 }}
+            className="mb-8"
           >
-            <button
-              onClick={() => setLimit(prev => prev + 20)}
-              className="btn-layeredge-secondary px-6 py-3 rounded-lg font-semibold hover-lift"
-            >
-              Load More Tweets
-            </button>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Recent Submissions</h1>
+            <p className="text-muted-foreground">
+              Latest community tweets from our database
+            </p>
           </motion.div>
-        )}
+
+          {/* Controls */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="card-layeredge p-6 mb-8"
+          >
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-4 flex-1">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search tweets or users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input-layeredge w-full pl-10 pr-4 py-2 text-sm"
+                  />
+                </div>
+
+                {/* Sort */}
+                <div className="relative">
+                  <FunnelIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'recent' | 'points' | 'engagement')}
+                    className="input-layeredge pl-10 pr-8 py-2 text-sm appearance-none bg-card"
+                  >
+                    <option value="recent">Most Recent</option>
+                    <option value="points">Highest Points</option>
+                    <option value="engagement">Most Engagement</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Refresh Button */}
+              <div className="flex items-center space-x-3">
+                {lastRefresh && (
+                  <div className="text-xs text-muted-foreground">
+                    Updated: {lastRefresh.toLocaleTimeString()}
+                  </div>
+                )}
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
+                  title="Refresh tweets"
+                >
+                  <ArrowPathIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  Showing {filteredTweets.length} of {formatNumber(pagination?.total || 0)} tweets
+                </span>
+                <div className="flex items-center space-x-2">
+                  <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                  <span className="text-green-600">Database-only (stable)</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Tweets List */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            {filteredTweets.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                  <ChatBubbleLeftRightIcon className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">
+                  {searchTerm ? 'No tweets found matching your search.' : 'No tweets available.'}
+                </p>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="mt-4 text-layeredge-blue hover:underline"
+                  >
+                    Clear search
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <AnimatePresence mode="popLayout">
+                  {filteredTweets.map((tweet, index) => (
+                    <motion.div
+                      key={tweet.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4, delay: index * 0.05 }}
+                      layout
+                    >
+                      <TweetCard
+                        tweet={{
+                          ...tweet,
+                          createdAt: new Date(tweet.displayDate)
+                        }}
+                        showUser={true}
+                        isUpdating={false}
+                        showUpdateButton={false}
+                        className="hover:shadow-lg transition-shadow duration-200"
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Load More / Pagination */}
+          {pagination?.hasMore && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="text-center mt-8"
+            >
+              <button
+                onClick={handleLoadMore}
+                disabled={isLoading}
+                className="btn-layeredge-secondary px-8 py-3 rounded-lg font-semibold hover-lift disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    <span>Loading...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span>Load More Tweets</span>
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </div>
+                )}
+              </button>
+
+              {pagination && (
+                <div className="mt-4 text-sm text-muted-foreground">
+                  Page {pagination.page} of {pagination.totalPages} • {formatNumber(pagination.total)} total tweets
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Success Message */}
+          {tweets.length > 0 && !error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="mt-8 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+            >
+              <div className="flex items-center space-x-2 text-green-700 dark:text-green-300">
+                <CheckCircleIcon className="h-5 w-5" />
+                <span className="text-sm font-medium">
+                  ✅ Stable database-only mode - No Twitter API dependencies, no infinite loops!
+                </span>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </ErrorBoundary>
