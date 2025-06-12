@@ -235,17 +235,21 @@ export class SimplifiedTweetSubmissionService {
     // Calculate points based on tweet content and engagement
     const points = await this.calculatePoints(tweetId)
 
-    // Save submission to database
+    // Save submission to database using Tweet model
     try {
-      await prisma.tweetSubmission.create({
+      await prisma.tweet.create({
         data: {
           userId,
           tweetId,
-          tweetUrl,
-          authorUsername,
-          points,
-          submittedAt: new Date(),
-          status: 'approved' // Auto-approve for now
+          url: tweetUrl,
+          content: tweetData.content,
+          likes: tweetData.engagement.likes,
+          retweets: tweetData.engagement.retweets,
+          replies: tweetData.engagement.replies,
+          totalPoints: points,
+          isVerified: true,
+          originalTweetDate: tweetData.createdAt,
+          submittedAt: new Date()
         }
       })
 
@@ -348,7 +352,7 @@ export class SimplifiedTweetSubmissionService {
 
   private async checkExistingSubmission(tweetId: string, userId: string): Promise<boolean> {
     try {
-      const existing = await prisma.tweetSubmission.findFirst({
+      const existing = await prisma.tweet.findFirst({
         where: {
           OR: [
             { tweetId, userId },
