@@ -201,7 +201,7 @@ function testAuthProviderFixes() {
 
   const authProviderPath = path.join(process.cwd(), 'src/components/AuthProvider.tsx')
 
-  if (!fs.existsExists(authProviderPath)) {
+  if (!fs.existsSync(authProviderPath)) {
     console.log('❌ AuthProvider file not found')
     return false
   }
@@ -294,11 +294,13 @@ async function runTests() {
   const test2Result = testProblematicUseEffectPatterns()
   const test3Result = testRecentPageFixes()
   const test4Result = testAuthProviderFixes()
+  const test5Result = testTweetCardTooltipFixes()
 
   if (!test1Result) allTestsPassed = false
   if (!test2Result) allTestsPassed = false
   if (!test3Result) allTestsPassed = false
   if (!test4Result) allTestsPassed = false
+  if (!test5Result) allTestsPassed = false
   
   console.log('\n' + '='.repeat(60))
   
@@ -308,15 +310,18 @@ async function runTests() {
     console.log('   • Dashboard circular dependency fixed with useRef pattern')
     console.log('   • Recent page handleLoadMore fixed with refs and empty dependencies')
     console.log('   • AuthProvider Supabase client dependency removed')
-    console.log('   • All useEffect hooks no longer include function dependencies')
+    console.log('   • TweetCard previousMetrics circular dependency fixed with useRef')
+    console.log('   • Multiple TooltipProvider instances consolidated into single global provider')
+    console.log('   • All useEffect hooks no longer include problematic dependencies')
     console.log('   • Consistent patterns applied across all components')
     console.log('\n🚀 The "Maximum update depth exceeded" error should be resolved!')
     console.log('\n📋 Next Steps:')
-    console.log('   1. Test the /recent page in development mode')
+    console.log('   1. Test the /recent page with TweetCard tooltips in development mode')
     console.log('   2. Check browser console for any remaining React errors')
     console.log('   3. Verify no multiple GoTrueClient instances warning')
-    console.log('   4. Ensure fetchTweets is only called once per trigger')
-    console.log('   5. Deploy to production and test')
+    console.log('   4. Test tooltip hover interactions work without infinite loops')
+    console.log('   5. Ensure fetchTweets is only called once per trigger')
+    console.log('   6. Deploy to production and test')
   } else {
     console.log('❌ SOME TESTS FAILED!')
     console.log('\n⚠️  React Error #185 may still occur. Please review the failed tests above.')
