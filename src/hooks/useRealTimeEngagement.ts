@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { engagementManager, type Tweet, type EngagementUpdateResult } from '@/lib/engagement-manager'
 
 // Interface for future use in engagement update notifications
@@ -45,7 +45,20 @@ export function useRealTimeEngagement({
   const isComponentMounted = useRef(true)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
-  // Update local tweets when props change (with deep comparison to prevent unnecessary updates)
+  // CRITICAL FIX: Use ref to store current tweets to avoid circular dependencies
+  const currentTweetsRef = useRef<Tweet[]>(tweets)
+
+  // CRITICAL FIX: Memoize tweets comparison to prevent unnecessary updates
+  const tweetsHash = useMemo(() => {
+    return tweets.map(t => `${t.id}-${t.likes}-${t.retweets}-${t.replies}`).join('|')
+  }, [tweets])
+
+  // CRITICAL FIX: Always keep ref in sync with tweets prop
+  useEffect(() => {
+    currentTweetsRef.current = tweets
+  }, [tweets])
+
+  // CRITICAL FIX: Update local tweets when props change (REMOVED updatedTweets from dependencies to prevent infinite loop)
   useEffect(() => {
     const tweetsChanged = tweets.length !== updatedTweets.length ||
       tweets.some((tweet, index) => {
@@ -57,9 +70,10 @@ export function useRealTimeEngagement({
       })
 
     if (tweetsChanged) {
+      console.log('🔄 Tweets changed, updating local state')
       setUpdatedTweets(tweets)
     }
-  }, [tweets, updatedTweets])
+  }, [tweetsHash]) // CRITICAL FIX: Use tweetsHash instead of [tweets, updatedTweets]
 
   // Subscribe to engagement manager updates with throttling
   useEffect(() => {
@@ -135,13 +149,15 @@ export function useRealTimeEngagement({
   //   }
   // }, [])
 
-  // Update engagement metrics for tweets using the global engagement manager
+  // CRITICAL FIX: Update engagement metrics using ref to avoid dependency on updatedTweets
   const updateEngagementMetrics = useCallback(async (tweetIds?: string[]) => {
     if (!enabled || !isComponentMounted.current) return
 
+    // CRITICAL FIX: Use ref instead of state to avoid circular dependencies
+    const currentTweets = currentTweetsRef.current
     const tweetsToUpdate = tweetIds
-      ? updatedTweets.filter(tweet => tweetIds.includes(tweet.id))
-      : updatedTweets
+      ? currentTweets.filter(tweet => tweetIds.includes(tweet.id))
+      : currentTweets
 
     if (tweetsToUpdate.length === 0) return
 
@@ -186,14 +202,14 @@ export function useRealTimeEngagement({
         setIsUpdating(false)
       }
     }
-  }, [enabled, updatedTweets, maxRetries])
+  }, [enabled, maxRetries]) // CRITICAL FIX: Removed updatedTweets from dependencies
 
   // Force update function
   const forceUpdate = useCallback(async () => {
     await updateEngagementMetrics()
   }, [updateEngagementMetrics])
 
-  // Set up polling interval
+  // CRITICAL FIX: Set up polling interval with stable dependencies
   useEffect(() => {
     if (!enabled || retryCount >= maxRetries) return
 
@@ -207,8 +223,8 @@ export function useRealTimeEngagement({
       }, updateInterval)
     }
 
-    // Start polling immediately if we have tweets
-    if (updatedTweets.length > 0) {
+    // CRITICAL FIX: Use ref to check tweets length to avoid dependency on updatedTweets
+    if (currentTweetsRef.current.length > 0) {
       startPolling()
     }
 
@@ -217,7 +233,7 @@ export function useRealTimeEngagement({
         clearInterval(intervalRef.current)
       }
     }
-  }, [enabled, updateInterval, updatedTweets.length, updateEngagementMetrics, retryCount, maxRetries])
+  }, [enabled, updateInterval, updateEngagementMetrics, retryCount, maxRetries]) // CRITICAL FIX: Removed updatedTweets.length
 
   // Cleanup on unmount
   useEffect(() => {
