@@ -297,13 +297,44 @@ export class SimplifiedTweetSubmissionService {
         }
       }
 
-      // Fetch tweet data
-      const tweetData = await this.xApi.getTweetById(tweetId)
-      if (!tweetData) {
+      // PRODUCTION FIX: Use fallback service instead of direct X API call
+      console.log('🔄 Using fallback service for tweet validation (handles rate limits)')
+      const { getFallbackService } = await import('./fallback-service')
+      const fallbackService = getFallbackService({
+        preferApi: process.env.PREFER_API === 'true',
+        apiTimeoutMs: 10000
+      })
+
+      const fallbackData = await fallbackService.getTweetData(tweetUrl)
+      if (!fallbackData) {
         return {
           isValid: false,
           error: 'Tweet not found. It may be deleted, private, or the URL is incorrect.'
         }
+      }
+
+      // Convert fallback data to XTweetData format
+      const tweetData = {
+        id: fallbackData.id,
+        content: fallbackData.content,
+        author: {
+          id: fallbackData.author.id,
+          username: fallbackData.author.username,
+          name: fallbackData.author.name,
+          verified: fallbackData.author.verified || false,
+          profileImage: fallbackData.author.profileImage || '',
+          followersCount: fallbackData.author.followersCount || 0,
+          followingCount: fallbackData.author.followingCount || 0
+        },
+        engagement: {
+          likes: fallbackData.likes || 0,
+          retweets: fallbackData.retweets || 0,
+          replies: fallbackData.replies || 0,
+          quotes: 0
+        },
+        createdAt: fallbackData.createdAt,
+        isFromLayerEdgeCommunity: fallbackData.isFromLayerEdgeCommunity,
+        url: fallbackData.url
       }
 
       // Get user data to verify ownership

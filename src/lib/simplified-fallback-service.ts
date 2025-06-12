@@ -108,6 +108,13 @@ export class SimplifiedFallbackService {
       console.warn(`API rate limited. Will retry after ${this.rateLimitResetTime}`)
     }
 
+    // Check if this is an authentication error
+    if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
+      console.log('API authentication error detected, switching to fallback methods')
+      this.isApiRateLimited = true // Treat auth errors like rate limits
+      this.rateLimitResetTime = new Date(Date.now() + this.config.rateLimitCooldownMs)
+    }
+
     console.warn(`API error (failure count: ${this.apiFailureCount}):`, error.message)
   }
 
@@ -195,8 +202,91 @@ export class SimplifiedFallbackService {
       }
     }
 
-    console.error('All API methods failed for tweet:', tweetUrl)
+    // Try oEmbed API as final fallback
+    console.log('Attempting final fallback via oEmbed API...')
+    const oembedData = await this.tryOEmbedScraping(tweetUrl)
+    if (oembedData) {
+      console.log('✅ Successfully fetched tweet data via oEmbed API')
+      return oembedData
+    }
+
+    console.error('All fallback methods failed for tweet:', tweetUrl)
     return null
+  }
+
+  private async tryOEmbedScraping(tweetUrl: string): Promise<FallbackTweetData | null> {
+    try {
+      console.log('Attempting oEmbed scraping for:', tweetUrl)
+
+      // Extract tweet ID
+      const tweetId = this.extractTweetId(tweetUrl)
+      if (!tweetId) {
+        throw new Error('Invalid tweet URL')
+      }
+
+      // Use Twitter's oEmbed API (free and no auth required)
+      const oembedUrl = `https://publish.twitter.com/oembed?url=${encodeURIComponent(tweetUrl)}&omit_script=true`
+
+      const response = await fetch(oembedUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LayerEdge/1.0)',
+        },
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const oembedData = await response.json()
+
+      // Extract text content from HTML
+      const textContent = this.extractTextFromHtml(oembedData.html || '')
+
+      return {
+        id: tweetId,
+        content: textContent,
+        author: {
+          id: 'unknown',
+          username: oembedData.author_name || 'Unknown',
+          name: oembedData.author_name || 'Unknown',
+          verified: false,
+          followersCount: 0,
+          followingCount: 0
+        },
+        engagement: {
+          likes: 0, // oEmbed doesn't provide engagement metrics
+          retweets: 0,
+          replies: 0,
+          quotes: 0
+        },
+        createdAt: new Date(), // oEmbed doesn't provide exact date
+        isFromLayerEdgeCommunity: textContent.toLowerCase().includes('@layeredge') || textContent.toLowerCase().includes('$edgen'),
+        url: tweetUrl,
+        source: 'oembed' as const
+      }
+    } catch (error) {
+      console.error('oEmbed scraping failed:', error)
+      return null
+    }
+  }
+
+  private extractTweetId(tweetUrl: string): string | null {
+    const match = tweetUrl.match(/\/status\/(\d+)/)
+    return match ? match[1] : null
+  }
+
+  private extractTextFromHtml(html: string): string {
+    try {
+      // Extract text from the tweet HTML
+      const textMatch = html.match(/<p[^>]*>(.*?)<\/p>/s)
+      if (textMatch) {
+        return textMatch[1].replace(/<[^>]*>/g, '').trim()
+      }
+      return ''
+    } catch (error) {
+      return ''
+    }
   }
 
   async getEngagementMetrics(tweetUrl: string): Promise<FallbackEngagementMetrics | null> {
