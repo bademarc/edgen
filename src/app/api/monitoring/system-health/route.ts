@@ -174,38 +174,15 @@ async function checkRSSHealth() {
 }
 
 async function checkPlaywrightHealth() {
-  try {
-    // Check if Playwright is available
-    const playwright = await import('playwright')
-    
-    // Try to launch a browser (quick test)
-    let browserTest = null
-    try {
-      const browser = await playwright.chromium.launch({ headless: true })
-      await browser.close()
-      browserTest = 'working'
-    } catch (error) {
-      browserTest = 'failed'
-    }
-
-    return {
-      status: browserTest === 'working' ? 'healthy' : 'warning',
-      details: {
-        playwrightInstalled: 'yes',
-        browserTest,
-        fallbackAvailable: browserTest === 'working' ? 'yes' : 'no'
-      }
-    }
-  } catch (error) {
-    return {
-      status: 'warning',
-      details: {
-        playwrightInstalled: 'no',
-        browserTest: 'not available',
-        fallbackAvailable: 'no'
-      },
-      error: 'Playwright not available - web scraping fallback disabled'
-    }
+  // REMOVED: Playwright dependency (web scraping removed to fix React error #185)
+  return {
+    status: 'disabled',
+    details: {
+      playwrightInstalled: 'not needed',
+      browserTest: 'disabled',
+      fallbackAvailable: 'no'
+    },
+    error: 'Web scraping removed - using database-only approach for stability'
   }
 }
 

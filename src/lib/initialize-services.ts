@@ -1,9 +1,9 @@
 import { getTweetTrackerInstance } from './tweet-tracker'
-import { getEngagementUpdateService } from './engagement-update-service'
 
 /**
  * Initialize LayerEdge community platform services
  * OPTIMIZED: Manual submissions only - automatic tracking disabled
+ * UPDATED: Engagement services removed to fix React error #185
  */
 export async function initializeServices(): Promise<void> {
   console.log('🚀 Initializing LayerEdge Community Platform Services (Manual Mode)...')
@@ -36,19 +36,17 @@ export async function initializeServices(): Promise<void> {
     const tweetTracker = getTweetTrackerInstance()
     await tweetTracker.start()
 
-    // Initialize Engagement Update Service
-    console.log('📊 Starting Engagement Update Service...')
-    const engagementService = getEngagementUpdateService()
-    await engagementService.startAutomaticUpdates()
+    // REMOVED: Engagement Update Service (caused React error #185)
+    console.log('📊 Engagement Update Service: DISABLED (removed to fix infinite loops)')
 
-    console.log('✅ All automatic services initialized!')
+    console.log('✅ Automatic services initialized!')
     console.log('📋 Active services:')
     console.log('  - Tweet Tracker: Twitter API v1.1 search (15-minute intervals)')
-    console.log('  - Engagement Updates: Hourly engagement metric updates')
     console.log('  - Manual Submission: User tweet submission interface')
     console.log('')
     console.log('🔧 Configuration:')
     console.log('  - Web scraping: DISABLED (removed)')
+    console.log('  - Engagement updates: DISABLED (removed to fix React errors)')
     console.log('  - Rate limiting: ENABLED (respects Twitter API limits)')
     console.log('  - Manual verification: ENABLED (prevents point farming)')
     console.log('  - Required mentions: @layeredge, $EDGEN')
@@ -61,6 +59,7 @@ export async function initializeServices(): Promise<void> {
 
 /**
  * Get status of all services
+ * UPDATED: Engagement services removed to fix React error #185
  */
 export async function getServicesStatus(): Promise<{
   tweetTracker: {
@@ -81,28 +80,35 @@ export async function getServicesStatus(): Promise<{
     activeServices: number
     totalServices: number
     webScrapingRemoved: boolean
+    engagementUpdatesRemoved: boolean
   }
 }> {
   try {
     const tweetTracker = getTweetTrackerInstance()
-    const engagementService = getEngagementUpdateService()
 
     const tweetTrackerStatus = tweetTracker.getStatus()
-    const engagementStatus = engagementService.getStatus()
+
+    // REMOVED: Engagement service (caused React error #185)
+    const engagementStatus = {
+      isRunning: false,
+      lastUpdateTime: 0,
+      nextUpdateTime: 0,
+      apiAvailable: false
+    }
 
     const activeServices = [
-      tweetTrackerStatus.isRunning,
-      engagementStatus.isRunning
+      tweetTrackerStatus.isRunning
     ].filter(Boolean).length
 
     return {
       tweetTracker: tweetTrackerStatus,
       engagementUpdates: engagementStatus,
       summary: {
-        allServicesRunning: activeServices === 2,
+        allServicesRunning: activeServices === 1, // Only tweet tracker now
         activeServices,
-        totalServices: 2,
-        webScrapingRemoved: true
+        totalServices: 1, // Reduced from 2
+        webScrapingRemoved: true,
+        engagementUpdatesRemoved: true // New flag
       }
     }
   } catch (error) {
@@ -113,16 +119,17 @@ export async function getServicesStatus(): Promise<{
 
 /**
  * Stop all services
+ * UPDATED: Engagement services removed to fix React error #185
  */
 export async function stopAllServices(): Promise<void> {
   console.log('🛑 Stopping all LayerEdge services...')
 
   try {
     const tweetTracker = getTweetTrackerInstance()
-    const engagementService = getEngagementUpdateService()
+    // REMOVED: Engagement service (caused React error #185)
 
     await tweetTracker.stop()
-    await engagementService.stopAutomaticUpdates()
+    // REMOVED: engagementService.stopAutomaticUpdates()
 
     console.log('✅ All services stopped successfully')
   } catch (error) {
@@ -133,6 +140,7 @@ export async function stopAllServices(): Promise<void> {
 
 /**
  * Restart all services
+ * UPDATED: Engagement services removed to fix React error #185
  */
 export async function restartAllServices(): Promise<void> {
   console.log('🔄 Restarting all LayerEdge services...')
@@ -142,7 +150,7 @@ export async function restartAllServices(): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
     await initializeServices()
 
-    console.log('✅ All services restarted successfully')
+    console.log('✅ All services restarted successfully (engagement service excluded)')
   } catch (error) {
     console.error('❌ Error restarting services:', error)
     throw error
@@ -176,9 +184,10 @@ export async function healthCheck(): Promise<{
       issues.push('Tweet Tracker is not running')
     }
 
-    if (!services.engagementUpdates) {
-      issues.push('Engagement Update Service is not running')
-    }
+    // REMOVED: Engagement service checks (service removed to fix React error #185)
+    // if (!services.engagementUpdates) {
+    //   issues.push('Engagement Update Service is not running')
+    // }
 
     if (!services.twitterApi) {
       issues.push('Twitter API is not available')

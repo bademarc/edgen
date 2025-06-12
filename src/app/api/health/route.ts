@@ -82,22 +82,15 @@ export async function GET() {
       manualSubmissionHealth.error = error instanceof Error ? error.message : 'Manual submission service failed'
     }
 
-    // Check Engagement Update Service health
+    // REMOVED: Engagement Update Service (caused React error #185)
     const engagementUpdateHealth: EngagementUpdateHealth = {
       available: false,
       isRunning: false,
       lastUpdateTime: 0,
-      error: null
+      error: 'Engagement service removed to fix React error #185 - using database-only approach'
     }
 
-    try {
-      // Simplified engagement tracking - just mark as available
-      engagementUpdateHealth.available = true
-      engagementUpdateHealth.isRunning = true
-      engagementUpdateHealth.lastUpdateTime = Date.now()
-    } catch (error) {
-      engagementUpdateHealth.error = error instanceof Error ? error.message : 'Engagement update service failed'
-    }
+    // No longer checking engagement service - it was removed to fix infinite loops
 
     // Check Simplified Cache Service
     const cacheService = getSimplifiedCacheService()
@@ -121,7 +114,7 @@ export async function GET() {
 
     // Determine system capabilities
     systemHealth.canSubmitTweets = twitterApiHealth.healthy && manualSubmissionHealth.available
-    systemHealth.canUpdateEngagement = twitterApiHealth.healthy && engagementUpdateHealth.available
+    systemHealth.canUpdateEngagement = false // REMOVED: Engagement service removed to fix React error #185
 
     // Assess overall health
     if (!systemHealth.canSubmitTweets) {
@@ -132,10 +125,9 @@ export async function GET() {
       if (!manualSubmissionHealth.available) {
         systemHealth.issues.push('Manual submission service unavailable')
       }
-    } else if (!systemHealth.canUpdateEngagement) {
-      systemHealth.status = 'degraded'
-      systemHealth.issues.push('Engagement update service unavailable - metrics may be stale')
     }
+    // REMOVED: Engagement service health checks (service removed to fix React error #185)
+    // Note: Using database-only approach for engagement data
 
     // Check for missing environment variables
     const missingEnvVars = Object.entries(envCheck)
@@ -170,12 +162,8 @@ export async function GET() {
     if (!manualSubmissionHealth.available) {
       healthReport.recommendations.push('Check manual tweet submission service configuration')
     }
-    if (!engagementUpdateHealth.available) {
-      healthReport.recommendations.push('Check engagement update service configuration')
-    }
-    if (!engagementUpdateHealth.isRunning && engagementUpdateHealth.available) {
-      healthReport.recommendations.push('Start engagement update service: npm run services:start')
-    }
+    // REMOVED: Engagement service recommendations (service removed to fix React error #185)
+    healthReport.recommendations.push('Engagement updates: Using stable database-only approach')
 
     // Set appropriate HTTP status based on health
     const httpStatus = systemHealth.status === 'unhealthy' ? 503 :
