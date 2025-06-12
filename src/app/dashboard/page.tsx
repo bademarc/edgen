@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/components/AuthProvider'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -63,8 +63,18 @@ export default function DashboardPage() {
     setIsHydrated(true)
   }, [])
 
+  // CRITICAL FIX: Use refs to store current values and avoid circular dependencies
+  const userRef = useRef(user)
+
+  // Update ref when user changes
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
+  // CRITICAL FIX: Stable fetchDashboardData function using refs to prevent infinite loops
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
-    if (!user?.id) return
+    const currentUser = userRef.current
+    if (!currentUser?.id) return
 
     setIsLoading(true)
     setError(null)
@@ -91,8 +101,8 @@ export default function DashboardPage() {
 
       // Fetch user's recent tweets with cache-busting
       const tweetsUrl = forceRefresh
-        ? `/api/tweets?userId=${user.id}&limit=5&_t=${Date.now()}`
-        : `/api/tweets?userId=${user.id}&limit=5`
+        ? `/api/tweets?userId=${currentUser.id}&limit=5&_t=${Date.now()}`
+        : `/api/tweets?userId=${currentUser.id}&limit=5`
 
       const tweetsResponse = await fetch(tweetsUrl, {
         // DASHBOARD FIX: Disable caching for fresh data
@@ -107,7 +117,7 @@ export default function DashboardPage() {
       }
       const tweetsData = await tweetsResponse.json()
 
-      console.log(`📊 Dashboard: Fetched ${tweetsData.length} recent tweets for user ${user.id}`)
+      console.log(`📊 Dashboard: Fetched ${tweetsData.length} recent tweets for user ${currentUser.id}`)
       setRecentTweets(tweetsData)
     } catch (err) {
       console.error('Error fetching dashboard data:', err)
@@ -115,18 +125,19 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [user?.id])
+  }, []) // CRITICAL FIX: No dependencies to prevent circular dependency
 
+  // CRITICAL FIX: Initial load effect without fetchDashboardData dependency
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login')
       return
     }
 
-    if (user?.id) {
+    if (user?.id && isHydrated) {
       fetchDashboardData()
     }
-  }, [authLoading, user, router, fetchDashboardData])
+  }, [authLoading, user?.id, router, isHydrated]) // CRITICAL FIX: Removed fetchDashboardData dependency
 
   // DASHBOARD FIX: Auto-refresh every 60 seconds to catch new submissions
   useEffect(() => {
@@ -138,7 +149,7 @@ export default function DashboardPage() {
     }, 60000) // 60 seconds
 
     return () => clearInterval(interval)
-  }, [fetchDashboardData, user?.id])
+  }, [user?.id]) // CRITICAL FIX: Removed fetchDashboardData dependency since it's now stable
 
   // Manual refresh handler
   const handleManualRefresh = useCallback(() => {
