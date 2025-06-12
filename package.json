@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev-cross-platform.js",
+    "dev:next": "next dev",
+    "dev:fix": "node scripts/fix-dev-server.js",
+    "test:platform": "node scripts/test-cross-platform.js",
+    "setup:dev": "node scripts/setup-development.js",
     "build": "node scripts/build-windows.js",
     "build:original": "prisma generate && prisma migrate deploy && next build",
     "build:windows": "node scripts/build-windows.js",

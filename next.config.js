@@ -1,14 +1,36 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // Cross-platform compatibility
+  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+
+  // External packages that should not be bundled
   serverExternalPackages: ['@prisma/client', 'prisma'],
+
+  // Development optimizations
+  ...(process.env.NODE_ENV === 'development' && {
+    // Enable faster refresh in development
+    reactStrictMode: true,
+    // Optimize for development speed
+    swcMinify: false,
+    // Enable source maps for better debugging
+    productionBrowserSourceMaps: false,
+  }),
+
+  // Production optimizations
+  ...(process.env.NODE_ENV === 'production' && {
+    // Enable optimizations for production
+    swcMinify: true,
+    // Disable source maps in production
+    productionBrowserSourceMaps: false,
+  }),
+
   eslint: {
-    // Disable ESLint during builds to avoid blocking deployment
-    ignoreDuringBuilds: true,
+    // Only ignore during builds in production to avoid blocking deployment
+    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
   },
   typescript: {
-    // Disable TypeScript errors during builds for faster deployment
-    ignoreBuildErrors: true,
+    // Only ignore TypeScript errors in production builds for faster deployment
+    ignoreBuildErrors: process.env.NODE_ENV === 'production',
   },
   images: {
     remotePatterns: [
@@ -55,29 +77,68 @@ const nextConfig = {
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
   },
-  webpack: (config, { isServer }) => {
-    // Ignore Supabase Edge Functions during build
+  webpack: (config, { isServer, dev }) => {
+    // Cross-platform file watching optimizations
     config.watchOptions = {
       ...config.watchOptions,
+      // Reduce CPU usage on all platforms
+      aggregateTimeout: 300,
+      poll: process.platform === 'win32' ? 1000 : undefined,
       ignored: [
         ...(Array.isArray(config.watchOptions?.ignored) ? config.watchOptions.ignored : []),
         '**/supabase/functions/**/*',
         '**/node_modules/**',
+        '**/.git/**',
+        '**/.next/**',
+        '**/coverage/**',
+        '**/dist/**',
       ],
     };
 
-    // Exclude Supabase functions from module resolution
-    config.resolve.alias = {
-      ...config.resolve.alias,
-    };
+    // Platform-specific optimizations
+    if (process.platform === 'darwin') {
+      // macOS optimizations
+      config.watchOptions.ignored.push('**/node_modules/.cache/**');
+    } else if (process.platform === 'win32') {
+      // Windows optimizations
+      config.watchOptions.usePolling = true;
+      config.watchOptions.interval = 1000;
+    }
 
-    // Ensure framer-motion is properly handled
+    // Client-side fallbacks for Node.js modules
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
         net: false,
         tls: false,
+        crypto: false,
+        stream: false,
+        url: false,
+        zlib: false,
+        http: false,
+        https: false,
+        assert: false,
+        os: false,
+        path: false,
+      };
+    }
+
+    // Development-specific optimizations
+    if (dev) {
+      // Faster builds in development
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all',
+            },
+          },
+        },
       };
     }
 
