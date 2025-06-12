@@ -285,7 +285,7 @@ export default function RecentSubmissionsPage() {
           >
             <h1 className="text-3xl font-bold text-foreground mb-2">Recent Submissions</h1>
             <p className="text-muted-foreground">
-              Latest community tweets from our database
+              Latest community tweets and engagement highlights
             </p>
           </motion.div>
 
@@ -351,7 +351,7 @@ export default function RecentSubmissionsPage() {
                 </span>
                 <div className="flex items-center space-x-2">
                   <CheckCircleIcon className="h-4 w-4 text-green-500" />
-                  <span className="text-green-600">Database-only (stable)</span>
+                  <span className="text-green-600">Live community feed</span>
                 </div>
               </div>
             </div>
@@ -454,7 +454,7 @@ export default function RecentSubmissionsPage() {
               <div className="flex items-center space-x-2 text-green-700 dark:text-green-300">
                 <CheckCircleIcon className="h-5 w-5" />
                 <span className="text-sm font-medium">
-                  ✅ Stable database-only mode - No Twitter API dependencies, no infinite loops!
+                  ✅ Community feed is active and up-to-date!
                 </span>
               </div>
             </motion.div>

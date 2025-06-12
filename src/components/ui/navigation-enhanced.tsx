@@ -13,7 +13,8 @@ import {
   InformationCircleIcon,
   QuestionMarkCircleIcon,
   ChartBarIcon,
-  ChatBubbleLeftRightIcon
+  ChatBubbleLeftRightIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 import { Button } from './button'
 import { Badge } from './badge'
@@ -22,8 +23,9 @@ import { Card } from './card'
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon, requiresAuth: true },
-  { name: 'Recent Submissions', href: '/recent', icon: ChatBubbleLeftRightIcon },
+  { name: 'Quests', href: '/quests', icon: SparklesIcon, requiresAuth: true },
   { name: 'Leaderboard', href: '/leaderboard', icon: TrophyIcon },
+  { name: 'Recent Submissions', href: '/recent', icon: ChatBubbleLeftRightIcon },
   { name: 'About', href: '/about', icon: InformationCircleIcon },
   { name: 'FAQ', href: '/faq', icon: QuestionMarkCircleIcon },
 ]

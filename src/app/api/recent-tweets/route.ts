@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
 /**
- * Database-only API route for recent tweets page
- * No Twitter API calls, no real-time updates, just pure database queries
+ * Community feed API route for recent tweets page
+ * Serves curated community content from our platform database
  */
 export async function GET(request: NextRequest) {
   try {
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         sortBy,
         search: search || null,
         timestamp: new Date().toISOString(),
-        source: 'database-only' // Indicates this is not using Twitter API
+        source: 'community-feed' // Indicates this is from our community database
       }
     })
   } catch (error) {

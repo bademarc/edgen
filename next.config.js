@@ -10,16 +10,12 @@ const nextConfig = {
   ...(process.env.NODE_ENV === 'development' && {
     // Enable faster refresh in development
     reactStrictMode: true,
-    // Optimize for development speed
-    swcMinify: false,
     // Enable source maps for better debugging
     productionBrowserSourceMaps: false,
   }),
 
   // Production optimizations
   ...(process.env.NODE_ENV === 'production' && {
-    // Enable optimizations for production
-    swcMinify: true,
     // Disable source maps in production
     productionBrowserSourceMaps: false,
   }),
@@ -101,8 +97,7 @@ const nextConfig = {
       config.watchOptions.ignored.push('**/node_modules/.cache/**');
     } else if (process.platform === 'win32') {
       // Windows optimizations
-      config.watchOptions.usePolling = true;
-      config.watchOptions.interval = 1000;
+      config.watchOptions.poll = 1000;
     }
 
     // Client-side fallbacks for Node.js modules

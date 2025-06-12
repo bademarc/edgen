@@ -66,6 +66,7 @@ model User {
   pointsHistory PointsHistory[]
   tweetMonitoring TweetMonitoring[]
   tweetTracking TweetTracking[]
+  userQuests    UserQuest[]
 }
 
 model VerificationToken {
@@ -153,6 +154,60 @@ model SystemConfig {
   key       String   @id
   value     String
   updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Quest {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  type        String   // 'follow', 'join_community', 'engage_tweet', 'custom'
+  points      Int      @default(1000)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  // Quest-specific data (JSON for flexibility)
+  metadata    Json?    // Store quest-specific requirements and data
+
+  // Verification settings
+  requiresManualVerification Boolean @default(false)
+  autoVerifiable             Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userQuests  UserQuest[]
+
+  @@index([isActive, sortOrder])
+}
+
+model UserQuest {
+  id          String   @id @default(cuid())
+  userId      String
+  questId     String
+
+  // Progress tracking
+  status      String   @default("not_started") // 'not_started', 'in_progress', 'completed', 'claimed'
+  progress    Int      @default(0)
+  maxProgress Int      @default(1)
+
+  // Completion data
+  completedAt DateTime?
+  claimedAt   DateTime?
+
+  // Verification data (for manual verification quests)
+  submissionData Json?    // Store user submission data (URLs, screenshots, etc.)
+  verifiedBy     String?  // Admin user ID who verified
+  verifiedAt     DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest       Quest    @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId])
+  @@index([userId, status])
+  @@index([questId, status])
 }
 
 model UnclaimedTweet {

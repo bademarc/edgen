@@ -13,7 +13,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
-import { Menu, X, Home, BarChart3, MessageSquare, Trophy, HelpCircle, FileText, User, LogOut } from "lucide-react"
+import { Menu, X, Home, BarChart3, MessageSquare, Trophy, HelpCircle, FileText, User, LogOut, Target } from "lucide-react"
 import { cn } from '@/lib/utils'
 import {
   Sheet,
@@ -47,6 +47,42 @@ export function Navigation() {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
+                <Link href="/dashboard" legacyBehavior passHref>
+                  <NavigationMenuLink
+                    className={cn(
+                      "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                      !user && "opacity-50 pointer-events-none"
+                    )}
+                  >
+                    Dashboard
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              {user && (
+                <NavigationMenuItem>
+                  <Link href="/quests" legacyBehavior passHref>
+                    <NavigationMenuLink
+                      className={cn(
+                        "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                      )}
+                    >
+                      Quests
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+              )}
+              <NavigationMenuItem>
+                <Link href="/leaderboard" legacyBehavior passHref>
+                  <NavigationMenuLink
+                    className={cn(
+                      "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                    )}
+                  >
+                    Leaderboard
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
                 <NavigationMenuTrigger>Community</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
@@ -63,9 +99,6 @@ export function Navigation() {
                         </a>
                       </NavigationMenuLink>
                     </li>
-                    <ListItem href="/leaderboard" title="Leaderboard">
-                      See top community contributors
-                    </ListItem>
                     <ListItem href="/recent" title="Recent Activity">
                       Latest community engagement
                     </ListItem>
@@ -178,8 +211,9 @@ export function Navigation() {
               <div className="space-y-2">
                 <MobileNavLink href="/" icon={Home} label="Home" />
                 <MobileNavLink href="/dashboard" icon={BarChart3} label="Dashboard" requiresAuth />
-                <MobileNavLink href="/submit-tweet" icon={MessageSquare} label="Submit Tweet" />
+                <MobileNavLink href="/quests" icon={Target} label="Quests" requiresAuth />
                 <MobileNavLink href="/leaderboard" icon={Trophy} label="Leaderboard" />
+                <MobileNavLink href="/submit-tweet" icon={MessageSquare} label="Submit Tweet" />
                 <MobileNavLink href="/recent" icon={FileText} label="Recent Activity" />
                 <MobileNavLink href="/helper" icon={HelpCircle} label="Helper" />
                 <MobileNavLink href="/about" icon={FileText} label="About" />
