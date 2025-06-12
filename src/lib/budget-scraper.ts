@@ -74,17 +74,23 @@ class BudgetScrapingService {
       }
 
       const oembedData = await response.json()
-      
+
       // Parse engagement metrics from HTML (basic parsing)
       const metrics = this.parseMetricsFromHtml(oembedData.html || '')
-      
+
+      // Extract actual username from author_url instead of using display name
+      const authorUsername = this.extractUsernameFromAuthorUrl(oembedData.author_url) ||
+                            this.extractUsernameFromUrl(tweetUrl) ||
+                            oembedData.author_name ||
+                            'Unknown'
+
       return {
         success: true,
         data: {
           id: tweetId,
           url: tweetUrl,
           content: this.extractTextFromHtml(oembedData.html || ''),
-          author: oembedData.author_name || 'Unknown',
+          author: authorUsername,
           likes: metrics.likes || 0,
           retweets: metrics.retweets || 0,
           replies: metrics.replies || 0,
@@ -213,6 +219,38 @@ class BudgetScrapingService {
   private extractTweetId(url: string): string | null {
     const match = url.match(/status\/(\d+)/)
     return match ? match[1] : null
+  }
+
+  /**
+   * Extract username from Twitter/X author URL
+   */
+  private extractUsernameFromAuthorUrl(authorUrl: string): string | null {
+    if (!authorUrl) return null
+
+    try {
+      // Match patterns like https://twitter.com/username or https://x.com/username
+      const match = authorUrl.match(/(?:twitter\.com|x\.com)\/([^\/\?]+)/)
+      return match ? match[1] : null
+    } catch (error) {
+      console.error('Error extracting username from author URL:', error)
+      return null
+    }
+  }
+
+  /**
+   * Extract username from tweet URL as fallback
+   */
+  private extractUsernameFromUrl(tweetUrl: string): string | null {
+    if (!tweetUrl) return null
+
+    try {
+      // Match patterns like https://twitter.com/username/status/123 or https://x.com/username/status/123
+      const match = tweetUrl.match(/(?:twitter\.com|x\.com)\/([^\/]+)\/status\//)
+      return match ? match[1] : null
+    } catch (error) {
+      console.error('Error extracting username from tweet URL:', error)
+      return null
+    }
   }
 
   private hashUrl(url: string): string {

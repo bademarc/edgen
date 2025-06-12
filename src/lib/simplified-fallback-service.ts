@@ -265,12 +265,18 @@ export class SimplifiedFallbackService {
       // Extract text content from HTML
       const textContent = this.extractTextFromHtml(oembedData.html || '')
 
+      // Extract actual username from author_url instead of using display name
+      const authorUsername = this.extractUsernameFromAuthorUrl(oembedData.author_url) ||
+                            this.extractUsernameFromUrl(tweetUrl) ||
+                            oembedData.author_name ||
+                            'Unknown'
+
       return {
         id: tweetId,
         content: textContent,
         author: {
           id: 'unknown',
-          username: oembedData.author_name || 'Unknown',
+          username: authorUsername,
           name: oembedData.author_name || 'Unknown',
           verified: false,
           followersCount: 0,
@@ -305,6 +311,38 @@ export class SimplifiedFallbackService {
       return ''
     } catch (error) {
       return ''
+    }
+  }
+
+  /**
+   * Extract username from Twitter/X author URL
+   */
+  private extractUsernameFromAuthorUrl(authorUrl: string): string | null {
+    if (!authorUrl) return null
+
+    try {
+      // Match patterns like https://twitter.com/username or https://x.com/username
+      const match = authorUrl.match(/(?:twitter\.com|x\.com)\/([^\/\?]+)/)
+      return match ? match[1] : null
+    } catch (error) {
+      console.error('Error extracting username from author URL:', error)
+      return null
+    }
+  }
+
+  /**
+   * Extract username from tweet URL as fallback
+   */
+  private extractUsernameFromUrl(tweetUrl: string): string | null {
+    if (!tweetUrl) return null
+
+    try {
+      // Match patterns like https://twitter.com/username/status/123 or https://x.com/username/status/123
+      const match = tweetUrl.match(/(?:twitter\.com|x\.com)\/([^\/]+)\/status\//)
+      return match ? match[1] : null
+    } catch (error) {
+      console.error('Error extracting username from tweet URL:', error)
+      return null
     }
   }
 
