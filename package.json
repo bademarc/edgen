@@ -70,6 +70,7 @@
     "test:simplified": "node scripts/test-simplified-services.cjs",
     "fix:twitter-token": "node scripts/fix-twitter-bearer-token.cjs",
     "update:bearer-token": "node scripts/update-bearer-token.cjs",
+    "test:verification": "node scripts/test-tweet-verification.cjs",
     "audit:users": "tsx src/scripts/audit-user-sync.ts",
     "check:auth-sessions": "tsx src/scripts/check-auth-sessions.ts",
     "fix:user-sync": "tsx src/scripts/fix-user-sync.ts",

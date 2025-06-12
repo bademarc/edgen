@@ -11,6 +11,14 @@ export interface TweetSubmissionResult {
   error?: string
 }
 
+export interface TweetVerificationResult {
+  isValid: boolean
+  isOwnTweet: boolean
+  containsRequiredMentions: boolean
+  tweetData?: any
+  error?: string
+}
+
 interface TweetValidationResult {
   isValid: boolean
   error?: string
@@ -30,6 +38,101 @@ export class SimplifiedTweetSubmissionService {
 
   private readonly SUBMISSION_COOLDOWN_MS = 2 * 60 * 1000 // 2 minutes between submissions
   private readonly RATE_LIMIT_PER_HOUR = 10 // 10 submissions per hour per user
+
+  /**
+   * Verify tweet ownership and validity without submitting
+   */
+  async verifyTweetOwnership(tweetUrl: string, userId: string): Promise<TweetVerificationResult> {
+    try {
+      // Input validation
+      if (!tweetUrl || typeof tweetUrl !== 'string') {
+        return {
+          isValid: false,
+          isOwnTweet: false,
+          containsRequiredMentions: false,
+          error: 'Tweet URL is required and must be a valid string'
+        }
+      }
+
+      if (!userId || typeof userId !== 'string') {
+        return {
+          isValid: false,
+          isOwnTweet: false,
+          containsRequiredMentions: false,
+          error: 'User ID is required for tweet verification'
+        }
+      }
+
+      // Normalize URL
+      const normalizedUrl = tweetUrl.trim()
+      if (!normalizedUrl) {
+        return {
+          isValid: false,
+          isOwnTweet: false,
+          containsRequiredMentions: false,
+          error: 'Tweet URL cannot be empty'
+        }
+      }
+
+      // Validate tweet URL and extract tweet ID
+      const validation = await this.validateTweet(normalizedUrl, userId)
+
+      if (!validation.isValid) {
+        return {
+          isValid: false,
+          isOwnTweet: false,
+          containsRequiredMentions: false,
+          error: validation.error || 'Tweet validation failed'
+        }
+      }
+
+      const tweetId = validation.tweetId!
+
+      // Get tweet data for verification response
+      const tweetData = await this.xApi.getTweetById(tweetId)
+
+      if (!tweetData) {
+        return {
+          isValid: false,
+          isOwnTweet: false,
+          containsRequiredMentions: false,
+          error: 'Could not fetch tweet data'
+        }
+      }
+
+      // Get user data to verify ownership
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { xUsername: true }
+      })
+
+      const isOwnTweet = user?.xUsername?.toLowerCase() === tweetData.author.username.toLowerCase()
+      const containsRequiredMentions = tweetData.isFromLayerEdgeCommunity
+
+      return {
+        isValid: true,
+        isOwnTweet,
+        containsRequiredMentions,
+        tweetData: {
+          id: tweetData.id,
+          content: tweetData.content,
+          author: tweetData.author,
+          engagement: tweetData.engagement,
+          createdAt: tweetData.createdAt,
+          url: tweetData.url
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Tweet verification error:', error)
+      return {
+        isValid: false,
+        isOwnTweet: false,
+        containsRequiredMentions: false,
+        error: 'An unexpected error occurred during tweet verification'
+      }
+    }
+  }
 
   /**
    * Submit a tweet for points calculation
