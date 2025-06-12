@@ -3,7 +3,7 @@
 /**
  * Helper Page - Full-screen AI Chat Interface
  * Dedicated page for extended conversations with Edgen Helper AI
- * Powered by io.net Intelligence API with DeepSeek-R1-0528 model
+ * Powered by Advanced AI Assistant
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
@@ -179,7 +179,7 @@ export default function HelperPage() {
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         role: 'assistant',
-        content: parseAIContent("# 👋 Welcome to Edgen Helper!\n\nI'm your dedicated LayerEdge community assistant, powered by **DeepSeek-R1 AI**.\n\n## 🎯 How I can help you:\n\n• **Tweet Submission & Optimization** - Learn the best strategies for earning maximum points\n• **Points System Mastery** - Understand how engagement translates to rewards\n• **Hashtag Strategy** - Master the use of @layeredge and $EDGEN mentions\n• **Platform Navigation** - Get help with any LayerEdge feature\n• **Troubleshooting** - Solve issues with submissions, login, or account problems\n• **Community Insights** - Learn about LayerEdge ecosystem and opportunities\n\n## 💬 **Try asking me:**\n- \"How do I maximize my points on LayerEdge?\"\n- \"What's the best way to submit tweets?\"\n- \"I'm having trouble with my account\"\n- \"Explain the LayerEdge community platform\"\n\n**Ready to help you succeed in the LayerEdge community!** 🚀"),
+        content: parseAIContent("# 👋 Welcome to Edgen Helper!\n\nI'm your dedicated LayerEdge community assistant, powered by **Advanced AI Assistant**.\n\n## 🎯 How I can help you:\n\n• **Tweet Submission & Optimization** - Learn the best strategies for earning maximum points\n• **Points System Mastery** - Understand how engagement translates to rewards\n• **Hashtag Strategy** - Master the use of @layeredge and $EDGEN mentions\n• **Platform Navigation** - Get help with any LayerEdge feature\n• **Troubleshooting** - Solve issues with submissions, login, or account problems\n• **Community Insights** - Learn about LayerEdge ecosystem and opportunities\n\n## 💬 **Try asking me:**\n- \"How do I maximize my points on LayerEdge?\"\n- \"What's the best way to submit tweets?\"\n- \"I'm having trouble with my account\"\n- \"Explain the LayerEdge community platform\"\n\n**Ready to help you succeed in the LayerEdge community!** 🚀\n\n⚠️ **Note**: AI responses may contain errors and should be verified."),
         timestamp: new Date()
       }
       setMessages([welcomeMessage])
@@ -252,10 +252,10 @@ export default function HelperPage() {
         // Update online status and mode based on response
         if (data.isOffline) {
           setIsOnline(false)
-          setCurrentMode(data.mode || 'Enhanced Offline')
+          setCurrentMode(data.mode || 'Enhanced Offline Mode')
         } else {
           setIsOnline(true)
-          setCurrentMode('DeepSeek-R1 Online')
+          setCurrentMode('AI Assistant Online')
         }
       } else {
         throw new Error(data.error || 'Failed to get response')
@@ -499,6 +499,19 @@ export default function HelperPage() {
                     )}
                   </Button>
                 </div>
+
+                {/* AI Disclaimer */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-md"
+                >
+                  <p className="text-xs text-yellow-600 dark:text-yellow-200 flex items-center justify-center">
+                    <AlertCircle className="h-3 w-3 mr-1 flex-shrink-0" />
+                    AI responses may contain errors and should be verified
+                  </p>
+                </motion.div>
+
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -515,7 +528,7 @@ export default function HelperPage() {
                       </motion.span>
                     </span>
                   ) : (
-                    "Powered by DeepSeek-R1 via io.net Intelligence API • Press Enter to send"
+                    "Powered by Advanced AI Assistant • Press Enter to send"
                   )}
                 </motion.p>
               </div>

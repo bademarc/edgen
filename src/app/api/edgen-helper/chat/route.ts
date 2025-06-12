@@ -1,6 +1,6 @@
 /**
  * Edgen Helper Chat API Endpoint
- * Handles chat requests for the AI chatbot using io.net API
+ * Handles chat requests for the AI chatbot using external AI API
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -44,17 +44,17 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 Edgen Helper chat request received:', message.substring(0, 50) + '...')
 
-    const ionetService = getIoNetApiService()
+    const aiService = getIoNetApiService()
 
-    console.log('🔍 Checking io.net API service status...')
-    const serviceStatus = ionetService.getStatus()
+    console.log('🔍 Checking external AI service status...')
+    const serviceStatus = aiService.getStatus()
     console.log('📊 Service status:', serviceStatus)
 
-    if (!ionetService.isReady()) {
-      console.warn('⚠️ io.net API service not ready, using enhanced fallback')
+    if (!aiService.isReady()) {
+      console.warn('⚠️ External AI API service not ready, using enhanced fallback')
       console.warn('Service status details:', serviceStatus)
 
-      const fallbackResponse = ionetService.getFallbackResponse(message)
+      const fallbackResponse = aiService.getFallbackResponse(message)
 
       // Return success with fallback message to keep chatbot working
       return NextResponse.json({
@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Send message to io.net API
-    console.log('🚀 Sending message to Llama-3.3-70B-Instruct via io.net...')
-    const response = await ionetService.sendMessage(message, conversationHistory || [])
+    // Send message to external AI API
+    console.log('🚀 Sending message to external AI API...')
+    const response = await aiService.sendMessage(message, conversationHistory || [])
 
     if (response.success) {
       console.log('✅ Edgen Helper response generated successfully')
@@ -87,10 +87,10 @@ export async function POST(request: NextRequest) {
         isOffline: false
       })
     } else {
-      console.error('❌ io.net API error:', response.error)
+      console.error('❌ External AI API error:', response.error)
 
       // Provide enhanced fallback response as success to keep chatbot working
-      const fallbackResponse = ionetService.getFallbackResponse(message)
+      const fallbackResponse = aiService.getFallbackResponse(message)
 
       return NextResponse.json({
         success: true,
@@ -120,13 +120,13 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const ionetService = getIoNetApiService()
-    const status = ionetService.getStatus()
+    const aiService = getIoNetApiService()
+    const status = aiService.getStatus()
 
     return NextResponse.json({
       service: 'Edgen Helper Chat API',
       status: status.ready ? 'ready' : 'not ready',
-      ionetApiStatus: {
+      externalAIStatus: {
         initialized: status.initialized,
         apiKey: status.apiKey,
         baseUrl: status.baseUrl,

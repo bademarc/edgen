@@ -1,11 +1,10 @@
 /**
- * io.net Intelligence API Service for Edgen Helper AI Chatbot
- * Integrates with io.net Intelligence API using Llama-3.3-70B-Instruct model
- * Reference: https://docs.io.net/reference/get-started-with-io-intelligence-api
- * Model: meta-llama/Llama-3.3-70B-Instruct
+ * AI API Service for Edgen Helper AI Chatbot
+ * Integrates with external AI API for intelligent responses
+ * Provides intelligent assistance for LayerEdge community platform
  */
 
-export interface IoNetConfig {
+export interface AIConfig {
   apiKey: string
   baseUrl: string
   model: string
@@ -31,13 +30,14 @@ export interface ChatResponse {
   }
   model?: string
   finishReason?: string
+  isOffline?: boolean
 }
 
-export class IoNetApiService {
-  private config: IoNetConfig
+export class AIService {
+  private config: AIConfig
   private isInitialized: boolean = false
 
-  constructor(config?: Partial<IoNetConfig>) {
+  constructor(config?: Partial<AIConfig>) {
     this.config = {
       apiKey: process.env.IO_NET_API_KEY || '',
       baseUrl: process.env.IO_NET_BASE_URL || 'https://api.intelligence.io.solutions/api',
@@ -49,7 +49,7 @@ export class IoNetApiService {
     }
 
     if (!this.config.apiKey) {
-      console.warn('⚠️ io.net Intelligence API key not configured')
+      console.warn('⚠️ External AI API key not configured')
       console.warn('Environment check:', {
         IO_NET_API_KEY: process.env.IO_NET_API_KEY ? 'Present' : 'Missing',
         IO_NET_BASE_URL: process.env.IO_NET_BASE_URL || 'Missing',
@@ -58,7 +58,7 @@ export class IoNetApiService {
       this.isInitialized = false
     } else {
       this.isInitialized = true
-      console.log('✅ io.net Intelligence API service initialized with Llama-3.3-70B-Instruct')
+      console.log('✅ External AI API service initialized')
       console.log(`📡 Base URL: ${this.config.baseUrl}`)
       console.log(`🤖 Model: ${this.config.model}`)
       console.log(`🔑 API Key: ${this.config.apiKey.substring(0, 20)}...`)
@@ -66,15 +66,15 @@ export class IoNetApiService {
   }
 
   /**
-   * Get the system prompt for Edgen Helper (optimized for Llama-3.3-70B-Instruct)
+   * Get the system prompt for Edgen Helper (External AI Assistant)
    */
   private getSystemPrompt(): string {
-    return `You are "Edgen Helper", an intelligent AI assistant powered by Llama-3.3-70B-Instruct for the LayerEdge community platform.
+    return `You are "Edgen Helper", an intelligent AI assistant for the LayerEdge community platform.
 
 CORE MISSION: Help LayerEdge community members maximize their engagement and earn points through strategic tweet submission.
 
 PLATFORM OVERVIEW:
-LayerEdge is a community-driven platform for \\$EDGEN token holders where users earn points by submitting high-engagement tweets containing specific mentions.
+LayerEdge is a community-driven platform for $EDGEN token holders where users earn points by submitting high-engagement tweets containing specific mentions.
 
 RESPONSE STYLE:
 - Be direct, helpful, and engaging
@@ -85,11 +85,11 @@ RESPONSE STYLE:
 
 KEY FEATURES YOU SUPPORT:
 
-1. **Points System**: Users earn points by submitting tweets with @layeredge OR \\$EDGEN mentions. Points = base score + engagement multiplier (likes + retweets + replies).
+1. **Points System**: Users earn points by submitting tweets with @layeredge OR $EDGEN mentions. Points = base score + engagement multiplier (likes + retweets + replies).
 
 2. **Tweet Submission**: Guide users to /submit page where they paste direct tweet URLs. System validates mentions and tracks engagement.
 
-3. **Hashtag Strategy**: @layeredge (official mention) or \\$EDGEN (token reference) - either qualifies for points.
+3. **Hashtag Strategy**: @layeredge (official mention) or $EDGEN (token reference) - either qualifies for points.
 
 4. **Troubleshooting**: Help with common issues like invalid URLs, tweet not found, missing points, or login problems.
 
@@ -106,19 +106,19 @@ If unsure about technical details, recommend contacting platform support.`
   }
 
   /**
-   * Send a chat message to io.net Intelligence API
-   * Uses Llama-3.3-70B-Instruct model through io.net's infrastructure
+   * Send a chat message to external AI API
+   * Uses advanced AI model through external infrastructure
    */
   async sendMessage(userMessage: string, conversationHistory: ChatMessage[] = []): Promise<ChatResponse> {
     if (!this.isInitialized) {
       return {
         success: false,
-        error: 'io.net Intelligence API service not initialized. Please check your API key configuration.'
+        error: 'External AI API service not initialized. Please check your API key configuration.'
       }
     }
 
     try {
-      console.log('🤖 Sending message to io.net Intelligence API with Llama-3.3-70B-Instruct...')
+      console.log('🤖 Sending message to external AI API...')
 
       // Prepare messages array with system prompt
       const messages: ChatMessage[] = [
@@ -126,16 +126,16 @@ If unsure about technical details, recommend contacting platform support.`
           role: 'system',
           content: this.getSystemPrompt()
         },
-        ...conversationHistory.slice(-8), // Keep last 8 messages for context (Llama optimization)
+        ...conversationHistory.slice(-8), // Keep last 8 messages for context
         {
           role: 'user',
           content: userMessage
         }
       ]
 
-      // Prepare request payload according to io.net Intelligence API documentation
+      // Prepare request payload according to API documentation
       const requestPayload = {
-        model: this.config.model, // meta-llama/Llama-3.3-70B-Instruct
+        model: this.config.model,
         messages: messages.map(msg => ({
           role: msg.role,
           content: msg.content
@@ -144,23 +144,16 @@ If unsure about technical details, recommend contacting platform support.`
         temperature: this.config.temperature,
         top_p: this.config.topP,
         stream: false,
-        // Llama-3.3-70B-Instruct specific parameters
         stop: null,
         presence_penalty: 0,
         frequency_penalty: 0
       }
 
-      console.log('📤 Request payload prepared for io.net Intelligence API')
+      console.log('📤 Request payload prepared for external AI API')
       console.log(`🎯 Using model: ${this.config.model}`)
 
-      // Make API request to io.net Intelligence API
+      // Make API request to external AI API
       console.log(`🌐 Making request to: ${this.config.baseUrl}/v1/chat/completions`)
-      console.log(`📋 Request payload:`, {
-        model: requestPayload.model,
-        messages: requestPayload.messages.length,
-        max_tokens: requestPayload.max_tokens,
-        temperature: requestPayload.temperature
-      })
 
       const response = await fetch(`${this.config.baseUrl}/v1/chat/completions`, {
         method: 'POST',
@@ -182,13 +175,13 @@ If unsure about technical details, recommend contacting platform support.`
           errorText = await response.text()
         }
 
-        console.error('❌ io.net Intelligence API error:', response.status, errorText)
+        console.error('❌ External AI API error:', response.status, errorText)
 
         // Handle specific error cases
         if (response.status === 401) {
           return {
             success: false,
-            error: 'Authentication failed. Please check your io.net API key.'
+            error: 'Authentication failed. Please check your API key.'
           }
         } else if (response.status === 429) {
           return {
@@ -204,12 +197,12 @@ If unsure about technical details, recommend contacting platform support.`
 
         return {
           success: false,
-          error: `io.net Intelligence API error: ${response.status} - ${errorText}`
+          error: `External AI API error: ${response.status} - ${errorText}`
         }
       }
 
       const data = await response.json()
-      console.log('✅ Received response from io.net Intelligence API')
+      console.log('✅ Received response from external AI API')
 
       // Extract the assistant's message according to OpenAI-compatible format
       const choice = data.choices?.[0]
@@ -219,7 +212,7 @@ If unsure about technical details, recommend contacting platform support.`
         console.error('❌ No content in API response:', data)
         return {
           success: false,
-          error: 'No response content received from io.net Intelligence API'
+          error: 'No response content received from external AI API'
         }
       }
 
@@ -236,13 +229,13 @@ If unsure about technical details, recommend contacting platform support.`
       }
 
     } catch (error) {
-      console.error('❌ io.net Intelligence API service error:', error)
+      console.error('❌ External AI API service error:', error)
 
       // Handle network errors
       if (error instanceof TypeError && error.message.includes('fetch')) {
         return {
           success: false,
-          error: 'Network error: Unable to connect to io.net Intelligence API'
+          error: 'Network error: Unable to connect to external AI API'
         }
       }
 
@@ -253,8 +246,10 @@ If unsure about technical details, recommend contacting platform support.`
     }
   }
 
+
+
   /**
-   * Get a comprehensive fallback response when API is unavailable
+   * Get a comprehensive fallback response
    */
   getFallbackResponse(userMessage: string): ChatResponse {
     const message = userMessage.toLowerCase()
@@ -297,33 +292,36 @@ If unsure about technical details, recommend contacting platform support.`
 
     return {
       success: true,
-      message: "🤖 **Edgen Helper - Enhanced Offline Mode**\n\nI'm your LayerEdge community assistant with comprehensive offline capabilities!\n\n🎯 **Quick Help**:\n• **Earn Points**: Submit tweets with @layeredge or \\$EDGEN\n• **Submit Tweets**: Visit `/submit` page\n• **Check Points**: View your dashboard\n• **Get Help**: Ask me specific questions\n\n💡 **Popular Topics**: Points system, tweet submission, hashtag strategy, troubleshooting\n\n*Ask me anything about LayerEdge - I have enhanced offline responses ready!*"
+      message: "🤖 **Edgen Helper - Local AI Assistant**\n\nI'm your LayerEdge community assistant with comprehensive local AI capabilities!\n\n🎯 **Quick Help**:\n• **Earn Points**: Submit tweets with @layeredge or $EDGEN\n• **Submit Tweets**: Visit `/submit` page\n• **Check Points**: View your dashboard\n• **Get Help**: Ask me specific questions\n\n💡 **Popular Topics**: Points system, tweet submission, hashtag strategy, troubleshooting\n\n*Ask me anything about LayerEdge - I have intelligent responses ready!*",
+      isOffline: true
     }
   }
 
+
+
   /**
-   * Test the io.net Intelligence API connection
+   * Test the external AI API connection
    */
   async testConnection(): Promise<boolean> {
     if (!this.isInitialized) {
-      console.log('❌ io.net Intelligence API not initialized')
+      console.log('❌ External AI API not initialized')
       return false
     }
 
     try {
-      console.log('🔍 Testing io.net Intelligence API connection...')
-      const testResponse = await this.sendMessage('Hello, this is a connection test for Llama-3.3-70B-Instruct.')
+      console.log('🔍 Testing external AI API connection...')
+      const testResponse = await this.sendMessage('Hello, this is a connection test.')
 
       if (testResponse.success) {
-        console.log('✅ io.net Intelligence API connection successful')
+        console.log('✅ External AI API connection successful')
         console.log(`🤖 Model confirmed: ${testResponse.model || this.config.model}`)
         return true
       } else {
-        console.log('❌ io.net Intelligence API connection failed:', testResponse.error)
+        console.log('❌ External AI API connection failed:', testResponse.error)
         return false
       }
     } catch (error) {
-      console.error('❌ io.net Intelligence API connection test failed:', error)
+      console.error('❌ External AI API connection test failed:', error)
       return false
     }
   }
@@ -359,25 +357,32 @@ If unsure about technical details, recommend contacting platform support.`
   isReady(): boolean {
     return this.isInitialized
   }
+
+  /**
+   * Check if service is ready
+   */
+  isReady(): boolean {
+    return this.isInitialized
+  }
 }
 
 // Singleton instance
-let ionetApiServiceInstance: IoNetApiService | null = null
+let aiServiceInstance: AIService | null = null
 
 /**
- * Get io.net API service instance
+ * Get AI service instance
  */
-export function getIoNetApiService(): IoNetApiService {
-  if (!ionetApiServiceInstance) {
-    ionetApiServiceInstance = new IoNetApiService()
+export function getIoNetApiService(): AIService {
+  if (!aiServiceInstance) {
+    aiServiceInstance = new AIService()
   }
-  return ionetApiServiceInstance
+  return aiServiceInstance
 }
 
 /**
- * Initialize io.net API service with custom config
+ * Initialize AI service with custom config
  */
-export function initializeIoNetApiService(config: Partial<IoNetConfig>): IoNetApiService {
-  ionetApiServiceInstance = new IoNetApiService(config)
-  return ionetApiServiceInstance
+export function initializeIoNetApiService(config: Partial<AIConfig>): AIService {
+  aiServiceInstance = new AIService(config)
+  return aiServiceInstance
 }

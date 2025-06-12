@@ -48,7 +48,7 @@
     "verify:x-api-config": "node scripts/verify-x-api-config.js",
     "fix:deployment-build": "bash scripts/fix-deployment-build.sh",
     "test:deployment-ready": "node scripts/test-deployment-ready.js",
-    "test:edgen-helper": "node scripts/test-edgen-helper-chatbot.js",
+
     "verify:deployment": "npm ci --dry-run && echo 'Deployment ready!'",
     "fix:koyeb-deployment": "bash scripts/fix-koyeb-deployment.sh",
     "deploy:new-oauth": "bash scripts/deploy-with-new-oauth.sh",

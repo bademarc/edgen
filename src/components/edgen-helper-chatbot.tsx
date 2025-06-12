@@ -3,7 +3,7 @@
 /**
  * Edgen Helper AI Chatbot Component
  * Intelligent assistant for LayerEdge community platform
- * Powered by io.net API
+ * Powered by Advanced AI Assistant
  */
 
 import React, { useState, useRef, useEffect } from 'react'
@@ -13,16 +13,17 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  Bot, 
-  User, 
+import {
+  MessageCircle,
+  X,
+  Send,
+  Bot,
+  User,
   Loader2,
   Minimize2,
   Maximize2,
-  HelpCircle
+  HelpCircle,
+  AlertCircle
 } from 'lucide-react'
 
 interface ChatMessage {
@@ -153,12 +154,12 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
         // Update online status and mode based on response
         if (data.isOffline) {
           setIsOnline(false)
-          setCurrentMode(data.mode || 'Enhanced Offline')
+          setCurrentMode(data.mode || 'Enhanced Offline Mode')
           console.log(`🤖 Edgen Helper running in: ${data.mode || 'Offline Mode'}`)
         } else {
           setIsOnline(true)
-          setCurrentMode('DeepSeek-R1 Online')
-          console.log('🤖 Edgen Helper online with DeepSeek-R1')
+          setCurrentMode('AI Assistant Online')
+          console.log('🤖 Edgen Helper online with AI Assistant')
         }
       } else {
         // This should rarely happen now since we always return success
@@ -380,9 +381,18 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                             )}
                           </Button>
                         </div>
+
+                        {/* AI Disclaimer */}
+                        <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
+                          <p className="text-xs text-yellow-200 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1 flex-shrink-0" />
+                            AI responses may contain errors and should be verified
+                          </p>
+                        </div>
+
                         <div className="flex justify-between items-center mt-2">
                           <p className="text-xs text-gray-500">
-                            Powered by DeepSeek-R1 via io.net
+                            Powered by Advanced AI Assistant
                           </p>
                           <Button
                             variant="ghost"
