@@ -24,6 +24,7 @@ interface TweetValidationResult {
   error?: string
   tweetId?: string
   authorUsername?: string
+  tweetData?: any // Add tweetData to pass the fetched data
 }
 
 export class SimplifiedTweetSubmissionService {
@@ -222,6 +223,7 @@ export class SimplifiedTweetSubmissionService {
 
     const tweetId = validation.tweetId!
     const authorUsername = validation.authorUsername!
+    const tweetData = validation.tweetData! // Get the tweet data from validation
 
     // Check if tweet was already submitted
     const existingSubmission = await this.checkExistingSubmission(tweetId, userId)
@@ -232,8 +234,8 @@ export class SimplifiedTweetSubmissionService {
       }
     }
 
-    // Calculate points based on tweet content and engagement
-    const points = await this.calculatePoints(tweetId)
+    // Calculate points based on tweet engagement data (no API call needed!)
+    const points = this.calculatePointsFromData(tweetData)
 
     // Save submission to database using Tweet model
     try {
@@ -369,7 +371,8 @@ export class SimplifiedTweetSubmissionService {
       return {
         isValid: true,
         tweetId,
-        authorUsername: tweetData.author.username
+        authorUsername: tweetData.author.username,
+        tweetData: tweetData // Return the fetched tweet data
       }
 
     } catch (error) {
@@ -398,26 +401,62 @@ export class SimplifiedTweetSubmissionService {
     }
   }
 
-  private async calculatePoints(tweetId: string): Promise<number> {
+  /**
+   * Calculate points from tweet data (no API calls - uses already fetched data)
+   */
+  private calculatePointsFromData(tweetData: any): number {
     try {
-      const tweetData = await this.xApi.getTweetById(tweetId)
-      if (!tweetData) {
-        return 10 // Base points if we can't fetch engagement data
-      }
-
       // Base points for tweet submission
       let points = 10
 
       // Bonus points based on engagement
       const { likes, retweets, replies, quotes } = tweetData.engagement
-      
+
       // Engagement multipliers
       points += Math.min(likes * 0.5, 50) // Max 50 points from likes
       points += Math.min(retweets * 2, 100) // Max 100 points from retweets
       points += Math.min(replies * 1, 30) // Max 30 points from replies
-      points += Math.min(quotes * 3, 90) // Max 90 points from quotes
+      points += Math.min((quotes || 0) * 3, 90) // Max 90 points from quotes
+
+      console.log(`📊 Points calculation: Base(10) + Likes(${likes}*0.5) + Retweets(${retweets}*2) + Replies(${replies}*1) = ${Math.round(points)}`)
 
       return Math.round(points)
+    } catch (error) {
+      console.error('❌ Error calculating points from data:', error)
+      return 10 // Fallback to base points
+    }
+  }
+
+  /**
+   * Legacy method - kept for backward compatibility but now uses fallback service
+   */
+  private async calculatePoints(tweetId: string): Promise<number> {
+    try {
+      console.log('⚠️ Using legacy calculatePoints method - consider using calculatePointsFromData instead')
+
+      // Use fallback service instead of direct API call to avoid rate limits
+      const { getFallbackService } = await import('./fallback-service')
+      const fallbackService = getFallbackService({
+        preferApi: false, // Prefer oEmbed to avoid rate limits
+        apiTimeoutMs: 5000
+      })
+
+      const tweetUrl = `https://x.com/i/web/status/${tweetId}`
+      const tweetData = await fallbackService.getTweetData(tweetUrl)
+
+      if (!tweetData) {
+        console.log('📊 No tweet data available, using base points')
+        return 10 // Base points if we can't fetch engagement data
+      }
+
+      return this.calculatePointsFromData({
+        engagement: {
+          likes: tweetData.likes || 0,
+          retweets: tweetData.retweets || 0,
+          replies: tweetData.replies || 0,
+          quotes: 0
+        }
+      })
     } catch (error) {
       console.error('❌ Error calculating points:', error)
       return 10 // Fallback to base points
