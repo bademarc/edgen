@@ -1,6 +1,7 @@
 import { TwitterApiService } from './twitter-api'
 import { URLValidator, validateTweetURL, URLValidationError } from './url-validator'
 import { XApiService, getXApiService } from './x-api-service'
+import { extractTweetId } from './utils'
 
 export interface FallbackTweetData {
   id: string
@@ -77,24 +78,43 @@ export class SimplifiedFallbackService {
   private shouldUseApi(): boolean {
     // PRODUCTION FIX: Force oEmbed-only mode if Twitter API is disabled
     if (process.env.TWITTER_API_DISABLED === 'true' || process.env.FORCE_OEMBED_ONLY === 'true') {
-      console.log('Twitter API disabled via environment variable - using oEmbed only')
+      console.log('🚫 Twitter API disabled via environment variable - using oEmbed only')
+      return false
+    }
+
+    // RATE LIMIT FIX: Default to false to prioritize oEmbed
+    if (!this.config.preferApi) {
+      console.log('🎯 API not preferred - prioritizing oEmbed to avoid rate limits')
+      return false
+    }
+
+    // Don't use API if it's not available
+    if (!this.twitterApi) {
+      console.log('⚠️ Twitter API service not available')
       return false
     }
 
     // Don't use API if we're rate limited
     if (this.isApiRateLimited && this.rateLimitResetTime && new Date() < this.rateLimitResetTime) {
+      const remainingMinutes = Math.ceil((this.rateLimitResetTime.getTime() - Date.now()) / (60 * 1000))
+      console.log(`⏳ API still rate limited for ${remainingMinutes} minutes`)
       return false
     }
 
-    // Don't use API if we've had too many recent failures
-    if (this.apiFailureCount >= 3 && this.lastApiFailure) {
+    // Be very conservative - don't use API if we've had ANY recent failures
+    if (this.apiFailureCount > 0 && this.lastApiFailure) {
       const timeSinceLastFailure = Date.now() - this.lastApiFailure.getTime()
       if (timeSinceLastFailure < this.config.rateLimitCooldownMs) {
+        const remainingMinutes = Math.ceil((this.config.rateLimitCooldownMs - timeSinceLastFailure) / (60 * 1000))
+        console.log(`🛡️ Recent API failures detected, avoiding API for ${remainingMinutes} more minutes`)
         return false
       }
     }
 
-    return this.twitterApi !== null && this.config.preferApi
+    // Only use API if explicitly preferred and no recent issues
+    const shouldUse = this.config.preferApi && this.apiFailureCount === 0
+    console.log(`🔄 API usage decision: ${shouldUse ? 'ALLOWED' : 'BLOCKED'} (failures: ${this.apiFailureCount})`)
+    return shouldUse
   }
 
   private handleApiError(error: Error): void {
@@ -128,19 +148,27 @@ export class SimplifiedFallbackService {
   }
 
   async getTweetData(tweetUrl: string): Promise<FallbackTweetData | null> {
-    console.log(`Fetching tweet data: ${tweetUrl}`)
+    console.log(`🔍 Fetching tweet data: ${tweetUrl}`)
 
     // Validate URL format
     const urlValidation = validateTweetURL(tweetUrl)
     if (!urlValidation.isValid) {
-      console.error('Invalid tweet URL format:', urlValidation.error)
+      console.error('❌ Invalid tweet URL format:', urlValidation.error)
       throw new URLValidationError(URLValidator.validateURL(tweetUrl))
     }
 
-    // Try X API first
+    // RATE LIMIT FIX: Try oEmbed FIRST to avoid API rate limits entirely
+    console.log('🎯 Attempting oEmbed API first (rate limit avoidance)...')
+    const oembedData = await this.tryOEmbedScraping(tweetUrl)
+    if (oembedData) {
+      console.log('✅ Successfully fetched tweet data via oEmbed API (PRIMARY - no rate limits)')
+      return oembedData
+    }
+
+    // Try X API second - only if oEmbed fails
     if (this.xApiService && this.xApiService.isReady()) {
       try {
-        console.log('Attempting to fetch tweet data via X API...')
+        console.log('🔄 oEmbed failed, attempting X API...')
         const xApiData = await this.xApiService.getTweetByUrl(tweetUrl)
 
         if (xApiData) {
@@ -161,18 +189,18 @@ export class SimplifiedFallbackService {
             isFromLayerEdgeCommunity: xApiData.isFromLayerEdgeCommunity
           }
 
-          console.log('✅ Successfully fetched tweet data via X API')
+          console.log('✅ Successfully fetched tweet data via X API (SECONDARY)')
           return fallbackData
         }
       } catch (error) {
-        console.error('X API failed:', error)
+        console.error('❌ X API failed:', error)
       }
     }
 
-    // Try Twitter API as fallback
+    // Try Twitter API as last resort (ONLY if explicitly preferred)
     if (this.shouldUseApi()) {
       try {
-        console.log('Attempting to fetch tweet data via Twitter API...')
+        console.log('🔄 Attempting Twitter API (LAST RESORT)...')
 
         const apiData = await Promise.race([
           this.twitterApi!.getTweetData(tweetUrl),
@@ -193,24 +221,18 @@ export class SimplifiedFallbackService {
             isFromLayerEdgeCommunity: isFromCommunity
           }
 
-          console.log('✅ Successfully fetched tweet data via Twitter API')
+          console.log('✅ Successfully fetched tweet data via Twitter API (TERTIARY)')
           return fallbackData
         }
       } catch (error) {
         this.handleApiError(error instanceof Error ? error : new Error(String(error)))
-        console.log('Twitter API failed')
+        console.log('❌ Twitter API failed')
       }
+    } else {
+      console.log('🚫 Skipping Twitter API (rate limit protection)')
     }
 
-    // Try oEmbed API as final fallback
-    console.log('Attempting final fallback via oEmbed API...')
-    const oembedData = await this.tryOEmbedScraping(tweetUrl)
-    if (oembedData) {
-      console.log('✅ Successfully fetched tweet data via oEmbed API')
-      return oembedData
-    }
-
-    console.error('All fallback methods failed for tweet:', tweetUrl)
+    console.error('❌ All fallback methods failed for tweet:', tweetUrl)
     return null
   }
 
@@ -219,7 +241,7 @@ export class SimplifiedFallbackService {
       console.log('Attempting oEmbed scraping for:', tweetUrl)
 
       // Extract tweet ID
-      const tweetId = this.extractTweetId(tweetUrl)
+      const tweetId = extractTweetId(tweetUrl)
       if (!tweetId) {
         throw new Error('Invalid tweet URL')
       }
@@ -271,10 +293,7 @@ export class SimplifiedFallbackService {
     }
   }
 
-  private extractTweetId(tweetUrl: string): string | null {
-    const match = tweetUrl.match(/\/status\/(\d+)/)
-    return match ? match[1] : null
-  }
+
 
   private extractTextFromHtml(html: string): string {
     try {

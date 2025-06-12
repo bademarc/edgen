@@ -59,9 +59,11 @@ export class TwitterApiService {
   private cache = getEnhancedCacheService()
   private rateLimiter = getEnhancedRateLimiter()
   private circuitBreaker = getCircuitBreaker('twitter-api', {
-    failureThreshold: 8, // Less aggressive than before
-    recoveryTimeout: 10 * 60 * 1000, // 10 minutes instead of 60
-    degradationMode: true // Enable graceful degradation
+    failureThreshold: 3, // More aggressive for rate limiting
+    recoveryTimeout: 15 * 60 * 1000, // 15 minutes for rate limit recovery
+    degradationMode: true, // Enable graceful degradation
+    monitoringPeriod: 5 * 60 * 1000, // 5 minute monitoring window
+    halfOpenMaxCalls: 1 // Only allow 1 test call when half-open
   })
 
   constructor() {
@@ -169,6 +171,7 @@ export class TwitterApiService {
     if (response.status === 429) {
       const resetTime = response.headers.get('x-rate-limit-reset')
       const remainingRequests = response.headers.get('x-rate-limit-remaining')
+      const retryAfter = response.headers.get('retry-after')
 
       // Get response body to check for usage cap errors
       const errorData = await response.json().catch(() => null)
@@ -179,12 +182,26 @@ export class TwitterApiService {
         throw new Error('Twitter API monthly usage limit exceeded. Please upgrade your Twitter API plan or wait until next month.')
       }
 
-      console.warn(`Rate limited! Remaining requests: ${remainingRequests}, Reset time: ${resetTime}`)
+      // Calculate wait time for rate limit reset
+      const resetTimeMs = resetTime ? parseInt(resetTime) * 1000 : Date.now() + (15 * 60 * 1000) // Default to 15 minutes
+      const waitTimeMs = Math.max(0, resetTimeMs - Date.now())
+      const waitTimeMinutes = Math.ceil(waitTimeMs / (60 * 1000))
 
-      // Create a specific rate limit error that the rate limiter can handle
-      const rateLimitError = new Error(`Twitter API rate limit exceeded. Reset time: ${resetTime}`)
+      console.warn(`🚫 Rate limited! Remaining: ${remainingRequests}, Reset in: ${waitTimeMinutes} minutes`)
+      console.warn(`📊 Rate limit headers: reset=${resetTime}, retry-after=${retryAfter}`)
+
+      // Update rate limit info for monitoring
+      this.rateLimitInfo = {
+        limit: this.rateLimitInfo?.limit || 0,
+        remaining: 0,
+        resetTime: resetTimeMs
+      }
+
+      // Create a specific rate limit error that the circuit breaker can handle
+      const rateLimitError = new Error(`Twitter API rate limit exceeded. Wait ${waitTimeMinutes} minutes before retry.`)
       ;(rateLimitError as any).status = 429
-      ;(rateLimitError as any).resetTime = resetTime
+      ;(rateLimitError as any).resetTime = resetTimeMs
+      ;(rateLimitError as any).waitTimeMs = waitTimeMs
       throw rateLimitError
     }
 

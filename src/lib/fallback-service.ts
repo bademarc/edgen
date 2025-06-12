@@ -1,6 +1,7 @@
 import { TwitterApiService } from './twitter-api'
 import { URLValidator, validateTweetURL, URLValidationError } from './url-validator'
 import { XApiService, getXApiService } from './x-api-service'
+import { extractTweetId } from './utils'
 
 export interface FallbackTweetData {
   id: string
@@ -77,49 +78,54 @@ export class FallbackService {
   private shouldUseApi(): boolean {
     // PRODUCTION FIX: Force oEmbed-only mode if Twitter API is disabled
     if (process.env.TWITTER_API_DISABLED === 'true' || process.env.FORCE_OEMBED_ONLY === 'true') {
-      console.log('Twitter API disabled via environment variable - using oEmbed only')
+      console.log('🚫 Twitter API disabled via environment variable - using oEmbed only')
       return false
     }
 
-    // PRIORITY FIX: Don't use API if not preferred (Scweet prioritization)
+    // RATE LIMIT FIX: Default to false to prioritize oEmbed and avoid rate limits
     if (!this.config.preferApi) {
-      console.log('Twitter API disabled - using Scweet prioritization')
+      console.log('🎯 API not preferred - prioritizing oEmbed to avoid rate limits')
       return false
     }
 
     // Don't use API if it's not available
     if (!this.twitterApi) {
+      console.log('⚠️ Twitter API service not available')
       return false
     }
 
     // Don't use API if we're currently rate limited
     if (this.isApiRateLimited && this.rateLimitResetTime) {
       if (new Date() < this.rateLimitResetTime) {
-        console.log('API still rate limited, using scraper')
+        const remainingMinutes = Math.ceil((this.rateLimitResetTime.getTime() - Date.now()) / (60 * 1000))
+        console.log(`⏳ API still rate limited for ${remainingMinutes} minutes, using oEmbed`)
         return false
       } else {
         // Rate limit period has passed
         this.isApiRateLimited = false
         this.rateLimitResetTime = null
         this.apiFailureCount = 0
-        console.log('API rate limit period expired, re-enabling API')
+        console.log('✅ API rate limit period expired, re-enabling API')
       }
     }
 
-    // Use API only if preferred and not experiencing failures
-    if (this.config.preferApi && this.apiFailureCount < 3) {
+    // Be very conservative about API usage - only use if explicitly preferred and no recent failures
+    if (this.config.preferApi && this.apiFailureCount === 0) {
+      console.log('🔄 Using API (no recent failures)')
       return true
     }
 
-    // If we've had recent API failures, use scraper
+    // If we've had any API failures, use oEmbed for extended period
     if (this.lastApiFailure) {
       const timeSinceFailure = Date.now() - this.lastApiFailure.getTime()
       if (timeSinceFailure < this.config.rateLimitCooldownMs) {
-        console.log('Recent API failures detected, using scraper')
+        const remainingMinutes = Math.ceil((this.config.rateLimitCooldownMs - timeSinceFailure) / (60 * 1000))
+        console.log(`🛡️ Recent API failures detected, using oEmbed for ${remainingMinutes} more minutes`)
         return false
       }
     }
 
+    console.log('🚫 Defaulting to oEmbed to avoid rate limits')
     return false // PRIORITY FIX: Default to false to avoid rate limits
   }
 
@@ -261,26 +267,27 @@ export class FallbackService {
   }
 
   async getTweetData(tweetUrl: string): Promise<FallbackTweetData | null> {
-    console.log(`Fetching tweet data with fallback service: ${tweetUrl}`)
+    console.log(`🔍 Fetching tweet data with fallback service: ${tweetUrl}`)
 
     // PRIORITY FIX: Validate URL format before processing
     const urlValidation = validateTweetURL(tweetUrl)
     if (!urlValidation.isValid) {
-      console.error('Invalid tweet URL format:', urlValidation.error)
+      console.error('❌ Invalid tweet URL format:', urlValidation.error)
       throw new URLValidationError(URLValidator.validateURL(tweetUrl))
     }
 
-    // PRIORITY FIX: Try Official Scweet FIRST to eliminate rate limit issues
-    const scweetData = await this.tryScweetService(tweetUrl)
-    if (scweetData) {
-      console.log('✅ Successfully fetched tweet data via Official Scweet v3.0+ (PRIMARY)')
-      return scweetData
+    // RATE LIMIT FIX: Try oEmbed FIRST to avoid API rate limits entirely
+    console.log('🎯 Attempting oEmbed scraping first (rate limit avoidance)...')
+    const oembedData = await this.tryOEmbedScraping(tweetUrl)
+    if (oembedData) {
+      console.log('✅ Successfully fetched tweet data via oEmbed (PRIMARY - no rate limits)')
+      return oembedData
     }
 
-    // Try X API second (NEW: Enhanced API with new credentials)
+    // Try X API second (NEW: Enhanced API with new credentials) - only if oEmbed fails
     if (this.xApiService && this.xApiService.isReady()) {
       try {
-        console.log('Attempting to fetch tweet data via X API (NEW)...')
+        console.log('🔄 oEmbed failed, attempting X API (NEW)...')
 
         const xApiData = await this.xApiService.getTweetByUrl(tweetUrl)
 
@@ -298,22 +305,22 @@ export class FallbackService {
               profileImage: xApiData.author.profileImage
             },
             createdAt: xApiData.createdAt,
-            source: 'api' as const,
+            source: 'x-api' as const,
             isFromLayerEdgeCommunity: xApiData.isFromLayerEdgeCommunity
           }
 
-          console.log('✅ Successfully fetched tweet data via X API (NEW)')
+          console.log('✅ Successfully fetched tweet data via X API (SECONDARY)')
           return fallbackData
         }
       } catch (error) {
-        console.error('X API failed:', error)
+        console.error('❌ X API failed:', error)
       }
     }
 
-    // Try legacy Twitter API third (if conditions are met and X API failed)
+    // Try legacy Twitter API third (ONLY if explicitly preferred and conditions are met)
     if (this.shouldUseApi()) {
       try {
-        console.log('Attempting to fetch tweet data via Legacy Twitter API...')
+        console.log('🔄 Attempting Legacy Twitter API (LAST RESORT)...')
 
         const apiData = await Promise.race([
           this.twitterApi!.getTweetData(tweetUrl),
@@ -334,30 +341,25 @@ export class FallbackService {
             isFromLayerEdgeCommunity: isFromCommunity
           }
 
-          console.log('Successfully fetched tweet data via Legacy API')
+          console.log('✅ Successfully fetched tweet data via Legacy API (TERTIARY)')
           return fallbackData
         }
       } catch (error) {
         this.handleApiError(error instanceof Error ? error : new Error(String(error)))
-        console.log('Legacy API failed, continuing with fallback chain...')
+        console.log('❌ Legacy API failed, exhausted all options')
       }
+    } else {
+      console.log('🚫 Skipping Legacy API (rate limit protection)')
     }
 
-    // Try Twikit service as tertiary fallback
-    const twikitData = await this.tryTwikitService(tweetUrl)
-    if (twikitData) {
-      return twikitData
+    // Try budget scraping as final fallback
+    const budgetData = await this.tryBudgetScraping(tweetUrl)
+    if (budgetData) {
+      console.log('✅ Successfully fetched tweet data via budget scraping (FINAL)')
+      return budgetData
     }
 
-    // Try oEmbed scraping as final fallback
-    console.log('Attempting final fallback via oEmbed scraping...')
-    const oembedData = await this.tryOEmbedScraping(tweetUrl)
-    if (oembedData) {
-      console.log('✅ Successfully fetched tweet data via oEmbed scraping')
-      return oembedData
-    }
-
-    console.error('All fallback methods failed for tweet:', tweetUrl)
+    console.error('❌ All fallback methods failed for tweet:', tweetUrl)
     return null
   }
 
