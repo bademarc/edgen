@@ -10,7 +10,7 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
 import { formatDate, formatNumber } from '@/lib/utils'
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { DateTooltip, ButtonTooltip } from '@/components/ui/tooltip'
 
 interface TweetCardProps {
@@ -60,19 +60,35 @@ export const TweetCard = memo(function TweetCard({
     totalPoints: false
   })
 
+  // CRITICAL FIX: Use ref to store previous metrics and avoid circular dependency
+  const previousMetricsRef = useRef(previousMetrics)
+
   // Track changes in metrics for visual feedback
   useEffect(() => {
+    const currentPreviousMetrics = previousMetricsRef.current
+
     const changes = {
-      likes: tweet.likes !== previousMetrics.likes,
-      retweets: tweet.retweets !== previousMetrics.retweets,
-      replies: tweet.replies !== previousMetrics.replies,
-      totalPoints: tweet.totalPoints !== previousMetrics.totalPoints
+      likes: tweet.likes !== currentPreviousMetrics.likes,
+      retweets: tweet.retweets !== currentPreviousMetrics.retweets,
+      replies: tweet.replies !== currentPreviousMetrics.replies,
+      totalPoints: tweet.totalPoints !== currentPreviousMetrics.totalPoints
     }
 
-    setShowChanges(changes)
-
-    // Hide change indicators after 3 seconds
+    // Only update if there are actual changes
     if (Object.values(changes).some(Boolean)) {
+      setShowChanges(changes)
+
+      // Update previous metrics
+      const newMetrics = {
+        likes: tweet.likes,
+        retweets: tweet.retweets,
+        replies: tweet.replies,
+        totalPoints: tweet.totalPoints
+      }
+      setPreviousMetrics(newMetrics)
+      previousMetricsRef.current = newMetrics
+
+      // Hide change indicators after 3 seconds
       const timer = setTimeout(() => {
         setShowChanges({
           likes: false,
@@ -84,14 +100,7 @@ export const TweetCard = memo(function TweetCard({
 
       return () => clearTimeout(timer)
     }
-
-    setPreviousMetrics({
-      likes: tweet.likes,
-      retweets: tweet.retweets,
-      replies: tweet.replies,
-      totalPoints: tweet.totalPoints
-    })
-  }, [tweet.likes, tweet.retweets, tweet.replies, tweet.totalPoints, previousMetrics])
+  }, [tweet.likes, tweet.retweets, tweet.replies, tweet.totalPoints]) // CRITICAL FIX: Removed previousMetrics dependency
 
   const handleUpdateClick = useCallback(async () => {
     if (onUpdateEngagement) {

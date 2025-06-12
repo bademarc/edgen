@@ -82,7 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     initAuth()
-  }, [supabase.auth])
+  }, []) // CRITICAL FIX: Remove supabase.auth dependency to prevent multiple GoTrueClient instances
 
   const checkCustomSession = async () => {
     try {

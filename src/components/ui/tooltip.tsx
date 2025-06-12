@@ -37,6 +37,7 @@ const TooltipContent = React.forwardRef<
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
 // Enhanced tooltip with better positioning and visibility
+// CRITICAL FIX: Removed individual TooltipProvider to prevent multiple instances and React Error #185
 const EnhancedTooltip = React.forwardRef<
   HTMLDivElement,
   {
@@ -48,18 +49,16 @@ const EnhancedTooltip = React.forwardRef<
     className?: string
   }
 >(({ children, content, side = "top", align = "center", delayDuration = 200, className }, ref) => (
-  <TooltipProvider delayDuration={delayDuration}>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div ref={ref} className={cn("cursor-help", className)}>
-          {children}
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side={side} align={align}>
-        {content}
-      </TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <div ref={ref} className={cn("cursor-help", className)}>
+        {children}
+      </div>
+    </TooltipTrigger>
+    <TooltipContent side={side} align={align}>
+      {content}
+    </TooltipContent>
+  </Tooltip>
 ))
 EnhancedTooltip.displayName = "EnhancedTooltip"
 
@@ -96,6 +95,7 @@ const DateTooltip = React.forwardRef<
 DateTooltip.displayName = "DateTooltip"
 
 // Button tooltip for interactive elements
+// CRITICAL FIX: Removed individual TooltipProvider to prevent multiple instances and React Error #185
 const ButtonTooltip = React.forwardRef<
   HTMLButtonElement,
   {
@@ -105,27 +105,25 @@ const ButtonTooltip = React.forwardRef<
     className?: string
   } & React.ButtonHTMLAttributes<HTMLButtonElement>
 >(({ children, tooltip, side = "top", className, ...props }, ref) => (
-  <TooltipProvider>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          ref={ref}
-          className={cn(
-            // FIXED: Ensure button tooltips have proper focus and hover states
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            "transition-colors duration-200",
-            className
-          )}
-          {...props}
-        >
-          {children}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side={side}>
-        {tooltip}
-      </TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        ref={ref}
+        className={cn(
+          // FIXED: Ensure button tooltips have proper focus and hover states
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "transition-colors duration-200",
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </button>
+    </TooltipTrigger>
+    <TooltipContent side={side}>
+      {tooltip}
+    </TooltipContent>
+  </Tooltip>
 ))
 ButtonTooltip.displayName = "ButtonTooltip"
 

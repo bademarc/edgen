@@ -81,6 +81,9 @@ export default function RecentSubmissionsPage() {
   // CRITICAL FIX: Use refs to store current values and avoid circular dependencies
   const sortByRef = useRef(sortBy)
   const searchTermRef = useRef(searchTerm)
+  const paginationRef = useRef(pagination)
+  const currentPageRef = useRef(currentPage)
+  const isLoadingRef = useRef(isLoading)
 
   // Update refs when values change
   useEffect(() => {
@@ -90,6 +93,18 @@ export default function RecentSubmissionsPage() {
   useEffect(() => {
     searchTermRef.current = searchTerm
   }, [searchTerm])
+
+  useEffect(() => {
+    paginationRef.current = pagination
+  }, [pagination])
+
+  useEffect(() => {
+    currentPageRef.current = currentPage
+  }, [currentPage])
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading
+  }, [isLoading])
 
   // CRITICAL FIX: Fetch tweets with stable dependencies using refs
   const fetchTweets = useCallback(async (page = 1, isRefresh = false) => {
@@ -191,10 +206,14 @@ export default function RecentSubmissionsPage() {
 
   // Load more (pagination)
   const handleLoadMore = useCallback(() => {
-    if (pagination?.hasMore && !isLoading) {
-      fetchTweets(currentPage + 1)
+    const currentPagination = paginationRef.current
+    const currentPageValue = currentPageRef.current
+    const currentIsLoading = isLoadingRef.current
+
+    if (currentPagination?.hasMore && !currentIsLoading) {
+      fetchTweets(currentPageValue + 1)
     }
-  }, [pagination, currentPage, isLoading]) // CRITICAL FIX: Removed fetchTweets dependency
+  }, []) // CRITICAL FIX: No dependencies to prevent circular loops
 
   // Filter tweets based on search (client-side backup)
   const filteredTweets = useMemo(() => {

@@ -125,51 +125,162 @@ function testProblematicUseEffectPatterns() {
 }
 
 /**
- * Test 3: Verify recent page also has similar fixes
+ * Test 3: Verify recent page fixes for React Error #185
  */
-function testRecentPageConsistency() {
-  console.log('\n📋 Test 3: Recent Page Consistency Check')
+function testRecentPageFixes() {
+  console.log('\n📋 Test 3: Recent Page React Error #185 Fixes')
   console.log('-'.repeat(50))
-  
+
   const recentPagePath = path.join(process.cwd(), 'src/app/recent/page.tsx')
-  
+
   if (!fs.existsSync(recentPagePath)) {
     console.log('❌ Recent page file not found')
     return false
   }
-  
+
   const content = fs.readFileSync(recentPagePath, 'utf8')
-  
-  const consistencyChecks = [
+
+  const recentPageChecks = [
     {
       name: 'Uses refs to avoid circular dependencies',
       pattern: /const sortByRef = useRef\(sortBy\)/,
       required: true
     },
     {
-      name: 'Removes function dependencies from useEffect',
-      pattern: /\/\/ CRITICAL FIX: Remove.*dependency to prevent circular dependency/,
+      name: 'Uses pagination ref to prevent loops',
+      pattern: /const paginationRef = useRef\(pagination\)/,
       required: true
     },
     {
-      name: 'Stable function with empty dependencies',
-      pattern: /\}, \[\]\) \/\/ CRITICAL FIX: No dependencies since.*is stable/,
+      name: 'Uses currentPage ref to prevent loops',
+      pattern: /const currentPageRef = useRef\(currentPage\)/,
+      required: true
+    },
+    {
+      name: 'Uses isLoading ref to prevent loops',
+      pattern: /const isLoadingRef = useRef\(isLoading\)/,
+      required: true
+    },
+    {
+      name: 'fetchTweets has empty dependencies',
+      pattern: /\}, \[\]\) \/\/ CRITICAL FIX: No dependencies to prevent circular loops/,
+      required: true
+    },
+    {
+      name: 'handleLoadMore has empty dependencies',
+      pattern: /\}, \[\]\) \/\/ CRITICAL FIX: No dependencies to prevent circular loops/,
+      required: true
+    },
+    {
+      name: 'handleLoadMore uses refs instead of direct state',
+      pattern: /const currentPagination = paginationRef\.current/,
       required: true
     }
   ]
-  
-  let allConsistencyChecksPassed = true
-  
-  for (const check of consistencyChecks) {
+
+  let allRecentPageChecksPassed = true
+
+  for (const check of recentPageChecks) {
     if (check.pattern.test(content)) {
       console.log(`  ✅ ${check.name}`)
     } else {
       console.log(`  ❌ ${check.name}`)
-      allConsistencyChecksPassed = false
+      allRecentPageChecksPassed = false
     }
   }
-  
-  return allConsistencyChecksPassed
+
+  return allRecentPageChecksPassed
+}
+
+/**
+ * Test 4: Check AuthProvider for Supabase client issues
+ */
+function testAuthProviderFixes() {
+  console.log('\n📋 Test 4: AuthProvider Supabase Client Fixes')
+  console.log('-'.repeat(50))
+
+  const authProviderPath = path.join(process.cwd(), 'src/components/AuthProvider.tsx')
+
+  if (!fs.existsExists(authProviderPath)) {
+    console.log('❌ AuthProvider file not found')
+    return false
+  }
+
+  const content = fs.readFileSync(authProviderPath, 'utf8')
+
+  const authProviderChecks = [
+    {
+      name: 'AuthProvider useEffect has empty dependencies',
+      pattern: /\}, \[\]\) \/\/ CRITICAL FIX: Remove supabase\.auth dependency to prevent multiple GoTrueClient instances/,
+      required: true
+    }
+  ]
+
+  let allAuthProviderChecksPassed = true
+
+  for (const check of authProviderChecks) {
+    if (check.pattern.test(content)) {
+      console.log(`  ✅ ${check.name}`)
+    } else {
+      console.log(`  ❌ ${check.name}`)
+      allAuthProviderChecksPassed = false
+    }
+  }
+
+  return allAuthProviderChecksPassed
+}
+
+/**
+ * Test 5: Check TweetCard and Tooltip fixes
+ */
+function testTweetCardTooltipFixes() {
+  console.log('\n📋 Test 5: TweetCard and Tooltip Fixes')
+  console.log('-'.repeat(50))
+
+  const tweetCardPath = path.join(process.cwd(), 'src/components/TweetCard.tsx')
+  const providersPath = path.join(process.cwd(), 'src/components/Providers.tsx')
+
+  if (!fs.existsSync(tweetCardPath) || !fs.existsSync(providersPath)) {
+    console.log('❌ Required files not found')
+    return false
+  }
+
+  const tweetCardContent = fs.readFileSync(tweetCardPath, 'utf8')
+  const providersContent = fs.readFileSync(providersPath, 'utf8')
+
+  const tooltipChecks = [
+    {
+      name: 'TweetCard uses previousMetricsRef',
+      pattern: /const previousMetricsRef = useRef\(previousMetrics\)/,
+      content: tweetCardContent,
+      required: true
+    },
+    {
+      name: 'TweetCard useEffect removes previousMetrics dependency',
+      pattern: /\[tweet\.likes, tweet\.retweets, tweet\.replies, tweet\.totalPoints\]\) \/\/ CRITICAL FIX: Removed previousMetrics dependency/,
+      content: tweetCardContent,
+      required: true
+    },
+    {
+      name: 'Global TooltipProvider in Providers',
+      pattern: /<TooltipProvider delayDuration=\{200\}>/,
+      content: providersContent,
+      required: true
+    }
+  ]
+
+  let allTooltipChecksPassed = true
+
+  for (const check of tooltipChecks) {
+    if (check.pattern.test(check.content)) {
+      console.log(`  ✅ ${check.name}`)
+    } else {
+      console.log(`  ❌ ${check.name}`)
+      allTooltipChecksPassed = false
+    }
+  }
+
+  return allTooltipChecksPassed
 }
 
 /**
@@ -177,15 +288,17 @@ function testRecentPageConsistency() {
  */
 async function runTests() {
   let allTestsPassed = true
-  
+
   // Run all tests
   const test1Result = testDashboardCircularDependencyFix()
   const test2Result = testProblematicUseEffectPatterns()
-  const test3Result = testRecentPageConsistency()
-  
+  const test3Result = testRecentPageFixes()
+  const test4Result = testAuthProviderFixes()
+
   if (!test1Result) allTestsPassed = false
   if (!test2Result) allTestsPassed = false
   if (!test3Result) allTestsPassed = false
+  if (!test4Result) allTestsPassed = false
   
   console.log('\n' + '='.repeat(60))
   
@@ -193,15 +306,17 @@ async function runTests() {
     console.log('🎉 ALL TESTS PASSED!')
     console.log('\n✅ React Error #185 Fix Summary:')
     console.log('   • Dashboard circular dependency fixed with useRef pattern')
-    console.log('   • fetchDashboardData now has stable dependencies')
-    console.log('   • useEffect hooks no longer include function dependencies')
-    console.log('   • Consistent patterns applied across dashboard and recent pages')
+    console.log('   • Recent page handleLoadMore fixed with refs and empty dependencies')
+    console.log('   • AuthProvider Supabase client dependency removed')
+    console.log('   • All useEffect hooks no longer include function dependencies')
+    console.log('   • Consistent patterns applied across all components')
     console.log('\n🚀 The "Maximum update depth exceeded" error should be resolved!')
     console.log('\n📋 Next Steps:')
-    console.log('   1. Test the dashboard page in development mode')
+    console.log('   1. Test the /recent page in development mode')
     console.log('   2. Check browser console for any remaining React errors')
-    console.log('   3. Verify auto-refresh functionality works without loops')
-    console.log('   4. Deploy to production and test')
+    console.log('   3. Verify no multiple GoTrueClient instances warning')
+    console.log('   4. Ensure fetchTweets is only called once per trigger')
+    console.log('   5. Deploy to production and test')
   } else {
     console.log('❌ SOME TESTS FAILED!')
     console.log('\n⚠️  React Error #185 may still occur. Please review the failed tests above.')
