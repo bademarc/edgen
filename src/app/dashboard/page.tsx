@@ -11,6 +11,7 @@ import {
   Target,
   Calendar
 } from 'lucide-react'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -37,9 +38,9 @@ interface RecentTweet {
   retweets: number
   replies: number
   totalPoints: number
-  createdAt: string // This is now the original tweet date from API transformation
-  submittedAt?: string // When submitted to our system
-  originalTweetDate?: string // Original tweet creation date
+  createdAt: string | Date // HYDRATION FIX: Accept both string and Date to prevent mismatches
+  submittedAt?: string | Date // When submitted to our system
+  originalTweetDate?: string | Date // Original tweet creation date
   user: {
     id: string
     name: string | null
@@ -55,28 +56,58 @@ export default function DashboardPage() {
   const [recentTweets, setRecentTweets] = useState<RecentTweet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isHydrated, setIsHydrated] = useState(false) // HYDRATION FIX: Track hydration state
 
-  const fetchDashboardData = useCallback(async () => {
+  // HYDRATION FIX: Ensure component is hydrated before rendering complex content
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
+  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     if (!user?.id) return
 
     setIsLoading(true)
     setError(null)
 
     try {
-      // Fetch user stats
-      const statsResponse = await fetch('/api/user/stats')
+      // Fetch user stats with cache-busting for force refresh
+      const statsUrl = forceRefresh
+        ? `/api/user/stats?_t=${Date.now()}`
+        : '/api/user/stats'
+
+      const statsResponse = await fetch(statsUrl, {
+        // DASHBOARD FIX: Disable caching for fresh data
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+
       if (!statsResponse.ok) {
         throw new Error('Failed to fetch user stats')
       }
       const statsData = await statsResponse.json()
       setStats(statsData)
 
-      // Fetch user's recent tweets
-      const tweetsResponse = await fetch(`/api/tweets?userId=${user.id}&limit=5`)
+      // Fetch user's recent tweets with cache-busting
+      const tweetsUrl = forceRefresh
+        ? `/api/tweets?userId=${user.id}&limit=5&_t=${Date.now()}`
+        : `/api/tweets?userId=${user.id}&limit=5`
+
+      const tweetsResponse = await fetch(tweetsUrl, {
+        // DASHBOARD FIX: Disable caching for fresh data
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+
       if (!tweetsResponse.ok) {
         throw new Error('Failed to fetch recent tweets')
       }
       const tweetsData = await tweetsResponse.json()
+
+      console.log(`📊 Dashboard: Fetched ${tweetsData.length} recent tweets for user ${user.id}`)
       setRecentTweets(tweetsData)
     } catch (err) {
       console.error('Error fetching dashboard data:', err)
@@ -97,7 +128,26 @@ export default function DashboardPage() {
     }
   }, [authLoading, user, router, fetchDashboardData])
 
-  if (authLoading || isLoading) {
+  // DASHBOARD FIX: Auto-refresh every 60 seconds to catch new submissions
+  useEffect(() => {
+    if (!user?.id) return
+
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing dashboard data...')
+      fetchDashboardData(true) // Force refresh
+    }, 60000) // 60 seconds
+
+    return () => clearInterval(interval)
+  }, [fetchDashboardData, user?.id])
+
+  // Manual refresh handler
+  const handleManualRefresh = useCallback(() => {
+    console.log('🔄 Manual dashboard refresh triggered')
+    fetchDashboardData(true)
+  }, [fetchDashboardData])
+
+  // HYDRATION FIX: Show loading state during hydration
+  if (!isHydrated || authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="py-12">
@@ -285,33 +335,72 @@ export default function DashboardPage() {
           >
             <Card variant="professional">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Recent Contributions
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Recent Contributions
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleManualRefresh}
+                    disabled={isLoading}
+                    className="h-8 w-8 p-0"
+                    title="Refresh contributions"
+                  >
+                    <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {recentTweets.length > 0 ? (
                   <div className="space-y-4">
                     {recentTweets.slice(0, 3).map((tweet) => {
-                      // FIXED: Better date formatting and display
-                      const tweetDate = new Date(tweet.createdAt)
-                      const submittedDate = tweet.submittedAt ? new Date(tweet.submittedAt) : null
+                      // HYDRATION FIX: Safe date handling to prevent hydration mismatches
+                      const safeTweetDate = (() => {
+                        try {
+                          if (tweet.createdAt instanceof Date) {
+                            return tweet.createdAt
+                          }
+                          return new Date(tweet.createdAt)
+                        } catch (error) {
+                          console.warn('Invalid tweet date:', tweet.id, tweet.createdAt)
+                          return new Date() // Fallback to current date
+                        }
+                      })()
+
+                      const safeSubmittedDate = (() => {
+                        if (!tweet.submittedAt) return null
+                        try {
+                          if (tweet.submittedAt instanceof Date) {
+                            return tweet.submittedAt
+                          }
+                          return new Date(tweet.submittedAt)
+                        } catch (error) {
+                          console.warn('Invalid submitted date:', tweet.id, tweet.submittedAt)
+                          return null
+                        }
+                      })()
 
                       const formatDate = (date: Date) => {
-                        const now = new Date()
-                        const diffTime = Math.abs(now.getTime() - date.getTime())
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                        try {
+                          const now = new Date()
+                          const diffTime = Math.abs(now.getTime() - date.getTime())
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-                        if (diffDays === 1) return 'Today'
-                        if (diffDays === 2) return 'Yesterday'
-                        if (diffDays <= 7) return `${diffDays - 1} days ago`
+                          if (diffDays === 1) return 'Today'
+                          if (diffDays === 2) return 'Yesterday'
+                          if (diffDays <= 7) return `${diffDays - 1} days ago`
 
-                        return date.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-                        })
+                          return date.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+                          })
+                        } catch (error) {
+                          console.warn('Date formatting error:', error)
+                          return 'Unknown date'
+                        }
                       }
 
                       return (
@@ -319,12 +408,12 @@ export default function DashboardPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <DateTooltip
-                                originalDate={tweetDate}
-                                submittedDate={submittedDate || undefined}
+                                originalDate={safeTweetDate}
+                                submittedDate={safeSubmittedDate || undefined}
                                 className="text-sm text-muted-foreground"
                               >
-                                {formatDate(tweetDate)}
-                                {submittedDate && (
+                                {formatDate(safeTweetDate)}
+                                {safeSubmittedDate && (
                                   <span className="ml-1 text-xs text-muted-foreground/70">
                                     ℹ️
                                   </span>
