@@ -78,7 +78,20 @@ export default function RecentSubmissionsPage() {
     setIsHydrated(true)
   }, [])
 
-  // Fetch tweets from database-only API
+  // CRITICAL FIX: Use refs to store current values and avoid circular dependencies
+  const sortByRef = useRef(sortBy)
+  const searchTermRef = useRef(searchTerm)
+
+  // Update refs when values change
+  useEffect(() => {
+    sortByRef.current = sortBy
+  }, [sortBy])
+
+  useEffect(() => {
+    searchTermRef.current = searchTerm
+  }, [searchTerm])
+
+  // CRITICAL FIX: Fetch tweets with stable dependencies using refs
   const fetchTweets = useCallback(async (page = 1, isRefresh = false) => {
     if (isRefresh) {
       setIsRefreshing(true)
@@ -90,15 +103,19 @@ export default function RecentSubmissionsPage() {
     try {
       const limit = 20
       const offset = (page - 1) * limit
-      
+
+      // CRITICAL FIX: Use refs to get current values without dependencies
+      const currentSortBy = sortByRef.current
+      const currentSearchTerm = searchTermRef.current
+
       const params = new URLSearchParams({
         limit: limit.toString(),
         offset: offset.toString(),
-        sortBy,
-        ...(searchTerm && { search: searchTerm })
+        sortBy: currentSortBy,
+        ...(currentSearchTerm && { search: currentSearchTerm })
       })
 
-      console.log(`🔍 Fetching tweets: page=${page}, sortBy=${sortBy}, search="${searchTerm}"`)
+      console.log(`🔍 Fetching tweets: page=${page}, sortBy=${currentSortBy}, search="${currentSearchTerm}"`)
 
       const response = await fetch(`/api/recent-tweets?${params}`, {
         cache: 'no-store',
@@ -125,7 +142,7 @@ export default function RecentSubmissionsPage() {
         // Append for pagination
         setTweets(prev => [...prev, ...data.tweets])
       }
-      
+
       setPagination(data.pagination)
       setCurrentPage(page)
       setLastRefresh(new Date())
@@ -137,45 +154,47 @@ export default function RecentSubmissionsPage() {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [sortBy, searchTerm])
+  }, []) // CRITICAL FIX: No dependencies to prevent circular loops
 
   // Initial load
   useEffect(() => {
-    fetchTweets(1)
-  }, [fetchTweets])
+    if (isHydrated) {
+      fetchTweets(1)
+    }
+  }, [isHydrated]) // CRITICAL FIX: Remove fetchTweets dependency to prevent circular dependency
 
   // Search with debounce
   useEffect(() => {
+    if (!isHydrated) return
+
     const timeoutId = setTimeout(() => {
-      if (isHydrated) {
-        setCurrentPage(1)
-        fetchTweets(1)
-      }
+      setCurrentPage(1)
+      fetchTweets(1)
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm, isHydrated])
+  }, [searchTerm, isHydrated]) // CRITICAL FIX: Removed fetchTweets dependency since it's now stable
 
   // Sort change
   useEffect(() => {
-    if (isHydrated) {
-      setCurrentPage(1)
-      fetchTweets(1)
-    }
-  }, [sortBy, isHydrated])
+    if (!isHydrated) return
+
+    setCurrentPage(1)
+    fetchTweets(1)
+  }, [sortBy, isHydrated]) // CRITICAL FIX: Removed fetchTweets dependency since it's now stable
 
   // Manual refresh
   const handleRefresh = useCallback(() => {
     console.log('🔄 Manual refresh triggered')
     fetchTweets(1, true)
-  }, [fetchTweets])
+  }, []) // CRITICAL FIX: No dependencies since fetchTweets is stable
 
   // Load more (pagination)
   const handleLoadMore = useCallback(() => {
     if (pagination?.hasMore && !isLoading) {
       fetchTweets(currentPage + 1)
     }
-  }, [pagination, currentPage, isLoading, fetchTweets])
+  }, [pagination, currentPage, isLoading]) // CRITICAL FIX: Removed fetchTweets dependency
 
   // Filter tweets based on search (client-side backup)
   const filteredTweets = useMemo(() => {
