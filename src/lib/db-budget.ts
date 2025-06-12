@@ -20,9 +20,9 @@ class BudgetDatabaseService {
   /**
    * Aggressive caching for leaderboard (update every 15 minutes)
    */
-  async getLeaderboard(limit: number = 100): Promise<any[]> {
+  async getLeaderboard(limit: number = 100, updateRanks: boolean = true): Promise<any[]> {
     const cacheKey = `leaderboard:${limit}`
-    
+
     // Try cache first (15 minute TTL)
     const cached = await this.cache.get(cacheKey)
     if (cached) {
@@ -48,6 +48,18 @@ class BudgetDatabaseService {
       ...user,
       rank: index + 1,
     }))
+
+    // Update ranks in database for dashboard synchronization
+    if (updateRanks && leaderboard.length > 0) {
+      console.log('🔄 Updating user ranks in database for dashboard sync')
+      try {
+        // Batch update ranks efficiently
+        await this.batchUpdateRanks(leaderboard)
+      } catch (error) {
+        console.error('❌ Failed to update ranks:', error)
+        // Continue without failing the leaderboard request
+      }
+    }
 
     // Cache for 15 minutes
     await this.cache.set(cacheKey, leaderboard, 900)
@@ -76,6 +88,31 @@ class BudgetDatabaseService {
 
     // Invalidate leaderboard cache
     await this.cache.del('leaderboard:100')
+  }
+
+  /**
+   * Batch update user ranks efficiently
+   */
+  async batchUpdateRanks(leaderboard: Array<{ id: string; rank: number }>): Promise<void> {
+    // Group updates to reduce transactions
+    const chunks = this.chunkArray(leaderboard, 50) // Process 50 at a time
+
+    for (const chunk of chunks) {
+      await this.prisma.$transaction(async (tx) => {
+        const promises = chunk.map(({ id, rank }) =>
+          tx.user.update({
+            where: { id },
+            data: { rank },
+            select: { id: true } // Minimal select to reduce data transfer
+          })
+        )
+        await Promise.all(promises)
+      })
+    }
+
+    // Invalidate user cache for affected users
+    const userCacheKeys = leaderboard.map(user => `user:${user.id}`)
+    await Promise.allSettled(userCacheKeys.map(key => this.cache.del(key)))
   }
 
   /**
@@ -130,13 +167,15 @@ class BudgetDatabaseService {
   /**
    * Efficient user lookup with caching
    */
-  async getUserById(userId: string): Promise<any | null> {
+  async getUserById(userId: string, useCache: boolean = true): Promise<any | null> {
     const cacheKey = `user:${userId}`
-    
+
     // Check cache (10 minute TTL)
-    const cached = await this.cache.get(cacheKey)
-    if (cached) {
-      return cached
+    if (useCache) {
+      const cached = await this.cache.get(cacheKey)
+      if (cached) {
+        return cached
+      }
     }
 
     const user = await this.prisma.user.findUnique({
@@ -148,6 +187,7 @@ class BudgetDatabaseService {
         xUsername: true,
         image: true,
         totalPoints: true,
+        rank: true, // Include rank field for dashboard
         joinDate: true,
         autoMonitoringEnabled: true,
         _count: {
@@ -156,7 +196,7 @@ class BudgetDatabaseService {
       },
     })
 
-    if (user) {
+    if (user && useCache) {
       // Cache for 10 minutes
       await this.cache.set(cacheKey, user, 600)
     }

@@ -50,9 +50,22 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // Calculate rank if not stored in database (fallback for dashboard sync issues)
+    let userRank = userData.rank
+    if (!userRank && userData.totalPoints > 0) {
+      console.log('🔄 Calculating fallback rank for user dashboard')
+      userRank = await prisma.user.count({
+        where: {
+          totalPoints: {
+            gt: userData.totalPoints,
+          },
+        },
+      }) + 1
+    }
+
     const stats = {
       totalPoints: userData.totalPoints,
-      rank: userData.rank,
+      rank: userRank,
       tweetsSubmitted: userData._count.tweets,
       thisWeekPoints: thisWeekPoints._sum.pointsAwarded || 0,
     }

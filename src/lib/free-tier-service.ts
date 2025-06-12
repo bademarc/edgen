@@ -40,7 +40,7 @@ class FreeTierService {
    */
   async getLeaderboard(limit: number = 100): Promise<any[]> {
     const cacheKey = `leaderboard:${limit}`
-    
+
     // Try cache first (30 minute TTL for free tier)
     const cached = await this.cache.get(cacheKey)
     if (cached) {
@@ -48,15 +48,15 @@ class FreeTierService {
       return cached
     }
 
-    // If cache miss, get from database
+    // If cache miss, get from database with rank updates for dashboard sync
     console.log('🔍 Fetching leaderboard from database (FREE TIER)')
     this.dailyStats.dbQueries++
-    
-    const leaderboard = await this.db.getLeaderboard(limit, false) // Don't double-cache
-    
+
+    const leaderboard = await this.db.getLeaderboard(limit, true) // Enable rank updates for dashboard sync
+
     // Cache for 30 minutes
     await this.cache.set(cacheKey, leaderboard, this.config.cacheTTL)
-    
+
     return leaderboard
   }
 
@@ -65,7 +65,7 @@ class FreeTierService {
    */
   async getUser(userId: string): Promise<any | null> {
     const cacheKey = `user:${userId}`
-    
+
     // Check cache first
     const cached = await this.cache.get(cacheKey)
     if (cached) {
@@ -76,15 +76,33 @@ class FreeTierService {
     // Database lookup with minimal data
     console.log(`🔍 Fetching user ${userId} from database (FREE TIER)`)
     this.dailyStats.dbQueries++
-    
+
     const user = await this.db.getUserById(userId, false) // Don't double-cache
-    
+
     if (user) {
       // Cache for 30 minutes
       await this.cache.set(cacheKey, user, this.config.cacheTTL)
     }
-    
+
     return user
+  }
+
+  /**
+   * Force rank synchronization for dashboard fix
+   */
+  async syncRanks(): Promise<void> {
+    console.log('🔄 Forcing rank synchronization (FREE TIER)')
+
+    // Clear leaderboard cache to force fresh calculation
+    await this.cache.del('leaderboard:100')
+    await this.cache.del('leaderboard:50')
+    await this.cache.del('leaderboard:20')
+    await this.cache.del('leaderboard:10')
+
+    // Fetch fresh leaderboard with rank updates
+    await this.getLeaderboard(100)
+
+    console.log('✅ Rank synchronization completed')
   }
 
   /**
