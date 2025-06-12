@@ -89,6 +89,7 @@ export class ManualTweetSubmissionService {
 
   /**
    * Verify that a tweet URL is valid and belongs to the authenticated user
+   * RATE LIMIT FIX: Uses fallback service as primary method to avoid API rate limits
    */
   async verifyTweetOwnership(tweetUrl: string, userId: string): Promise<TweetVerificationResult> {
     try {
@@ -102,28 +103,6 @@ export class ManualTweetSubmissionService {
           error: 'Invalid tweet URL format'
         }
       }
-
-      if (!this.twitterApi) {
-        return {
-          isValid: false,
-          isOwnTweet: false,
-          containsRequiredMentions: false,
-          error: 'Twitter API service unavailable'
-        }
-      }
-
-      // Extract tweet ID from URL
-      const tweetIdMatch = tweetUrl.match(/status\/(\d+)/)
-      if (!tweetIdMatch) {
-        return {
-          isValid: false,
-          isOwnTweet: false,
-          containsRequiredMentions: false,
-          error: 'Could not extract tweet ID from URL'
-        }
-      }
-
-      const tweetId = tweetIdMatch[1]
 
       // Get user's Twitter username from database
       const user = await prisma.user.findUnique({
@@ -140,93 +119,65 @@ export class ManualTweetSubmissionService {
         }
       }
 
-      // Fetch tweet data using Twitter API with fallback
-      let tweetData
-      let apiError: Error | null = null
+      console.log('🔍 Starting manual tweet verification with fallback service (rate limit safe)')
 
-      try {
-        tweetData = await this.twitterApi.getTweetData(tweetUrl)
-      } catch (error) {
-        console.error('Twitter API error in manual submission:', error)
-        apiError = error instanceof Error ? error : new Error(String(error))
+      // RATE LIMIT FIX: Use fallback service as PRIMARY method instead of direct API calls
+      const fallbackService = getSimplifiedFallbackService({
+        preferApi: false, // Prioritize oEmbed to avoid rate limits
+        apiTimeoutMs: 10000
+      })
 
-        // Check for specific error types that should not use fallback
-        if (apiError.message.includes('monthly usage limit exceeded')) {
-          console.log('🔄 Twitter API monthly limit exceeded, trying fallback service...')
+      const fallbackData = await fallbackService.getTweetData(tweetUrl)
 
-          // Try fallback service
-          try {
-            const fallbackService = getSimplifiedFallbackService({
-              preferApi: false, // Skip API since it's capped
-              apiTimeoutMs: 10000
-            })
+      if (!fallbackData) {
+        console.error('❌ Failed to fetch tweet data via fallback service')
+        const fallbackStatus = fallbackService.getStatus()
 
-            const fallbackData = await fallbackService.getTweetData(tweetUrl)
-            if (fallbackData) {
-              console.log('✅ Successfully fetched tweet data via fallback service')
-              tweetData = {
-                id: fallbackData.id,
-                content: fallbackData.content,
-                likes: fallbackData.likes,
-                retweets: fallbackData.retweets,
-                replies: fallbackData.replies,
-                author: fallbackData.author,
-                createdAt: fallbackData.createdAt
-              }
-            }
-          } catch (fallbackError) {
-            console.error('Fallback service also failed:', fallbackError)
-            return {
-              isValid: false,
-              isOwnTweet: false,
-              containsRequiredMentions: false,
-              error: 'Twitter API monthly limit exceeded and fallback service unavailable. Manual tweet submission is temporarily unavailable. Please try again later.'
-            }
-          }
+        // Provide specific error messages based on fallback status
+        let errorMessage = 'Could not fetch tweet data'
+        if (fallbackStatus.isApiRateLimited) {
+          errorMessage = 'Twitter API is currently rate limited. Please try again in a few minutes.'
+        } else if (fallbackStatus.lastError?.includes('404') || fallbackStatus.lastError?.includes('Not Found')) {
+          errorMessage = 'Tweet not found. It may be deleted, private, or the URL is incorrect.'
+        } else if (fallbackStatus.lastError?.includes('403') || fallbackStatus.lastError?.includes('Forbidden')) {
+          errorMessage = 'Tweet is private or access is restricted.'
+        } else if (fallbackStatus.lastError?.includes('monthly usage limit')) {
+          errorMessage = 'Twitter API monthly limit exceeded. Manual tweet submission is temporarily unavailable. Please try again later.'
         }
 
-        if (!tweetData && apiError.message.includes('rate limit exceeded')) {
-          return {
-            isValid: false,
-            isOwnTweet: false,
-            containsRequiredMentions: false,
-            error: 'Twitter API rate limit exceeded. Please wait a few minutes and try again.'
-          }
-        }
-
-        if (!tweetData && (apiError.message.includes('401') || apiError.message.includes('403'))) {
-          return {
-            isValid: false,
-            isOwnTweet: false,
-            containsRequiredMentions: false,
-            error: 'Twitter API authentication issue. Please contact support.'
-          }
-        }
-
-        if (!tweetData) {
-          return {
-            isValid: false,
-            isOwnTweet: false,
-            containsRequiredMentions: false,
-            error: 'Could not fetch tweet data from Twitter API. Please check that the tweet is public and try again.'
-          }
-        }
-      }
-
-      if (!tweetData) {
         return {
           isValid: false,
           isOwnTweet: false,
           containsRequiredMentions: false,
-          error: 'Could not fetch tweet data. Please check that the tweet is public and accessible.'
+          error: errorMessage
         }
       }
 
-      // Verify tweet ownership
+      console.log(`✅ Tweet data fetched via ${fallbackData.source} (rate limit safe)`)
+
+      // Convert fallback data to expected format
+      const tweetData = {
+        id: fallbackData.id,
+        content: fallbackData.content,
+        likes: fallbackData.likes || 0,
+        retweets: fallbackData.retweets || 0,
+        replies: fallbackData.replies || 0,
+        author: {
+          id: fallbackData.author.id,
+          username: fallbackData.author.username,
+          name: fallbackData.author.name,
+          profileImage: fallbackData.author.profileImage
+        },
+        createdAt: fallbackData.createdAt
+      }
+
+      // Verify tweet ownership using fetched data
       const isOwnTweet = tweetData.author.username.toLowerCase() === user.xUsername.toLowerCase()
 
       // Check for required mentions
       const containsRequiredMentions = validateTweetContent(tweetData.content)
+
+      console.log(`🔐 Manual verification results: isOwnTweet=${isOwnTweet}, containsRequiredMentions=${containsRequiredMentions}`)
 
       return {
         isValid: true,
@@ -246,12 +197,25 @@ export class ManualTweetSubmissionService {
       }
 
     } catch (error) {
-      console.error('Error verifying tweet ownership:', error)
+      console.error('❌ Error verifying tweet ownership:', error)
+
+      // Provide more specific error messages for common issues
+      let errorMessage = 'Unknown verification error'
+      if (error instanceof Error) {
+        if (error.message.includes('rate limit') || error.message.includes('429')) {
+          errorMessage = 'Twitter API rate limit exceeded. Please try again in a few minutes.'
+        } else if (error.message.includes('network') || error.message.includes('timeout')) {
+          errorMessage = 'Network error occurred. Please check your connection and try again.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+
       return {
         isValid: false,
         isOwnTweet: false,
         containsRequiredMentions: false,
-        error: error instanceof Error ? error.message : 'Unknown verification error'
+        error: errorMessage
       }
     }
   }

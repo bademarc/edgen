@@ -42,6 +42,7 @@ export class SimplifiedTweetSubmissionService {
 
   /**
    * Verify tweet ownership and validity without submitting
+   * RATE LIMIT FIX: Uses fallback service instead of direct API calls
    */
   async verifyTweetOwnership(tweetUrl: string, userId: string): Promise<TweetVerificationResult> {
     try {
@@ -75,29 +76,50 @@ export class SimplifiedTweetSubmissionService {
         }
       }
 
-      // Validate tweet URL and extract tweet ID
-      const validation = await this.validateTweet(normalizedUrl, userId)
+      console.log('🔍 Starting tweet verification with fallback service (rate limit safe)')
 
-      if (!validation.isValid) {
+      // RATE LIMIT FIX: Use fallback service for verification instead of separate API calls
+      const { getFallbackService } = await import('./fallback-service')
+      const fallbackService = getFallbackService({
+        preferApi: false, // Prioritize oEmbed to avoid rate limits
+        apiTimeoutMs: 8000 // Shorter timeout for verification
+      })
+
+      // Fetch tweet data using fallback service (oEmbed first, then API if needed)
+      const fallbackData = await fallbackService.getTweetData(normalizedUrl)
+
+      if (!fallbackData) {
+        console.error('❌ Failed to fetch tweet data via fallback service')
+        const fallbackStatus = fallbackService.getStatus()
+
+        // Provide specific error messages based on fallback status
+        let errorMessage = 'Could not fetch tweet data'
+        if (fallbackStatus.isApiRateLimited) {
+          errorMessage = 'Twitter API is currently rate limited. Please try again in a few minutes.'
+        } else if (fallbackStatus.lastError?.includes('404') || fallbackStatus.lastError?.includes('Not Found')) {
+          errorMessage = 'Tweet not found. It may be deleted, private, or the URL is incorrect.'
+        } else if (fallbackStatus.lastError?.includes('403') || fallbackStatus.lastError?.includes('Forbidden')) {
+          errorMessage = 'Tweet is private or access is restricted.'
+        }
+
         return {
           isValid: false,
           isOwnTweet: false,
           containsRequiredMentions: false,
-          error: validation.error || 'Tweet validation failed'
+          error: errorMessage
         }
       }
 
-      const tweetId = validation.tweetId!
+      console.log(`✅ Tweet data fetched via ${fallbackData.source} (rate limit safe)`)
 
-      // Get tweet data for verification response
-      const tweetData = await this.xApi.getTweetById(tweetId)
-
-      if (!tweetData) {
+      // Extract tweet ID for validation
+      const tweetId = fallbackData.id
+      if (!tweetId) {
         return {
           isValid: false,
           isOwnTweet: false,
           containsRequiredMentions: false,
-          error: 'Could not fetch tweet data'
+          error: 'Could not extract tweet ID from fetched data'
         }
       }
 
@@ -107,30 +129,66 @@ export class SimplifiedTweetSubmissionService {
         select: { xUsername: true }
       })
 
-      const isOwnTweet = user?.xUsername?.toLowerCase() === tweetData.author.username.toLowerCase()
-      const containsRequiredMentions = tweetData.isFromLayerEdgeCommunity
+      if (!user?.xUsername) {
+        return {
+          isValid: false,
+          isOwnTweet: false,
+          containsRequiredMentions: false,
+          error: 'Your X/Twitter username is not linked. Please sign in with Twitter again.'
+        }
+      }
+
+      // Verify tweet ownership using fetched data
+      const isOwnTweet = user.xUsername.toLowerCase() === fallbackData.author.username.toLowerCase()
+      const containsRequiredMentions = fallbackData.isFromLayerEdgeCommunity
+
+      console.log(`🔐 Verification results: isOwnTweet=${isOwnTweet}, containsRequiredMentions=${containsRequiredMentions}`)
 
       return {
         isValid: true,
         isOwnTweet,
         containsRequiredMentions,
         tweetData: {
-          id: tweetData.id,
-          content: tweetData.content,
-          author: tweetData.author,
-          engagement: tweetData.engagement,
-          createdAt: tweetData.createdAt,
-          url: tweetData.url
+          id: fallbackData.id,
+          content: fallbackData.content,
+          author: {
+            id: fallbackData.author.id,
+            username: fallbackData.author.username,
+            name: fallbackData.author.name,
+            verified: fallbackData.author.verified || false,
+            profileImage: fallbackData.author.profileImage || '',
+            followersCount: fallbackData.author.followersCount || 0,
+            followingCount: fallbackData.author.followingCount || 0
+          },
+          engagement: {
+            likes: fallbackData.likes || 0,
+            retweets: fallbackData.retweets || 0,
+            replies: fallbackData.replies || 0,
+            quotes: 0
+          },
+          createdAt: fallbackData.createdAt,
+          url: normalizedUrl
         }
       }
 
     } catch (error) {
       console.error('❌ Tweet verification error:', error)
+
+      // Provide more specific error messages for common issues
+      let errorMessage = 'An unexpected error occurred during tweet verification'
+      if (error instanceof Error) {
+        if (error.message.includes('rate limit') || error.message.includes('429')) {
+          errorMessage = 'Twitter API rate limit exceeded. Please try again in a few minutes.'
+        } else if (error.message.includes('network') || error.message.includes('timeout')) {
+          errorMessage = 'Network error occurred. Please check your connection and try again.'
+        }
+      }
+
       return {
         isValid: false,
         isOwnTweet: false,
         containsRequiredMentions: false,
-        error: 'An unexpected error occurred during tweet verification'
+        error: errorMessage
       }
     }
   }
