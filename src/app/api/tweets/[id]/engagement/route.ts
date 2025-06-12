@@ -67,7 +67,7 @@ export async function POST(
 
     // Use simplified fallback service for engagement metrics
     const fallbackService = getSimplifiedFallbackService({
-      preferApi: true,
+      preferApi: process.env.PREFER_API === 'true',
       apiTimeoutMs: 8000, // 8 seconds for engagement updates
     })
 

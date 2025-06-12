@@ -134,10 +134,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch real tweet data using fallback service (API + scraping)
+    // Fetch real tweet data using fallback service (oEmbed + API fallback)
     console.log(`Attempting to fetch tweet data for URL: ${tweetUrl}`)
     const fallbackService = getFallbackService({
-      preferApi: true,
+      preferApi: process.env.PREFER_API === 'true',
       apiTimeoutMs: 12000, // 12 seconds for tweet submission
     })
 

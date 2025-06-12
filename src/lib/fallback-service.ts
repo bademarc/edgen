@@ -65,7 +65,7 @@ export class FallbackService {
     this.config = {
       apiTimeoutMs: 15000,
       maxApiRetries: 2,
-      preferApi: true, // Prefer API over other methods
+      preferApi: process.env.PREFER_API === 'true', // Respect environment variable
       rateLimitCooldownMs: 15 * 60 * 1000, // 15 minutes
       ...config
     }
@@ -125,6 +125,13 @@ export class FallbackService {
     if (error.message?.includes('429') || error.message?.includes('rate limit')) {
       console.log('API rate limit detected, switching to scraper for cooldown period')
       this.isApiRateLimited = true
+      this.rateLimitResetTime = new Date(Date.now() + this.config.rateLimitCooldownMs)
+    }
+
+    // Check if this is an authentication error
+    if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
+      console.log('API authentication error detected, switching to fallback methods')
+      this.isApiRateLimited = true // Treat auth errors like rate limits
       this.rateLimitResetTime = new Date(Date.now() + this.config.rateLimitCooldownMs)
     }
 

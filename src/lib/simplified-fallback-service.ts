@@ -65,7 +65,7 @@ export class SimplifiedFallbackService {
     this.config = {
       apiTimeoutMs: 15000,
       maxApiRetries: 2,
-      preferApi: true,
+      preferApi: process.env.PREFER_API === 'true', // Respect environment variable
       rateLimitCooldownMs: 15 * 60 * 1000, // 15 minutes
       ...config
     }

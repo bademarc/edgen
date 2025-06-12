@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Use real fallback service for preview
     console.log(`Fetching tweet preview for URL: ${tweetUrl}`)
     const fallbackService = getFallbackService({
-      preferApi: true,
+      preferApi: process.env.PREFER_API === 'true',
       apiTimeoutMs: 8000, // 8 seconds for preview
     })
 
