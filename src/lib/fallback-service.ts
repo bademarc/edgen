@@ -75,6 +75,12 @@ export class FallbackService {
   }
 
   private shouldUseApi(): boolean {
+    // PRODUCTION FIX: Force oEmbed-only mode if Twitter API is disabled
+    if (process.env.TWITTER_API_DISABLED === 'true' || process.env.FORCE_OEMBED_ONLY === 'true') {
+      console.log('Twitter API disabled via environment variable - using oEmbed only')
+      return false
+    }
+
     // PRIORITY FIX: Don't use API if not preferred (Scweet prioritization)
     if (!this.config.preferApi) {
       console.log('Twitter API disabled - using Scweet prioritization')
