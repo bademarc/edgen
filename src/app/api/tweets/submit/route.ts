@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
+import { getSimplifiedTweetSubmissionService } from '@/lib/simplified-tweet-submission'
 import { getAuthenticatedUser } from '@/lib/auth-utils'
-import { enhancedErrorHandler } from '@/lib/enhanced-error-handler'
-import { validateTweetURL, URLValidator } from '@/lib/url-validator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,85 +65,39 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Enhanced URL validation
-    const urlValidation = validateTweetURL(tweetUrl.trim())
-
-    if (!urlValidation.isValid) {
-      const errorMessage = URLValidator.getErrorMessage(tweetUrl)
+    // Basic URL validation
+    if (!tweetUrl.includes('twitter.com/') && !tweetUrl.includes('x.com/')) {
       return NextResponse.json(
         {
           error: 'Invalid tweet URL',
-          userMessage: 'The provided URL is not a valid tweet URL.',
+          userMessage: 'Please provide a valid X/Twitter URL.',
           suggestions: [
             'Make sure the URL is from X.com or Twitter.com',
-            'The URL should contain "/status/" followed by numbers',
             'Copy the URL directly from the tweet you want to submit',
             'Example: https://x.com/username/status/1234567890'
-          ],
-          details: errorMessage
-        },
-        { status: 400 }
-      )
-    }
-
-    // Additional validation for tweet ID
-    if (!urlValidation.tweetId) {
-      return NextResponse.json(
-        {
-          error: 'Could not extract tweet ID',
-          userMessage: 'Unable to identify the tweet from this URL.',
-          suggestions: [
-            'Ensure the URL contains a valid tweet ID',
-            'Try copying the URL again from the original tweet',
-            'Check that the URL is complete and not truncated'
           ]
         },
         { status: 400 }
       )
     }
 
-    // Get manual submission service
-    const submissionService = getManualTweetSubmissionService()
-
-    // Check submission status with enhanced feedback
-    const submissionStatus = submissionService.getSubmissionStatus(authResult.userId)
-    if (!submissionStatus.canSubmit) {
-      let errorMessage = 'Submission temporarily unavailable'
-      let retryAfter = 300 // Default 5 minutes
-
-      if (submissionStatus.cooldownRemaining) {
-        errorMessage = `Please wait ${submissionStatus.cooldownRemaining} minutes before submitting another tweet.`
-        retryAfter = submissionStatus.cooldownRemaining * 60
-      } else if (submissionStatus.rateLimitResetTime) {
-        const waitTime = Math.ceil((submissionStatus.rateLimitResetTime - Date.now()) / 1000 / 60)
-        errorMessage = `You've reached the hourly submission limit. Please wait ${waitTime} minutes.`
-        retryAfter = waitTime * 60
-      }
-
+    if (!tweetUrl.includes('/status/')) {
       return NextResponse.json(
         {
-          error: errorMessage,
-          cooldownRemaining: submissionStatus.cooldownRemaining,
-          rateLimitRemaining: submissionStatus.rateLimitRemaining,
-          retryAfter,
-          userMessage: 'Rate limiting helps ensure fair usage and system stability.'
+          error: 'Invalid tweet URL format',
+          userMessage: 'The URL must link to a specific tweet.',
+          suggestions: [
+            'Make sure the URL contains "/status/" followed by the tweet ID',
+            'Copy the URL from the tweet itself, not the user profile',
+            'Example: https://x.com/username/status/1234567890'
+          ]
         },
-        { status: 429 }
+        { status: 400 }
       )
     }
 
-    // Check rate limiting before submission
-    const rateLimitCheck = enhancedErrorHandler.shouldRateLimit('tweet_submission', authResult.userId)
-    if (rateLimitCheck.limited) {
-      return NextResponse.json(
-        {
-          error: 'Rate limited',
-          userMessage: 'Please wait before submitting another tweet',
-          retryAfter: rateLimitCheck.retryAfter
-        },
-        { status: 429 }
-      )
-    }
+    // Get simplified submission service
+    const submissionService = getSimplifiedTweetSubmissionService()
 
     // Check for bypass mode (admin or emergency situations)
     const bypassHeader = request.headers.get('x-bypass-circuit-breaker')
@@ -155,7 +107,7 @@ export async function POST(request: NextRequest) {
       console.log('🔓 Circuit breaker bypass enabled for manual submission')
     }
 
-    // Submit tweet with enhanced error handling
+    // Submit tweet with simplified error handling
     try {
       const result = await submissionService.submitTweet(tweetUrl, authResult.userId, bypassCircuitBreaker)
 
@@ -168,92 +120,24 @@ export async function POST(request: NextRequest) {
           bypassUsed: bypassCircuitBreaker
         })
       } else {
-        // Handle submission failure with enhanced error handling
-        let errorMessage = result.message
-        let suggestions: string[] = []
-        let retryable = false
-
-        // Provide specific guidance based on error type
-        if (result.message.includes('monthly usage limit exceeded')) {
-          errorMessage = 'Twitter API monthly limit reached'
-          suggestions = [
-            'This is a temporary service limitation',
-            'Our team is working to resolve this issue',
-            'Please try again in a few hours',
-            'Contact support if this persists'
-          ]
-          retryable = true
-        } else if (result.message.includes('rate limit exceeded')) {
-          errorMessage = 'Too many requests, please wait'
-          suggestions = [
-            'Wait 5-10 minutes before trying again',
-            'This helps prevent service overload'
-          ]
-          retryable = true
-        } else if (result.message.includes('authentication')) {
-          errorMessage = 'Service authentication issue'
-          suggestions = [
-            'This is a temporary service issue',
-            'Please contact support if this persists'
-          ]
-          retryable = false
-        } else if (result.message.includes('not found') || result.message.includes('not accessible')) {
-          errorMessage = 'Tweet not found or private'
-          suggestions = [
-            'Make sure the tweet URL is correct',
-            'Ensure the tweet is public (not private)',
-            'Check that the tweet has not been deleted'
-          ]
-          retryable = false
-        }
-
-        const errorResult = await enhancedErrorHandler.handleTwitterApiError(
-          new Error(result.message),
-          {
-            operation: 'tweet_submission',
-            userId: authResult.userId,
-            tweetUrl,
-            attempt: 1,
-            timestamp: new Date()
-          }
-        )
-
-        const uiError = enhancedErrorHandler.formatErrorForUI(errorResult)
-
         return NextResponse.json(
           {
-            error: errorMessage,
-            userMessage: uiError.message || errorMessage,
-            suggestions: suggestions.length > 0 ? suggestions : (errorResult.error?.suggestions || []),
-            retryable: retryable || (errorResult.error?.retryable || false),
-            details: result.error
+            success: false,
+            error: result.message,
+            userMessage: result.message
           },
-          { status: retryable ? 429 : 400 }
+          { status: 400 }
         )
       }
     } catch (submissionError) {
-      // Handle unexpected submission errors
-      const errorResult = await enhancedErrorHandler.handleTwitterApiError(
-        submissionError,
-        {
-          operation: 'tweet_submission',
-          userId: authResult.userId,
-          tweetUrl,
-          attempt: 1,
-          timestamp: new Date()
-        }
-      )
-
-      const uiError = enhancedErrorHandler.formatErrorForUI(errorResult)
-
+      console.error('Tweet submission error:', submissionError)
       return NextResponse.json(
         {
+          success: false,
           error: 'Submission failed',
-          userMessage: uiError.message,
-          suggestions: errorResult.error?.suggestions || [],
-          retryable: errorResult.error?.retryable || false
+          userMessage: 'An unexpected error occurred. Please try again later.'
         },
-        { status: errorResult.error?.retryable ? 429 : 500 }
+        { status: 500 }
       )
     }
 
@@ -278,15 +162,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get submission service
-    const submissionService = getManualTweetSubmissionService()
-
-    // Get submission status
-    const submissionStatus = submissionService.getSubmissionStatus(authResult.userId)
-
     return NextResponse.json({
-      canSubmit: submissionStatus.canSubmit,
-      cooldownRemaining: submissionStatus.cooldownRemaining
+      canSubmit: true,
+      message: 'Tweet submission is available'
     })
 
   } catch (error) {
