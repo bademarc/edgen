@@ -46,6 +46,25 @@ function logWarning(message) {
   log(`${colors.yellow}⚠️  ${message}${colors.reset}`);
 }
 
+function logInfo(message) {
+  log(`${colors.blue}ℹ️  ${message}${colors.reset}`);
+}
+
+function detectPlatform() {
+  const platform = process.platform;
+  const arch = process.arch;
+
+  logInfo(`Detected platform: ${platform} (${arch})`);
+
+  return {
+    isWindows: platform === 'win32',
+    isMacOS: platform === 'darwin',
+    isLinux: platform === 'linux',
+    architecture: arch,
+    platform
+  };
+}
+
 function execCommand(command, options = {}) {
   try {
     logStep('EXEC', `Running: ${command}`);
@@ -307,7 +326,10 @@ function verifyBuild() {
 }
 
 async function main() {
-  log(`${colors.bright}🚀 Starting Windows-compatible build process...${colors.reset}\n`);
+  const platformInfo = detectPlatform();
+
+  log(`${colors.bright}🚀 Starting cross-platform build process...${colors.reset}\n`);
+  logInfo(`Building for ${platformInfo.platform} (${platformInfo.architecture})`);
 
   try {
     // Step 1: Generate Prisma client
@@ -332,11 +354,29 @@ async function main() {
     log(`\n${colors.red}${colors.bright}💥 Build failed!${colors.reset}`);
     logError(error.message);
 
-    log(`\n${colors.yellow}🔧 Troubleshooting tips:${colors.reset}`);
-    log(`${colors.yellow}   1. Make sure no antivirus is blocking file operations${colors.reset}`);
-    log(`${colors.yellow}   2. Close any IDEs or editors that might lock files${colors.reset}`);
-    log(`${colors.yellow}   3. Run as administrator if permission issues persist${colors.reset}`);
-    log(`${colors.yellow}   4. Try: npm run clean && npm install${colors.reset}\n`);
+    log(`\n${colors.yellow}🔧 Platform-specific troubleshooting tips:${colors.reset}`);
+
+    if (platformInfo.isWindows) {
+      log(`${colors.yellow}   Windows:${colors.reset}`);
+      log(`${colors.yellow}   1. Make sure no antivirus is blocking file operations${colors.reset}`);
+      log(`${colors.yellow}   2. Close any IDEs or editors that might lock files${colors.reset}`);
+      log(`${colors.yellow}   3. Run as administrator if permission issues persist${colors.reset}`);
+      log(`${colors.yellow}   4. Try: npm run clean && npm install${colors.reset}`);
+    } else if (platformInfo.isMacOS) {
+      log(`${colors.yellow}   macOS:${colors.reset}`);
+      log(`${colors.yellow}   1. Check Xcode Command Line Tools: xcode-select --install${colors.reset}`);
+      log(`${colors.yellow}   2. Clear npm cache: npm cache clean --force${colors.reset}`);
+      log(`${colors.yellow}   3. For M1/M2 Macs, ensure native Node.js build${colors.reset}`);
+    } else {
+      log(`${colors.yellow}   Linux:${colors.reset}`);
+      log(`${colors.yellow}   1. Install build tools: sudo apt-get install build-essential${colors.reset}`);
+      log(`${colors.yellow}   2. Check file permissions: chmod -R 755 .${colors.reset}`);
+      log(`${colors.yellow}   3. Try: npm run clean && npm install${colors.reset}`);
+    }
+
+    log(`${colors.yellow}   General:${colors.reset}`);
+    log(`${colors.yellow}   4. Check Node.js version (18+ required)${colors.reset}`);
+    log(`${colors.yellow}   5. Verify environment variables in .env file${colors.reset}\n`);
 
     process.exit(1);
   }

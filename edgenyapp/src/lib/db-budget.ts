@@ -24,7 +24,7 @@ class BudgetDatabaseService {
     const cacheKey = `leaderboard:${limit}`
 
     // Try cache first (15 minute TTL)
-    const cached = await this.cache.get(cacheKey)
+    const cached = await this.cache.get<any[]>(cacheKey)
     if (cached) {
       console.log('📋 Returning cached leaderboard (15min cache)')
       return cached

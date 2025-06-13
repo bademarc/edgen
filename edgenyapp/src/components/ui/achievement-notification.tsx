@@ -56,15 +56,18 @@ export function AchievementNotification({
   useEffect(() => {
     if (achievement) {
       setIsVisible(true)
-      
+
       if (autoHide) {
         const timer = setTimeout(() => {
           handleDismiss()
         }, autoHideDelay)
-        
+
         return () => clearTimeout(timer)
       }
     }
+
+    // Return undefined for other cases
+    return undefined
   }, [achievement, autoHide, autoHideDelay])
 
   const handleDismiss = () => {

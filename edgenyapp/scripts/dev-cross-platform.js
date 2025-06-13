@@ -47,6 +47,41 @@ function logWarning(message) {
   log(`${colors.yellow}⚠️  ${message}${colors.reset}`);
 }
 
+function logInfo(message) {
+  log(`${colors.blue}ℹ️  ${message}${colors.reset}`);
+}
+
+function detectPlatform() {
+  const platform = process.platform;
+  const arch = process.arch;
+
+  logInfo(`Detected platform: ${platform} (${arch})`);
+
+  return {
+    isWindows: platform === 'win32',
+    isMacOS: platform === 'darwin',
+    isLinux: platform === 'linux',
+    architecture: arch,
+    platform
+  };
+}
+
+function getPlatformSpecificCommands(platformInfo) {
+  if (platformInfo.isWindows) {
+    return {
+      killPort: (port) => `netstat -ano | findstr :${port} && for /f "tokens=5" %a in ('netstat -ano ^| findstr :${port}') do taskkill /f /pid %a`,
+      openBrowser: (url) => `start ${url}`,
+      clearScreen: 'cls'
+    };
+  } else {
+    return {
+      killPort: (port) => `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`,
+      openBrowser: (url) => platformInfo.isMacOS ? `open ${url}` : `xdg-open ${url}`,
+      clearScreen: 'clear'
+    };
+  }
+}
+
 function getOSInfo() {
   const os = platform();
   const arch = process.arch;

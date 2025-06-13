@@ -100,6 +100,9 @@ export const TweetCard = memo(function TweetCard({
 
       return () => clearTimeout(timer)
     }
+
+    // Return undefined for the else case
+    return undefined
   }, [tweet.likes, tweet.retweets, tweet.replies, tweet.totalPoints]) // CRITICAL FIX: Removed previousMetrics dependency
 
   const handleUpdateClick = useCallback(async () => {

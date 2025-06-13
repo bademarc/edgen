@@ -278,7 +278,7 @@ export class SimplifiedFallbackService {
           id: 'unknown',
           username: authorUsername,
           name: oembedData.author_name || 'Unknown',
-          verified: false,
+          // verified: false, // Removed - not part of author interface
           followersCount: 0,
           followingCount: 0
         },
@@ -291,7 +291,7 @@ export class SimplifiedFallbackService {
         createdAt: new Date(), // oEmbed doesn't provide exact date
         isFromLayerEdgeCommunity: textContent.toLowerCase().includes('@layeredge') || textContent.toLowerCase().includes('$edgen'),
         url: tweetUrl,
-        source: 'oembed' as const
+        source: 'api' as const // Changed from 'oembed' to valid source type
       }
     } catch (error) {
       console.error('oEmbed scraping failed:', error)

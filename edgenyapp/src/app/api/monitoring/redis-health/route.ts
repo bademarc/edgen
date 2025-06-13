@@ -9,14 +9,16 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Starting Redis health check...')
 
+    const cache = getSimplifiedCacheService()
+
     // Test basic Redis connection
-    const redisTest = await enhancedCache.testRedisConnection()
-    
+    const redisTest = await cache.testRedisConnection()
+
     // Test tiered cache functionality
-    const tieredTest = await enhancedCache.testTieredCache()
-    
+    const tieredTest = await cache.testTieredCache()
+
     // Get current cache statistics
-    const stats = enhancedCache.getStats()
+    const stats = cache.getStats()
     
     // Test environment variables
     const envCheck = {
@@ -158,7 +160,8 @@ function getPerformanceRating(hitRate: number): string {
  */
 export async function POST(request: NextRequest) {
   try {
-    enhancedCache.resetStats()
+    const cache = getSimplifiedCacheService()
+    cache.resetStats()
     
     return NextResponse.json({
       success: true,

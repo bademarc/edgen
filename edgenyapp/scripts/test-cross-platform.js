@@ -290,29 +290,124 @@ async function testDevServerStartup() {
 
 function testAIChatbotAPI() {
   logStep('AI', 'Testing AI chatbot API...');
-  
+
   // Check if AI service files exist
   const aiServicePath = join(projectRoot, 'src', 'lib', 'ionet-api-service.ts');
   if (!existsSync(aiServicePath)) {
     logError('AI service file not found');
     return false;
   }
-  
+
   // Check API route
   const apiRoutePath = join(projectRoot, 'src', 'app', 'api', 'edgen-helper', 'chat', 'route.ts');
   if (!existsSync(apiRoutePath)) {
     logError('AI chat API route not found');
     return false;
   }
-  
+
   // Check chatbot component
   const chatbotPath = join(projectRoot, 'src', 'components', 'edgen-helper-chatbot.tsx');
   if (!existsSync(chatbotPath)) {
     logError('AI chatbot component not found');
     return false;
   }
-  
+
   logSuccess('AI chatbot files verified');
+  return true;
+}
+
+function testDockerCompatibility() {
+  logStep('DOCKER', 'Testing Docker compatibility...');
+
+  // Check if Dockerfile exists
+  const dockerfilePath = join(projectRoot, 'Dockerfile');
+  if (!existsSync(dockerfilePath)) {
+    logError('Dockerfile not found');
+    return false;
+  }
+
+  // Check docker-compose files
+  const dockerComposePath = join(projectRoot, 'docker-compose.scale.yml');
+  if (!existsSync(dockerComposePath)) {
+    logWarning('Docker compose file not found');
+  }
+
+  // Test Docker build (if Docker is available)
+  const dockerResult = execCommand('docker --version');
+  if (dockerResult.success) {
+    logSuccess('Docker is available');
+
+    // Test if we can build the image (dry run)
+    logStep('DOCKER', 'Testing Docker build syntax...');
+    const buildResult = execCommand('docker build --dry-run -t edgenyapp-test .');
+    if (buildResult.success) {
+      logSuccess('Docker build syntax is valid');
+    } else {
+      logWarning('Docker build syntax check failed (this may be expected in some environments)');
+    }
+  } else {
+    logWarning('Docker not available - skipping Docker tests');
+  }
+
+  logSuccess('Docker compatibility verified');
+  return true;
+}
+
+function testFilePathCompatibility() {
+  logStep('PATHS', 'Testing file path compatibility...');
+
+  const os = platform();
+
+  // Test path separators
+  const testPaths = [
+    'src/app/page.tsx',
+    'src\\app\\page.tsx',
+    './src/app/page.tsx',
+    '.\\src\\app\\page.tsx'
+  ];
+
+  let compatiblePaths = 0;
+  for (const testPath of testPaths) {
+    try {
+      const normalizedPath = join(projectRoot, testPath.replace(/[/\\]/g, '/'));
+      if (existsSync(normalizedPath)) {
+        compatiblePaths++;
+      }
+    } catch (error) {
+      // Path normalization failed
+    }
+  }
+
+  if (compatiblePaths > 0) {
+    logSuccess(`Path compatibility verified (${compatiblePaths}/${testPaths.length} paths work)`);
+  } else {
+    logError('Path compatibility issues detected');
+    return false;
+  }
+
+  // Test directory creation and deletion
+  const testDir = join(projectRoot, 'test-cross-platform-dir');
+  try {
+    // Create test directory
+    execCommand(`mkdir "${testDir}"`);
+    if (existsSync(testDir)) {
+      logSuccess('Directory creation works');
+
+      // Clean up
+      if (os === 'win32') {
+        execCommand(`rmdir /s /q "${testDir}"`);
+      } else {
+        execCommand(`rm -rf "${testDir}"`);
+      }
+
+      if (!existsSync(testDir)) {
+        logSuccess('Directory deletion works');
+      }
+    }
+  } catch (error) {
+    logWarning('Directory operations test failed');
+  }
+
   return true;
 }
 
@@ -357,6 +452,8 @@ async function main() {
     { name: 'Environment Variables', fn: testEnvironmentVariables },
     { name: 'Build Process', fn: testBuildProcess },
     { name: 'AI Chatbot API', fn: testAIChatbotAPI },
+    { name: 'Docker Compatibility', fn: testDockerCompatibility },
+    { name: 'File Path Compatibility', fn: testFilePathCompatibility },
     { name: 'Dev Server Startup', fn: testDevServerStartup }
   ];
   

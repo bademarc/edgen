@@ -243,6 +243,139 @@ export class SimplifiedXApiService {
   }
 
   /**
+   * Verify user login by checking if user exists
+   */
+  async verifyUserLogin(username: string): Promise<{
+    success: boolean
+    user?: XUserData & { tweetCount?: number; joinDate?: Date }
+    error?: string
+  }> {
+    try {
+      console.log(`🔐 Verifying login for user: @${username}`)
+
+      const user = await this.getUserByUsername(username)
+      if (!user) {
+        return {
+          success: false,
+          error: 'User not found'
+        }
+      }
+
+      // Get additional user stats if needed
+      const enhancedUser = {
+        ...user,
+        tweetCount: 0, // Could be fetched from user timeline if needed
+        joinDate: user.createdAt
+      }
+
+      return {
+        success: true,
+        user: enhancedUser
+      }
+
+    } catch (error) {
+      console.error(`❌ Error verifying login for @${username}:`, error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  /**
+   * Get user tweets by username
+   */
+  async getUserTweets(username: string, maxResults: number = 10): Promise<XTweetData[]> {
+    if (!this.isReady()) {
+      throw new Error('X API service not ready')
+    }
+
+    try {
+      console.log(`📝 Fetching tweets for user: @${username}`)
+
+      // First get user data
+      const user = await this.getUserByUsername(username)
+      if (!user) {
+        console.log(`❌ User not found: @${username}`)
+        return []
+      }
+
+      // Get user's tweets
+      const tweets = await this.client!.v2.userTimeline(user.id, {
+        max_results: Math.min(maxResults, 100), // API limit
+        'tweet.fields': [
+          'id',
+          'text',
+          'created_at',
+          'public_metrics',
+          'author_id',
+          'context_annotations'
+        ],
+        'user.fields': [
+          'id',
+          'name',
+          'username',
+          'verified',
+          'profile_image_url',
+          'public_metrics'
+        ],
+        expansions: ['author_id']
+      })
+
+      if (!tweets.data?.data || tweets.data.data.length === 0) {
+        console.log(`❌ No tweets found for user: @${username}`)
+        return []
+      }
+
+      const tweetData: XTweetData[] = []
+
+      for (const tweet of tweets.data.data) {
+        const xTweetData: XTweetData = {
+          id: tweet.id,
+          content: tweet.text,
+          author: {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            verified: user.verified,
+            profileImage: user.profileImage,
+            followersCount: user.followersCount,
+            followingCount: user.followingCount
+          },
+          engagement: {
+            likes: tweet.public_metrics?.like_count || 0,
+            retweets: tweet.public_metrics?.retweet_count || 0,
+            replies: tweet.public_metrics?.reply_count || 0,
+            quotes: tweet.public_metrics?.quote_count || 0
+          },
+          createdAt: tweet.created_at ? new Date(tweet.created_at) : new Date(),
+          isFromLayerEdgeCommunity: this.checkLayerEdgeCommunity(tweet.text),
+          url: `https://x.com/${user.username}/status/${tweet.id}`
+        }
+
+        tweetData.push(xTweetData)
+      }
+
+      console.log(`✅ Fetched ${tweetData.length} tweets for @${username}`)
+      return tweetData
+
+    } catch (error) {
+      console.error(`❌ Error fetching tweets for @${username}:`, error)
+
+      if (error instanceof Error) {
+        if (error.message.includes('rate limit')) {
+          throw new Error('Rate limit exceeded. Please try again later.')
+        }
+        if (error.message.includes('authorization')) {
+          throw new Error('Twitter API authorization failed. Please check credentials.')
+        }
+      }
+
+      throw new Error(`Failed to fetch user tweets: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /**
    * Extract tweet ID from URL
    */
   extractTweetId(tweetUrl: string): string | null {

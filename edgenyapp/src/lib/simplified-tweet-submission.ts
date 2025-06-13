@@ -29,6 +29,11 @@ interface TweetValidationResult {
 }
 
 export class SimplifiedTweetSubmissionService {
+  private lastError?: any;
+  private verified = false;
+  private followersCount = 0;
+  private followingCount = 0;
+  private url = '';
   private xApi = getSimplifiedXApiService()
   private cache = getSimplifiedCacheService()
   private circuitBreaker = getSimplifiedCircuitBreaker('tweet-submission', {

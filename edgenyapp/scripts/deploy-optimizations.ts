@@ -140,7 +140,7 @@ class OptimizationDeployer {
             console.log(`  ✅ Index ${indexName} created successfully`)
           } catch (error) {
             // Index might already exist, check if it's a duplicate error
-            if (error.message?.includes('already exists')) {
+            if (error instanceof Error && error.message?.includes('already exists')) {
               console.log(`  ⚠️ Index ${indexName} already exists, skipping`)
             } else {
               throw error

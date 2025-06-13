@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSimplifiedCircuitBreaker } from '@/lib/simplified-circuit-breaker'
 import { getSimplifiedCacheService } from '@/lib/simplified-cache'
+import { getRedisDataValidator } from '@/lib/redis-data-validator'
 
 /**
  * API endpoint to test Redis health and data integrity
@@ -15,7 +16,7 @@ export async function GET() {
       canConnect: false,
       canWrite: false,
       canRead: false,
-      error: null
+      error: null as string | null
     }
     
     try {
@@ -27,7 +28,7 @@ export async function GET() {
       connectivityTest.canWrite = true
       
       // Test read
-      const retrieved = await cache.get(testKey)
+      const retrieved = await cache.get(testKey) as any
       connectivityTest.canRead = retrieved && retrieved.test === true
       connectivityTest.canConnect = connectivityTest.canWrite && connectivityTest.canRead
       
@@ -70,13 +71,14 @@ export async function GET() {
       'circuit_breaker:monitoring'
     ]
     
+    const validator = getRedisDataValidator()
     const integrityReport = await validator.performDataIntegrityCheck(criticalKeys)
-    
+
     // Overall health assessment
     const overallHealth = {
-      status: 'healthy',
-      issues: [],
-      recommendations: []
+      status: 'healthy' as 'healthy' | 'warning' | 'critical',
+      issues: [] as string[],
+      recommendations: [] as string[]
     }
     
     if (!connectivityTest.canConnect) {

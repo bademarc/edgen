@@ -42,7 +42,7 @@ class FreeTierService {
     const cacheKey = `leaderboard:${limit}`
 
     // Try cache first (30 minute TTL for free tier)
-    const cached = await this.cache.get(cacheKey)
+    const cached = await this.cache.get<any[]>(cacheKey)
     if (cached) {
       console.log('📋 Returning cached leaderboard (FREE TIER)')
       return cached

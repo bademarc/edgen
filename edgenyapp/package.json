@@ -82,6 +82,11 @@
     "diagnose:twitter-api": "tsx src/scripts/diagnose-twitter-api.ts",
     "test:tweet-functionality": "tsx src/scripts/test-tweet-functionality.ts",
     "fix:twitter-api": "tsx src/scripts/fix-twitter-api-integration.ts",
+    "fix:typescript": "node scripts/fix-typescript.js",
+    "fix:typescript-critical": "node scripts/fix-critical-typescript.js",
+    "test:typescript": "npx tsc --noEmit --skipLibCheck",
+    "test:build": "npm run fix:typescript-critical && npm run test:typescript && npm run build",
+    "dev:cross-platform": "node scripts/dev-cross-platform.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

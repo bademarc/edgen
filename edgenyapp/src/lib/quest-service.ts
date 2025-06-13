@@ -23,11 +23,11 @@ export interface UserQuestData {
   status: 'not_started' | 'in_progress' | 'completed' | 'claimed'
   progress: number
   maxProgress: number
-  completedAt?: Date
-  claimedAt?: Date
+  completedAt?: Date | null
+  claimedAt?: Date | null
   submissionData?: any
-  verifiedBy?: string
-  verifiedAt?: Date
+  verifiedBy?: string | null
+  verifiedAt?: Date | null
   createdAt: Date
   updatedAt: Date
   quest: QuestData
@@ -51,10 +51,11 @@ export class QuestService {
 
     return quests.map(quest => {
       const userQuest = quest.userQuests[0]
-      
+
       if (userQuest) {
         return {
           ...userQuest,
+          status: userQuest.status as 'not_started' | 'in_progress' | 'completed' | 'claimed',
           quest: {
             id: quest.id,
             title: quest.title,
@@ -134,6 +135,7 @@ export class QuestService {
 
     return {
       ...userQuest,
+      status: userQuest.status as 'not_started' | 'in_progress' | 'completed' | 'claimed',
       quest: userQuest.quest
     }
   }
@@ -195,6 +197,7 @@ export class QuestService {
 
     return {
       ...updatedUserQuest,
+      status: updatedUserQuest.status as 'not_started' | 'in_progress' | 'completed' | 'claimed',
       quest: updatedUserQuest.quest
     }
   }
@@ -216,12 +219,12 @@ export class QuestService {
       throw new Error('Quest not found')
     }
 
-    if (userQuest.status !== 'completed') {
-      throw new Error('Quest not completed')
-    }
-
     if (userQuest.status === 'claimed') {
       throw new Error('Reward already claimed')
+    }
+
+    if (userQuest.status !== 'completed') {
+      throw new Error('Quest not completed')
     }
 
     // Award points and update quest status
@@ -272,6 +275,7 @@ export class QuestService {
 
     return {
       ...updatedUserQuest!,
+      status: updatedUserQuest!.status as 'not_started' | 'in_progress' | 'completed' | 'claimed',
       quest: updatedUserQuest!.quest
     }
   }
@@ -329,6 +333,7 @@ export class QuestService {
       })
       return {
         ...existingQuest!,
+        status: existingQuest!.status as 'not_started' | 'in_progress' | 'completed' | 'claimed',
         quest: existingQuest!.quest
       }
     }
@@ -383,6 +388,7 @@ export class QuestService {
 
     return {
       ...updatedUserQuest,
+      status: updatedUserQuest.status as 'not_started' | 'in_progress' | 'completed' | 'claimed',
       quest: updatedUserQuest.quest
     }
   }
@@ -434,22 +440,32 @@ export class QuestService {
     ]
 
     for (const questData of defaultQuests) {
-      await prisma.quest.upsert({
-        where: {
-          title: questData.title
-        },
-        update: {
-          description: questData.description,
-          type: questData.type,
-          points: questData.points,
-          sortOrder: questData.sortOrder,
-          metadata: questData.metadata,
-          requiresManualVerification: questData.requiresManualVerification,
-          autoVerifiable: questData.autoVerifiable,
-          isActive: true
-        },
-        create: questData
+      // Check if quest already exists
+      const existingQuest = await prisma.quest.findFirst({
+        where: { title: questData.title }
       })
+
+      if (existingQuest) {
+        // Update existing quest
+        await prisma.quest.update({
+          where: { id: existingQuest.id },
+          data: {
+            description: questData.description,
+            type: questData.type,
+            points: questData.points,
+            sortOrder: questData.sortOrder,
+            metadata: questData.metadata,
+            requiresManualVerification: questData.requiresManualVerification,
+            autoVerifiable: questData.autoVerifiable,
+            isActive: true
+          }
+        })
+      } else {
+        // Create new quest
+        await prisma.quest.create({
+          data: questData
+        })
+      }
     }
   }
 }

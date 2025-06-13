@@ -236,7 +236,7 @@ export class RSSMonitoringService {
           link: this.extractXMLValue(itemXml, 'link') || '',
           description: this.extractXMLValue(itemXml, 'description') || '',
           pubDate: this.extractXMLValue(itemXml, 'pubDate') || '',
-          guid: this.extractXMLValue(itemXml, 'guid')
+          guid: this.extractXMLValue(itemXml, 'guid') || undefined
         }
 
         if (item.link && item.description) {
