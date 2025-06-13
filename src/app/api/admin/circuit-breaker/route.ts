@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSimplifiedCircuitBreaker } from '@/lib/simplified-circuit-breaker'
+import { getEnhancedRateLimiter } from '@/lib/enhanced-rate-limiter'
+
+// Mock implementation for getAllCircuitBreakers until proper registry is implemented
+function getAllCircuitBreakers() {
+  // Return common circuit breakers used in the app
+  const commonBreakers = ['twitter-api', 'x-api', 'fallback-service', 'database']
+  return commonBreakers.map(name => getSimplifiedCircuitBreaker(name))
+}
 
 /**
  * Admin API for managing circuit breakers and rate limiters

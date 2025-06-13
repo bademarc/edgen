@@ -54,6 +54,7 @@ interface ApiResponse {
     timestamp: string
     source: string
   }
+  message?: string
 }
 
 export default function RecentSubmissionsPage() {
@@ -395,7 +396,8 @@ export default function RecentSubmissionsPage() {
                       <TweetCard
                         tweet={{
                           ...tweet,
-                          createdAt: new Date(tweet.displayDate)
+                          createdAt: new Date(tweet.displayDate),
+                          submittedAt: new Date(tweet.submittedAt)
                         }}
                         showUser={true}
                         isUpdating={false}

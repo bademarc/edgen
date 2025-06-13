@@ -195,4 +195,5 @@ export function getQueueService(): QueueService {
   return queueService
 }
 
-export { QueueService, QueueJob }
+export { QueueService }
+export type { QueueJob }

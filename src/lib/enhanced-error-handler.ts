@@ -270,7 +270,7 @@ export class EnhancedErrorHandler {
       return { limited: false }
     }
 
-    if (state.count >= this.rateLimitThreshold) {
+    if (state.count >= this.config.rateLimitThreshold) {
       return { 
         limited: true, 
         retryAfter: state.resetTime - Date.now() 

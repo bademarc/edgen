@@ -40,8 +40,7 @@ export async function GET(request: NextRequest) {
             id: true,
             pointsAwarded: true,
             reason: true,
-            createdAt: true,
-            metadata: true
+            createdAt: true
           },
           orderBy: {
             createdAt: 'desc'
@@ -100,8 +99,7 @@ export async function GET(request: NextRequest) {
         id: history.id,
         pointsAwarded: history.pointsAwarded,
         reason: history.reason,
-        createdAt: history.createdAt,
-        metadata: history.metadata ? JSON.parse(history.metadata) : null
+        createdAt: history.createdAt
       }))
     }
 
@@ -198,14 +196,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: userId,
           pointsAwarded: difference,
-          reason: `Points correction: Fixed discrepancy between stored (${currentTotalPoints}) and calculated (${correctTotalPoints}) points`,
-          metadata: JSON.stringify({
-            correctionType: 'points_fix',
-            previousTotal: currentTotalPoints,
-            newTotal: correctTotalPoints,
-            difference: difference,
-            timestamp: new Date().toISOString()
-          })
+          reason: `Points correction: Fixed discrepancy between stored (${currentTotalPoints}) and calculated (${correctTotalPoints}) points`
         }
       })
 

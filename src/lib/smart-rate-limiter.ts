@@ -38,7 +38,7 @@ class SmartRateLimiter {
     const cacheKey = `batch_users:${userIds.sort().join(',')}`
     
     // Check cache first
-    const cached = await this.cache.get(cacheKey)
+    const cached = await this.cache.get<any[]>(cacheKey)
     if (cached) {
       console.log('📋 Returning cached batch user lookup')
       return cached

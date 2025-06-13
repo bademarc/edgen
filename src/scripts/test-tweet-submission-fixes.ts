@@ -67,9 +67,9 @@ class TweetSubmissionTestSuite {
       const retrieved = await this.cache.get(testKey)
 
       const passed = retrieved && 
-                    retrieved.state === testData.state &&
-                    retrieved.failureCount === testData.failureCount &&
-                    retrieved.isValid === testData.isValid
+                    (retrieved as any).state === testData.state &&
+                    (retrieved as any).failureCount === testData.failureCount &&
+                    (retrieved as any).isValid === testData.isValid
 
       this.results.push({
         testName: 'Cache JSON Serialization',

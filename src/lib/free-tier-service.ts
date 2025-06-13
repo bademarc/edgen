@@ -42,7 +42,7 @@ class FreeTierService {
     const cacheKey = `leaderboard:${limit}`
 
     // Try cache first (30 minute TTL for free tier)
-    const cached = await this.cache.get(cacheKey)
+    const cached = await this.cache.get<any[]>(cacheKey)
     if (cached) {
       console.log('📋 Returning cached leaderboard (FREE TIER)')
       return cached
@@ -318,11 +318,26 @@ class FreeTierService {
         this.db.healthCheck(),
         this.scraper.healthCheck()
       ])
-      
+
       return cacheHealth && dbHealth && scraperHealth
     } catch {
       return false
     }
+  }
+
+  /**
+   * Public method to delete cache entries
+   */
+  async deleteCacheEntry(key: string): Promise<void> {
+    await this.cache.delete(key)
+  }
+
+  /**
+   * Public method to clear user-related cache entries
+   */
+  async clearUserCache(userId: string): Promise<void> {
+    await this.cache.delete(`user:stats:${userId}`)
+    await this.cache.delete(`user:${userId}`)
   }
 }
 

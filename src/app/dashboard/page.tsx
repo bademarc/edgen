@@ -206,7 +206,7 @@ export default function DashboardPage() {
               <div className="text-center mt-6">
                 <Button
                   variant="layeredge"
-                  onClick={fetchDashboardData}
+                  onClick={() => fetchDashboardData(true)}
                 >
                   Try Again
                 </Button>

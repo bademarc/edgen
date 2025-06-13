@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const tweetTracker = getTweetTrackerInstance()
     const startTime = Date.now()
 
-    const results: Record<string, { tweets: number; processed: number }> = {}
+    const results: Record<string, { tweets: number; processed: number; error?: string }> = {}
 
     try {
       if (method === 'all' || method === 'twscrape') {

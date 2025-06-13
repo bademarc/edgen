@@ -162,18 +162,28 @@ class PushNotificationService {
     }
 
     if (this.registration) {
-      await this.registration.showNotification(payload.title, {
+      const notificationOptions: NotificationOptions = {
         body: payload.body,
         icon: payload.icon || '/icon/-AlLx9IW_400x400.png',
         badge: payload.badge || '/icon/-AlLx9IW_400x400.png',
-        image: payload.image,
         data: payload.data,
-        actions: payload.actions,
         tag: payload.tag,
         requireInteraction: payload.requireInteraction,
         silent: payload.silent,
-        vibrate: payload.vibrate || [200, 100, 200]
-      })
+        // vibrate: payload.vibrate || [200, 100, 200] // Removed - not part of standard NotificationOptions
+      }
+
+      // Add actions if provided (not all browsers support this)
+      if (payload.actions) {
+        (notificationOptions as any).actions = payload.actions
+      }
+
+      // Add image if provided (not all browsers support this)
+      if (payload.image) {
+        (notificationOptions as any).image = payload.image
+      }
+
+      await this.registration.showNotification(payload.title, notificationOptions)
     }
   }
 

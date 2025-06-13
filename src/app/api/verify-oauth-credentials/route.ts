@@ -36,9 +36,9 @@ export async function GET() {
     // Test OAuth service initialization
     let oauthServiceStatus = {
       canInitialize: false,
-      error: null,
+      error: null as string | null,
       authUrlGenerated: false,
-      clientIdInUrl: null
+      clientIdInUrl: null as string | null
     }
 
     try {
