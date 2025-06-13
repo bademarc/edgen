@@ -75,7 +75,7 @@ const categoryColors = {
 
 export function HomepageFAQ() {
   return (
-    <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+    <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 mobile-section-padding">
       <div className="container mx-auto max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -88,8 +88,8 @@ export function HomepageFAQ() {
               <HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             </div>
           </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-2">Frequently Asked Questions</h2>
-          <p className="text-muted-foreground text-base sm:text-lg mb-4 sm:mb-6 px-2 leading-relaxed">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-4 sm:px-2 mobile-text-spacing">Frequently Asked Questions</h2>
+          <p className="text-muted-foreground text-base sm:text-lg mb-4 sm:mb-6 px-4 sm:px-2 mobile-text-spacing leading-relaxed">
             Everything you need to know about earning points and engaging with the LayerEdge community
           </p>
         </motion.div>
@@ -143,16 +143,16 @@ export function HomepageFAQ() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12 mobile-grid-spacing"
         >
-          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly">
-            <CardHeader className="text-center pb-3 sm:pb-4 px-4 sm:px-6">
+          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly mobile-card-padding">
+            <CardHeader className="text-center pb-3 sm:pb-4 px-5 sm:px-6">
               <div className="mx-auto p-2.5 sm:p-3 rounded-full bg-blue-500/10 w-fit">
                 <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
               </div>
               <CardTitle className="text-base sm:text-lg">Submit Your First Tweet</CardTitle>
             </CardHeader>
-            <CardContent className="text-center px-4 sm:px-6 pb-4 sm:pb-6">
+            <CardContent className="text-center px-5 sm:px-6 pb-5 sm:pb-6">
               <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
                 Ready to start earning points? Submit a tweet mentioning @layeredge or $EDGEN.
               </p>
@@ -162,14 +162,14 @@ export function HomepageFAQ() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly">
-            <CardHeader className="text-center pb-3 sm:pb-4 px-4 sm:px-6">
+          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly mobile-card-padding">
+            <CardHeader className="text-center pb-3 sm:pb-4 px-5 sm:px-6">
               <div className="mx-auto p-2.5 sm:p-3 rounded-full bg-purple-500/10 w-fit">
                 <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
               </div>
               <CardTitle className="text-base sm:text-lg">View Leaderboard</CardTitle>
             </CardHeader>
-            <CardContent className="text-center px-4 sm:px-6 pb-4 sm:pb-6">
+            <CardContent className="text-center px-5 sm:px-6 pb-5 sm:pb-6">
               <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
                 See how you rank against other community members and top contributors.
               </p>
@@ -179,14 +179,14 @@ export function HomepageFAQ() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly sm:col-span-2 lg:col-span-1">
-            <CardHeader className="text-center pb-3 sm:pb-4 px-4 sm:px-6">
+          <Card className="hover:shadow-lg transition-all duration-300 touch-friendly sm:col-span-2 lg:col-span-1 mobile-card-padding">
+            <CardHeader className="text-center pb-3 sm:pb-4 px-5 sm:px-6">
               <div className="mx-auto p-2.5 sm:p-3 rounded-full bg-green-500/10 w-fit">
                 <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
               </div>
               <CardTitle className="text-base sm:text-lg">Join Community</CardTitle>
             </CardHeader>
-            <CardContent className="text-center px-4 sm:px-6 pb-4 sm:pb-6">
+            <CardContent className="text-center px-5 sm:px-6 pb-5 sm:pb-6">
               <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
                 Connect with other LayerEdge enthusiasts and stay updated on the latest news.
               </p>

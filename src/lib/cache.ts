@@ -356,7 +356,7 @@ class CacheService {
           }
 
         } catch (parseError) {
-          throw new Error(`Deserialization test failed: ${parseError.message}`)
+          throw new Error(`Deserialization test failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
         }
 
       } catch (serializationError) {
@@ -377,7 +377,7 @@ class CacheService {
           constructor: value?.constructor?.name,
           timestamp: Date.now(),
           key: key,
-          errorMessage: serializationError.message
+          errorMessage: serializationError instanceof Error ? serializationError.message : 'Unknown error'
         })
 
         console.warn(`⚠️ Using fallback serialization for key: ${key}`)

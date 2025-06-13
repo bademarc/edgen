@@ -106,7 +106,7 @@ export class RedisDataValidator {
         return {
           isValid: false,
           errorType: 'serialization_error',
-          errorMessage: `JSON serialization failed: ${serializationError.message}`,
+          errorMessage: `JSON serialization failed: ${serializationError instanceof Error ? serializationError.message : 'Unknown error'}`,
           originalValue: value
         }
       }
@@ -115,7 +115,7 @@ export class RedisDataValidator {
       return {
         isValid: false,
         errorType: 'validation_error',
-        errorMessage: `Validation failed: ${error.message}`,
+        errorMessage: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         originalValue: value
       }
     }
@@ -183,7 +183,7 @@ export class RedisDataValidator {
       return {
         isValid: false,
         errorType: 'validation_error',
-        errorMessage: `Circuit breaker validation failed: ${error.message}`,
+        errorMessage: `Circuit breaker validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         originalValue: status,
         correctedValue: this.createDefaultCircuitBreakerStatus()
       }
@@ -262,7 +262,7 @@ export class RedisDataValidator {
       return {
         isValid: false,
         errorType: 'cache_error',
-        errorMessage: `Cache validation failed: ${error.message}`
+        errorMessage: `Cache validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       }
     }
   }
@@ -298,7 +298,7 @@ export class RedisDataValidator {
 
       } catch (error) {
         report.corruptedKeys++
-        report.errors.push(`${key}: Validation failed - ${error.message}`)
+        report.errors.push(`${key}: Validation failed - ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
 

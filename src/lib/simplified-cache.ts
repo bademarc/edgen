@@ -278,6 +278,104 @@ export class SimplifiedCacheService {
       await this.redis.disconnect()
     }
   }
+
+  /**
+   * Test Redis connection
+   */
+  async testRedisConnection(): Promise<{
+    success: boolean
+    error?: string
+    latency?: number
+  }> {
+    try {
+      const start = Date.now()
+      const testKey = 'redis_test_' + Date.now()
+      const testValue = { test: true }
+
+      await this.set(testKey, testValue, 10)
+      const retrieved = await this.get(testKey)
+      await this.delete(testKey)
+
+      const latency = Date.now() - start
+
+      return {
+        success: retrieved?.test === true,
+        latency
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  /**
+   * Test tiered cache functionality
+   */
+  async testTieredCache(): Promise<{
+    success: boolean
+    memoryWorking: boolean
+    redisWorking: boolean
+    error?: string
+  }> {
+    try {
+      const testKey = 'tiered_test_' + Date.now()
+      const testValue = { test: true, timestamp: Date.now() }
+
+      // Test set/get
+      await this.set(testKey, testValue, 60)
+      const retrieved = await this.get(testKey)
+
+      // Test Redis connection
+      const redisTest = await this.testRedisConnection()
+
+      // Cleanup
+      await this.delete(testKey)
+
+      return {
+        success: retrieved?.test === true,
+        memoryWorking: this.useMemoryFallback || retrieved?.test === true,
+        redisWorking: redisTest.success
+      }
+    } catch (error) {
+      return {
+        success: false,
+        memoryWorking: false,
+        redisWorking: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getStats(): {
+    memoryEntries: number
+    commandCount: number
+    dailyLimit: number
+    useMemoryFallback: boolean
+    useUpstash: boolean
+    isEnabled: boolean
+  } {
+    return {
+      memoryEntries: this.memoryCache.size,
+      commandCount: this.commandCount,
+      dailyLimit: this.dailyLimit,
+      useMemoryFallback: this.useMemoryFallback,
+      useUpstash: this.useUpstash,
+      isEnabled: this.isEnabled
+    }
+  }
+
+  /**
+   * Reset statistics
+   */
+  resetStats(): void {
+    this.commandCount = 0
+    console.log('📊 Cache statistics reset')
+  }
 }
 
 // Singleton instance

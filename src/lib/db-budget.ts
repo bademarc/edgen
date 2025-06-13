@@ -24,7 +24,7 @@ class BudgetDatabaseService {
     const cacheKey = `leaderboard:${limit}`
 
     // Try cache first (15 minute TTL)
-    const cached = await this.cache.get(cacheKey)
+    const cached = await this.cache.get<any[]>(cacheKey)
     if (cached) {
       console.log('📋 Returning cached leaderboard (15min cache)')
       return cached
@@ -324,6 +324,24 @@ class BudgetDatabaseService {
    */
   async disconnect(): Promise<void> {
     await this.prisma.$disconnect()
+  }
+
+  /**
+   * Public method to delete cache entries
+   */
+  async deleteCacheEntry(key: string): Promise<void> {
+    await this.cache.delete(key)
+  }
+
+  /**
+   * Public method to clear leaderboard cache
+   */
+  async clearLeaderboardCache(limit?: number): Promise<void> {
+    if (limit) {
+      await this.cache.delete(`leaderboard:${limit}`)
+    } else {
+      await this.cache.delete('leaderboard:top100')
+    }
   }
 }
 

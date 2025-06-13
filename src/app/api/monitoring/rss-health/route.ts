@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
     
     const overallHealth = healthyFeeds.length >= 2 ? 'healthy' : 'degraded'
     const responseTimes = results
-      .filter(r => r.responseTime !== undefined)
-      .map(r => r.responseTime!)
+      .filter((r): r is typeof r & { responseTime: number } => 'responseTime' in r && typeof r.responseTime === 'number')
+      .map(r => r.responseTime)
     const averageResponseTime = responseTimes.length > 0
       ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
       : 0
@@ -147,8 +147,8 @@ function generateHealthRecommendations(results: any[]): string[] {
 
   // Response time recommendations
   const responseTimes = results
-    .filter(r => r.responseTime !== undefined)
-    .map(r => r.responseTime!)
+    .filter((r): r is typeof r & { responseTime: number } => 'responseTime' in r && typeof r.responseTime === 'number')
+    .map(r => r.responseTime)
   const avgResponseTime = responseTimes.length > 0
     ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
     : 0

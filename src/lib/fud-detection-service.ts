@@ -59,7 +59,7 @@ export class FUDDetectionService {
     { terms: ['useless', 'pointless', 'waste', 'stupid', 'dumb'], weight: 6 },
     
     // Medium severity
-    { terms: ['bad', 'poor', 'disappointing', 'failed', 'failing'], weight: 4 },
+    { terms: ['bad', 'poor', 'disappointing', 'failed', 'failing', 'risky', 'dangerous'], weight: 4 },
     { terms: ['doubt', 'uncertain', 'worried', 'concerned', 'skeptical'], weight: 2 }
   ]
 
@@ -133,44 +133,49 @@ export class FUDDetectionService {
     const analysis = this.analyzeContent(content)
     const totalScore = this.calculateTotalScore(analysis)
     
-    // Check whitelist first
-    if (this.config.whitelistEnabled && this.isWhitelisted(content)) {
-      return {
-        isBlocked: false,
-        isWarning: false,
-        score: Math.max(0, totalScore - 5), // Reduce score for whitelisted content
-        detectedCategories: [],
-        flaggedTerms: [],
-        suggestions: [],
-        message: 'Content approved (whitelisted patterns detected)',
-        allowResubmit: true
+    // Check whitelist - but don't completely bypass FUD detection for high-risk content
+    const isWhitelisted = this.config.whitelistEnabled && this.isWhitelisted(content)
+    let adjustedScore = totalScore
+
+    if (isWhitelisted) {
+      // Only apply whitelist reduction if the content doesn't have severe FUD indicators
+      if (totalScore < this.config.blockThreshold) {
+        adjustedScore = Math.max(0, totalScore - 3) // Reduced from -5 to -3 for safety
+      }
+      // If content has severe FUD (>= block threshold), whitelist doesn't help much
+      else {
+        adjustedScore = Math.max(this.config.warnThreshold, totalScore - 2) // Minimal reduction for severe FUD
       }
     }
 
     const detectedCategories = this.getDetectedCategories(analysis)
     const flaggedTerms = this.getFlaggedTerms(content, analysis)
-    
-    // Determine action based on score and thresholds
-    if (totalScore >= this.config.blockThreshold) {
+
+    // Determine action based on adjusted score and thresholds
+    if (adjustedScore >= this.config.blockThreshold) {
       return {
         isBlocked: true,
         isWarning: false,
-        score: totalScore,
+        score: adjustedScore,
         detectedCategories,
         flaggedTerms,
         suggestions: this.generateSuggestions(analysis, 'block'),
-        message: this.generateBlockMessage(detectedCategories),
+        message: isWhitelisted
+          ? `Content blocked despite containing LayerEdge keywords due to harmful content: ${this.generateBlockMessage(detectedCategories)}`
+          : this.generateBlockMessage(detectedCategories),
         allowResubmit: true
       }
-    } else if (totalScore >= this.config.warnThreshold) {
+    } else if (adjustedScore >= this.config.warnThreshold) {
       return {
         isBlocked: false,
         isWarning: true,
-        score: totalScore,
+        score: adjustedScore,
         detectedCategories,
         flaggedTerms,
         suggestions: this.generateSuggestions(analysis, 'warn'),
-        message: this.generateWarningMessage(detectedCategories),
+        message: isWhitelisted
+          ? `Warning: Content contains LayerEdge keywords but may need revision: ${this.generateWarningMessage(detectedCategories)}`
+          : this.generateWarningMessage(detectedCategories),
         allowResubmit: true
       }
     }
@@ -178,11 +183,13 @@ export class FUDDetectionService {
     return {
       isBlocked: false,
       isWarning: false,
-      score: totalScore,
+      score: adjustedScore,
       detectedCategories: [],
       flaggedTerms: [],
       suggestions: [],
-      message: 'Content approved',
+      message: isWhitelisted
+        ? 'Content approved (contains LayerEdge keywords)'
+        : 'Content approved',
       allowResubmit: true
     }
   }

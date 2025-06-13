@@ -357,13 +357,6 @@ If unsure about technical details, recommend contacting platform support.`
   isReady(): boolean {
     return this.isInitialized
   }
-
-  /**
-   * Check if service is ready
-   */
-  isReady(): boolean {
-    return this.isInitialized
-  }
 }
 
 // Singleton instance

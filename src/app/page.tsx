@@ -207,38 +207,38 @@ export default function HomePage() {
       </section>
 
       {/* Features Section - Mobile Optimized */}
-      <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 mobile-section-padding">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">How It Works</h2>
-            <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto px-2">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-4 sm:px-2 mobile-text-spacing">How It Works</h2>
+            <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto px-4 sm:px-2 mobile-text-spacing leading-relaxed">
               Engage with LayerEdge content on X/Twitter and earn points for your participation
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div className="bg-card border rounded-lg p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover-lift touch-friendly">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mobile-grid-spacing">
+            <div className="bg-card border rounded-lg p-5 sm:p-6 hover:shadow-lg transition-all duration-300 hover-lift touch-friendly mobile-card-padding">
               <Shield className="h-8 w-8 text-primary mb-3 sm:mb-4" />
               <h3 className="font-semibold mb-2 text-base sm:text-lg">Connect Account</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Link your X/Twitter account to start tracking your engagement
               </p>
             </div>
-            <div className="bg-card border rounded-lg p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover-lift touch-friendly">
+            <div className="bg-card border rounded-lg p-5 sm:p-6 hover:shadow-lg transition-all duration-300 hover-lift touch-friendly mobile-card-padding">
               <Users className="h-8 w-8 text-primary mb-3 sm:mb-4" />
               <h3 className="font-semibold mb-2 text-base sm:text-lg">Engage Content</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Like, retweet, and comment on LayerEdge posts to earn points
               </p>
             </div>
-            <div className="bg-card border rounded-lg p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover-lift touch-friendly">
+            <div className="bg-card border rounded-lg p-5 sm:p-6 hover:shadow-lg transition-all duration-300 hover-lift touch-friendly mobile-card-padding">
               <Zap className="h-8 w-8 text-primary mb-3 sm:mb-4" />
               <h3 className="font-semibold mb-2 text-base sm:text-lg">Earn Points</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Get rewarded for authentic engagement with the community
               </p>
             </div>
-            <div className="bg-card border rounded-lg p-4 sm:p-6 hover:shadow-lg transition-all duration-300 hover-lift touch-friendly">
+            <div className="bg-card border rounded-lg p-5 sm:p-6 hover:shadow-lg transition-all duration-300 hover-lift touch-friendly mobile-card-padding">
               <Globe className="h-8 w-8 text-primary mb-3 sm:mb-4" />
               <h3 className="font-semibold mb-2 text-base sm:text-lg">Climb Leaderboard</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
@@ -256,10 +256,10 @@ export default function HomePage() {
       <HomepageFAQ />
 
       {/* CTA Section - Mobile Optimized */}
-      <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-muted/30 mobile-section-padding">
         <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-2">Ready to Join the LayerEdge Community?</h2>
-          <p className="text-muted-foreground text-base sm:text-lg mb-6 sm:mb-8 px-2">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-4 sm:px-2 mobile-text-spacing">Ready to Join the LayerEdge Community?</h2>
+          <p className="text-muted-foreground text-base sm:text-lg mb-6 sm:mb-8 px-4 sm:px-2 mobile-text-spacing leading-relaxed">
             Start earning points for your X/Twitter engagement today
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md sm:max-w-none mx-auto">

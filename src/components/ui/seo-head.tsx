@@ -34,7 +34,7 @@ export function SEOHead({
   const fullImageUrl = image.startsWith('http') ? image : `${url}${image}`
   
   // Generate structured data
-  const structuredData = {
+  const structuredData: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "LayerEdge Community Platform",

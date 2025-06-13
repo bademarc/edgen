@@ -52,6 +52,9 @@ export function ErrorDisplay({ error, onRetry, onContactSupport, className }: Er
 
       return () => clearInterval(timer)
     }
+
+    // Return undefined for other cases
+    return undefined
   }, [error.retryDelay])
 
   const getErrorIcon = () => {
