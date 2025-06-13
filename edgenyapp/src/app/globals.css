@@ -890,3 +890,131 @@ a:focus-visible,
     color: hsl(var(--foreground)) !important;
   }
 }
+
+/* Toast/Notification Mobile Optimizations */
+@media (max-width: 640px) {
+  /* Hide close button on mobile toasts - auto-dismiss is sufficient */
+  .group.toast [data-close-button],
+  .group.toast button[data-close-button],
+  .group.toast .mobile-toast-close,
+  .group.toast button[aria-label="Close toast"],
+  .group.toast button[data-sonner-toast-close-button] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Mobile toast positioning and sizing */
+  .toaster {
+    position: fixed !important;
+    top: 16px !important;
+    right: 16px !important;
+    left: 16px !important;
+    width: auto !important;
+    max-width: none !important;
+    z-index: 9999 !important;
+  }
+
+  /* Mobile toast styling */
+  .group.toast,
+  .mobile-toast {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  /* Mobile toast content spacing */
+  .group.toast [data-content] {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Mobile toast action button optimization */
+  .group.toast [data-action],
+  .mobile-toast-action {
+    margin-top: 8px !important;
+    width: 100% !important;
+    min-height: 44px !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Ensure no close button elements are visible */
+  .group.toast > button:last-child,
+  .group.toast button[type="button"]:not([data-action]) {
+    display: none !important;
+  }
+}
+
+/* Very small screens - ultra-compact toast */
+@media (max-width: 375px) {
+  .toaster {
+    top: 12px !important;
+    right: 12px !important;
+    left: 12px !important;
+  }
+
+  .group.toast {
+    padding: 12px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* Additional Sonner-specific mobile optimizations */
+@media (max-width: 640px) {
+  /* Target Sonner's internal close button classes */
+  [data-sonner-toaster] [data-close-button],
+  [data-sonner-toast] [data-close-button],
+  [data-sonner-toast] button[data-close-button],
+  [data-sonner-toast] button[aria-label*="close" i],
+  [data-sonner-toast] button[aria-label*="dismiss" i],
+  [data-sonner-toast] .sonner-close-button,
+  [data-sonner-toast] > button:last-child:not([data-action]) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+
+  /* Ensure toast content takes full width without close button space */
+  [data-sonner-toast] [data-content],
+  [data-sonner-toast] [data-title],
+  [data-sonner-toast] [data-description] {
+    width: 100% !important;
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Mobile-optimized toast container */
+  [data-sonner-toaster] {
+    position: fixed !important;
+    top: 16px !important;
+    left: 16px !important;
+    right: 16px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  /* Mobile toast item styling */
+  [data-sonner-toast] {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 0 8px 0 !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+}
