@@ -10,7 +10,6 @@ import { EdgenHelperChatbot } from "@/components/edgen-helper-chatbot";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: "LayerEdge Community Platform - Earn Points for X/Twitter Engagement",
   description: "Join the LayerEdge $EDGEN community platform. Engage with LayerEdge content on X/Twitter and earn points for your participation. Connect, compete, and climb the leaderboard.",
   keywords: ["LayerEdge", "EDGEN", "community", "Twitter", "X", "engagement", "points", "leaderboard", "cryptocurrency", "blockchain"],
