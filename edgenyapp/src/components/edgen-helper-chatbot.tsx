@@ -73,8 +73,21 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
   const [currentMode, setCurrentMode] = useState('AI Assistant')
+  const [isMobile, setIsMobile] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -91,15 +104,19 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
   // Initialize with welcome message
   useEffect(() => {
     if (isOpen && messages.length === 0) {
+      const welcomeContent = isMobile
+        ? "👋 Hi! I'm Edgen Helper, your LayerEdge AI assistant.\n\nI can help with:\n• Tweet submissions & points\n• Platform features\n• @layeredge hashtag tips\n• Troubleshooting\n\nWhat can I help you with?"
+        : "👋 Hi! I'm Edgen Helper, your LayerEdge community assistant powered by DeepSeek-R1 AI. I can help you with:\n\n• Tweet submission and points system\n• Platform navigation and features\n• @layeredge and $EDGEN hashtag strategy\n• Troubleshooting and optimization tips\n• Advanced engagement analysis\n\nWhat would you like to know about LayerEdge?"
+
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         role: 'assistant',
-        content: "👋 Hi! I'm Edgen Helper, your LayerEdge community assistant powered by DeepSeek-R1 AI. I can help you with:\n\n• Tweet submission and points system\n• Platform navigation and features\n• @layeredge and $EDGEN hashtag strategy\n• Troubleshooting and optimization tips\n• Advanced engagement analysis\n\nWhat would you like to know about LayerEdge?",
+        content: welcomeContent,
         timestamp: new Date()
       }
       setMessages([welcomeMessage])
     }
-  }, [isOpen, messages.length])
+  }, [isOpen, messages.length, isMobile])
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return
@@ -219,18 +236,18 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-50"
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50"
           >
             <Button
               onClick={() => setIsOpen(true)}
-              className="h-14 w-14 rounded-full bg-[#f7931a] hover:bg-[#e8851a] text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-[#f7931a] hover:bg-[#e8851a] text-white shadow-lg hover:shadow-xl transition-all duration-300 touch-friendly"
               size="icon"
             >
-              <MessageCircle className="h-6 w-6" />
+              <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
             </Button>
-            <Badge 
-              variant="secondary" 
-              className="absolute -top-2 -left-2 bg-green-500 text-white border-0 animate-pulse"
+            <Badge
+              variant="secondary"
+              className="absolute -top-1 -left-1 sm:-top-2 sm:-left-2 bg-green-500 text-white border-0 animate-pulse text-xs"
             >
               AI
             </Badge>
@@ -245,20 +262,20 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
             initial={{ scale: 0.8, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.8, opacity: 0, y: 20 }}
-            className="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)]"
+            className="fixed bottom-2 right-2 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-1rem)] sm:w-96 max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)] chat-mobile-optimized"
           >
-            <Card className="bg-gray-900 border-gray-700 shadow-2xl">
+            <Card className="bg-gray-900 border-gray-700 shadow-2xl chat-landscape-compact">
               {/* Header */}
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6 chat-header-landscape">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <div className="relative">
-                      <Bot className="h-6 w-6 text-[#f7931a]" />
-                      <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+                      <Bot className="h-5 w-5 sm:h-6 sm:w-6 text-[#f7931a]" />
+                      <div className={`absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
                     </div>
                     <div>
-                      <CardTitle className="text-white text-lg">Edgen Helper</CardTitle>
-                      <p className="text-xs text-gray-400">
+                      <CardTitle className="text-white text-base sm:text-lg">Edgen Helper</CardTitle>
+                      <p className="text-xs text-gray-400 hidden sm:block">
                         {currentMode}
                       </p>
                     </div>
@@ -268,7 +285,7 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => setIsMinimized(!isMinimized)}
-                      className="h-8 w-8 text-gray-400 hover:text-white"
+                      className="h-8 w-8 text-gray-400 hover:text-white touch-friendly"
                     >
                       {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
                     </Button>
@@ -276,7 +293,7 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => setIsOpen(false)}
-                      className="h-8 w-8 text-gray-400 hover:text-white"
+                      className="h-8 w-8 text-gray-400 hover:text-white touch-friendly"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -294,8 +311,8 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                   >
                     <CardContent className="p-0">
                       {/* Messages */}
-                      <ScrollArea className="h-80 px-4">
-                        <div className="space-y-4">
+                      <ScrollArea className="h-60 sm:h-80 px-3 sm:px-4 mobile-scroll chat-scroll-mobile">
+                        <div className="space-y-2 sm:space-y-4 py-2">
                           {messages.map((message) => (
                             <motion.div
                               key={message.id}
@@ -303,30 +320,30 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                               animate={{ opacity: 1, y: 0 }}
                               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
-                              <div className={`flex items-start space-x-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                                <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
-                                  message.role === 'user' 
-                                    ? 'bg-[#f7931a]' 
+                              <div className={`flex items-start space-x-2 sm:space-x-3 max-w-[85%] sm:max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                                <div className={`flex-shrink-0 h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center ${
+                                  message.role === 'user'
+                                    ? 'bg-[#f7931a]'
                                     : 'bg-gray-700'
                                 }`}>
                                   {message.role === 'user' ? (
-                                    <User className="h-4 w-4 text-white" />
+                                    <User className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                                   ) : (
-                                    <Bot className="h-4 w-4 text-[#f7931a]" />
+                                    <Bot className="h-3 w-3 sm:h-4 sm:w-4 text-[#f7931a]" />
                                   )}
                                 </div>
-                                <div className={`rounded-lg px-3 py-2 ${
+                                <div className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${
                                   message.role === 'user'
                                     ? 'bg-[#f7931a] text-white'
                                     : 'bg-gray-800 text-gray-100'
                                 }`}>
                                   {message.isTyping ? (
                                     <div className="flex items-center space-x-1">
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                      <span className="text-sm">{message.content}</span>
+                                      <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                      <span className="text-xs sm:text-sm">{message.content}</span>
                                     </div>
                                   ) : (
-                                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                    <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                                   )}
                                 </div>
                               </div>
@@ -338,16 +355,16 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
 
                       {/* Quick Actions */}
                       {messages.length <= 1 && (
-                        <div className="px-4 py-2 border-t border-gray-700">
-                          <p className="text-xs text-gray-400 mb-2">Quick actions:</p>
-                          <div className="flex flex-wrap gap-1">
+                        <div className="px-3 sm:px-4 py-2 border-t border-gray-700">
+                          <p className="text-xs text-gray-400 mb-2 hidden sm:block">Quick actions:</p>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
                             {quickActions.map((action, index) => (
                               <Button
                                 key={index}
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setInputMessage(action.message)}
-                                className="text-xs h-7 border-gray-600 text-gray-300 hover:bg-gray-700"
+                                className="text-xs h-8 sm:h-7 px-2 sm:px-3 border-gray-600 text-gray-300 hover:bg-gray-700 touch-friendly"
                               >
                                 {action.label}
                               </Button>
@@ -357,21 +374,21 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                       )}
 
                       {/* Input */}
-                      <div className="p-4 border-t border-gray-700">
+                      <div className="p-3 sm:p-4 border-t border-gray-700">
                         <div className="flex space-x-2">
                           <Input
                             ref={inputRef}
                             value={inputMessage}
                             onChange={(e) => setInputMessage(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            placeholder="Ask Edgen Helper anything..."
-                            className="flex-1 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                            placeholder={isMobile ? "Ask Edgen..." : "Ask Edgen Helper..."}
+                            className="flex-1 bg-gray-800 border-gray-600 text-white placeholder-gray-400 text-sm sm:text-base h-10 sm:h-auto chat-input-mobile"
                             disabled={isLoading}
                           />
                           <Button
                             onClick={sendMessage}
                             disabled={!inputMessage.trim() || isLoading}
-                            className="bg-[#f7931a] hover:bg-[#e8851a] text-white"
+                            className="bg-[#f7931a] hover:bg-[#e8851a] text-white touch-friendly h-10 w-10 sm:h-auto sm:w-auto"
                             size="icon"
                           >
                             {isLoading ? (
@@ -382,25 +399,29 @@ export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
                           </Button>
                         </div>
 
-                        {/* AI Disclaimer */}
-                        <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
+                        {/* AI Disclaimer - Compact on mobile */}
+                        <div className="mt-2 sm:mt-3 p-1.5 sm:p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
                           <p className="text-xs text-yellow-200 flex items-center">
                             <AlertCircle className="h-3 w-3 mr-1 flex-shrink-0" />
-                            AI responses may contain errors and should be verified
+                            <span className="hidden sm:inline">AI responses may contain errors and should be verified</span>
+                            <span className="sm:hidden">AI responses may contain errors</span>
                           </p>
                         </div>
 
                         <div className="flex justify-between items-center mt-2">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 hidden sm:block">
                             Powered by Advanced AI Assistant
+                          </p>
+                          <p className="text-xs text-gray-500 sm:hidden">
+                            AI Assistant
                           </p>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={clearChat}
-                            className="text-xs text-gray-400 hover:text-white h-6"
+                            className="text-xs text-gray-400 hover:text-white h-6 touch-friendly"
                           >
-                            Clear chat
+                            Clear
                           </Button>
                         </div>
                       </div>
