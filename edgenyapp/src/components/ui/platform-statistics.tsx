@@ -198,7 +198,7 @@ export function PlatformStatistics() {
   ]
 
   return (
-    <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30 mobile-section-padding">
+    <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30 mobile-section-padding platform-stats-mobile">
       <div className="container mx-auto max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -215,27 +215,28 @@ export function PlatformStatistics() {
           </Badge>
         </motion.div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-4 md:gap-6 mobile-grid-spacing">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mobile-grid-spacing">
           {statItems.map((item, index) => (
             <motion.div
               key={item.title}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
+              className="metrics-card-mobile"
             >
               <Card className="hover:shadow-lg transition-all duration-300 touch-friendly mobile-card-padding">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium leading-tight pr-2">{item.title}</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-5 sm:px-6 pt-5 sm:pt-6 card-header-mobile">
+                  <CardTitle className="text-xs sm:text-sm font-medium leading-tight pr-2 metrics-text-safe">{item.title}</CardTitle>
                   <div className={`p-1.5 sm:p-2 rounded-lg ${item.bgColor} flex-shrink-0`}>
                     <item.icon className={`h-3 w-3 sm:h-4 sm:w-4 ${item.color}`} />
                   </div>
                 </CardHeader>
-                <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-                  <div className={`text-lg sm:text-xl md:text-2xl font-bold ${item.color} mb-1`}>
+                <CardContent className="px-5 sm:px-6 pb-5 sm:pb-6 card-content-mobile">
+                  <div className={`text-lg sm:text-xl md:text-2xl font-bold ${item.color} mb-1 metrics-text-safe`}>
                     <AnimatedCounter value={item.value} />
                     {item.suffix || ''}
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed metrics-text-safe">
                     {item.description}
                   </p>
                 </CardContent>

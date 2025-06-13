@@ -694,6 +694,51 @@ a:focus-visible,
     padding-left: 0;
     padding-right: 0;
   }
+
+  /* Mobile metrics/statistics card fixes */
+  .metrics-card-mobile {
+    margin: 0 4px !important;
+  }
+
+  .metrics-card-mobile .card-header-mobile {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    padding-top: 16px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .metrics-card-mobile .card-content-mobile {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    padding-bottom: 16px !important;
+    padding-top: 0 !important;
+  }
+
+  /* Ensure metrics text has proper spacing from card borders */
+  .metrics-text-safe {
+    margin-left: 4px;
+    margin-right: 4px;
+  }
+
+  /* Platform statistics specific mobile fixes */
+  .platform-stats-mobile .card {
+    margin: 0 2px;
+    border-radius: 12px;
+  }
+
+  .platform-stats-mobile .card-header {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    padding-top: 14px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .platform-stats-mobile .card-content {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    padding-bottom: 14px !important;
+    padding-top: 0 !important;
+  }
 }
 
 /* Very small screens (iPhone SE, etc.) */
@@ -731,6 +776,42 @@ a:focus-visible,
     padding-left: 12px;
     padding-right: 12px;
   }
+
+  /* Ultra-small screen metrics fixes */
+  .metrics-card-mobile {
+    margin: 0 2px !important;
+  }
+
+  .metrics-card-mobile .card-header-mobile {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 12px !important;
+    padding-bottom: 6px !important;
+  }
+
+  .metrics-card-mobile .card-content-mobile {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-bottom: 12px !important;
+  }
+
+  /* Platform statistics ultra-small screen fixes */
+  .platform-stats-mobile .card {
+    margin: 0 1px;
+  }
+
+  .platform-stats-mobile .card-header {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-top: 12px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .platform-stats-mobile .card-content {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-bottom: 12px !important;
+  }
 }
 
 /* Landscape mobile optimizations */
@@ -738,6 +819,82 @@ a:focus-visible,
   .mobile-landscape-compact {
     padding-top: 8px;
     padding-bottom: 8px;
+  }
+}
+
+/* Additional mobile metrics fixes for all screen sizes */
+@media (max-width: 768px) {
+  /* Ensure metrics cards never touch screen edges */
+  .platform-stats-mobile {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  /* Metrics grid responsive improvements */
+  .platform-stats-mobile .grid {
+    gap: 12px;
+    padding: 0 4px;
+  }
+
+  /* Ensure all metrics text has safe spacing */
+  .platform-stats-mobile .card-title,
+  .platform-stats-mobile .card-content p,
+  .platform-stats-mobile .card-content div {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  /* Fix for very narrow cards */
+  .platform-stats-mobile .card {
+    min-width: 140px;
+    overflow: hidden;
+  }
+
+  /* Responsive text sizing for metrics */
+  .platform-stats-mobile .card-title {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  .platform-stats-mobile .card-content div {
+    font-size: 1.125rem;
+    line-height: 1.3;
+  }
+
+  .platform-stats-mobile .card-content p {
+    font-size: 0.6875rem;
+    line-height: 1.4;
+  }
+}
+
+/* Ultra-specific mobile fixes for metrics text positioning */
+@media (max-width: 480px) {
+  /* Force minimum padding for all metrics text elements */
+  .platform-stats-mobile .card-header,
+  .platform-stats-mobile .card-content {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Additional safety margin for text elements */
+  .metrics-text-safe {
+    margin-left: 6px !important;
+    margin-right: 6px !important;
+  }
+
+  /* Ensure cards have proper internal spacing */
+  .platform-stats-mobile .card {
+    padding: 4px;
+    margin: 0 2px;
+  }
+
+  /* Override any conflicting padding */
+  .platform-stats-mobile .card-header.card-header-mobile {
+    padding: 14px 18px 6px 18px !important;
+  }
+
+  .platform-stats-mobile .card-content.card-content-mobile {
+    padding: 0 18px 14px 18px !important;
   }
 }
 
