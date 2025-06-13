@@ -76,6 +76,8 @@ export function QuestSystem({ className }: QuestSystemProps) {
 
         if (action === 'claim') {
           toast.success(data.message || 'Quest completed!')
+        } else if (action === 'redirect') {
+          toast.success(data.message || 'Quest completed! Points awarded!')
         } else if (action === 'submit') {
           toast.success('Quest submitted for verification!')
         } else if (action === 'start') {
@@ -102,6 +104,10 @@ export function QuestSystem({ className }: QuestSystemProps) {
 
   const handleClaimQuest = async (questId: string) => {
     await handleQuestAction('claim', questId)
+  }
+
+  const handleRedirectQuest = async (questId: string) => {
+    await handleQuestAction('redirect', questId)
   }
 
   const questStats = {
@@ -217,6 +223,7 @@ export function QuestSystem({ className }: QuestSystemProps) {
               onStart={handleStartQuest}
               onSubmit={handleSubmitQuest}
               onClaim={handleClaimQuest}
+              onRedirect={handleRedirectQuest}
               isLoading={actionLoading}
             />
           ))}

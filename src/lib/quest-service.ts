@@ -288,81 +288,145 @@ export class QuestService {
   }
 
   /**
+   * Handle redirect-based quest completion
+   */
+  static async handleRedirectQuest(userId: string, questId: string): Promise<UserQuestData> {
+    const quest = await prisma.quest.findUnique({
+      where: { id: questId, isActive: true }
+    })
+
+    if (!quest) {
+      throw new Error('Quest not found or inactive')
+    }
+
+    // Start the quest if not already started
+    const userQuest = await prisma.userQuest.upsert({
+      where: {
+        userId_questId: { userId, questId }
+      },
+      update: {
+        status: 'in_progress',
+        updatedAt: new Date()
+      },
+      create: {
+        userId,
+        questId,
+        status: 'in_progress',
+        progress: 0,
+        maxProgress: 1
+      }
+    })
+
+    // Award points immediately upon redirect
+    await prisma.$transaction(async (tx) => {
+      // Award points to user
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          totalPoints: {
+            increment: quest.points
+          }
+        }
+      })
+
+      // Create points history record
+      await tx.pointsHistory.create({
+        data: {
+          userId,
+          pointsAwarded: quest.points,
+          reason: `Quest redirect completed: ${quest.title}`
+        }
+      })
+    })
+
+    // Set up 1-minute verification timer (in a real app, you'd use a job queue)
+    // For now, we'll mark it as completed immediately and let the verification happen later
+    const updatedUserQuest = await prisma.userQuest.update({
+      where: {
+        userId_questId: { userId, questId }
+      },
+      data: {
+        status: 'completed',
+        progress: 1,
+        completedAt: new Date(),
+        submissionData: {
+          redirectedAt: new Date(),
+          autoCompleted: true
+        },
+        updatedAt: new Date()
+      },
+      include: {
+        quest: true
+      }
+    })
+
+    return {
+      ...updatedUserQuest,
+      quest: updatedUserQuest.quest
+    }
+  }
+
+  /**
    * Initialize default quests (run once during setup)
    */
   static async initializeDefaultQuests(): Promise<void> {
+    // First, deactivate old quests that we're removing
+    await prisma.quest.updateMany({
+      where: {
+        title: {
+          in: ['Share Your Story', 'Invite a Friend', 'Engage and Tweet']
+        }
+      },
+      data: {
+        isActive: false
+      }
+    })
+
     const defaultQuests = [
       {
         title: 'Follow @LayerEdge on X',
-        description: 'Follow our official X account to stay updated with the latest news and announcements.',
-        type: 'follow',
+        description: 'Follow our official X account to stay updated with the latest news and announcements. Points are awarded immediately when you visit the profile!',
+        type: 'follow_redirect',
         points: 1000,
         sortOrder: 1,
         metadata: {
           targetAccount: '@LayerEdge',
-          accountUrl: 'https://x.com/LayerEdge'
+          accountUrl: 'https://x.com/LayerEdge',
+          redirectBased: true
         },
-        requiresManualVerification: true,
-        autoVerifiable: false
+        requiresManualVerification: false,
+        autoVerifiable: true
       },
       {
         title: 'Join LayerEdge Community',
-        description: 'Join our X community to connect with other members and participate in discussions.',
-        type: 'join_community',
+        description: 'Join our X community to connect with other members and participate in discussions. Points are awarded immediately when you visit the community!',
+        type: 'community_redirect',
         points: 1000,
         sortOrder: 2,
         metadata: {
-          communityUrl: process.env.LAYEREDGE_COMMUNITY_URL || 'https://x.com/i/communities/1890107751621357663'
+          communityUrl: process.env.LAYEREDGE_COMMUNITY_URL || 'https://x.com/i/communities/1890107751621357663',
+          redirectBased: true
         },
-        requiresManualVerification: true,
-        autoVerifiable: false
-      },
-      {
-        title: 'Engage and Tweet',
-        description: 'Engage with LayerEdge content and share your first tweet about LayerEdge.',
-        type: 'engage_tweet',
-        points: 1000,
-        sortOrder: 3,
-        metadata: {
-          requiredMentions: ['@LayerEdge', '#LayerEdge'],
-          minEngagements: 1
-        },
-        requiresManualVerification: true,
-        autoVerifiable: false
-      },
-      {
-        title: 'Share Your Story',
-        description: 'Share why you\'re excited about decentralized AI and LayerEdge\'s mission.',
-        type: 'custom',
-        points: 1500,
-        sortOrder: 4,
-        metadata: {
-          submissionType: 'text',
-          minLength: 100
-        },
-        requiresManualVerification: true,
-        autoVerifiable: false
-      },
-      {
-        title: 'Invite a Friend',
-        description: 'Invite a friend to join LayerEdge and earn bonus points when they complete their first quest.',
-        type: 'referral',
-        points: 2000,
-        sortOrder: 5,
-        metadata: {
-          referralBonus: 500
-        },
-        requiresManualVerification: true,
-        autoVerifiable: false
+        requiresManualVerification: false,
+        autoVerifiable: true
       }
     ]
 
     for (const questData of defaultQuests) {
       await prisma.quest.upsert({
-        where: { 
-          title: questData.title 
+        where: {
+          title: questData.title
         },
-        update: {},
+        update: {
+          description: questData.description,
+          type: questData.type,
+          points: questData.points,
+          sortOrder: questData.sortOrder,
+          metadata: questData.metadata,
+          requiresManualVerification: questData.requiresManualVerification,
+          autoVerifiable: questData.autoVerifiable,
+          isActive: true
+        },
         create: questData
       })
     }

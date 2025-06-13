@@ -28,12 +28,15 @@ interface QuestCardProps {
   onStart: (questId: string) => Promise<void>
   onSubmit: (questId: string, submissionData?: any) => Promise<void>
   onClaim: (questId: string) => Promise<void>
+  onRedirect: (questId: string) => Promise<void>
   isLoading?: boolean
 }
 
 const questIcons = {
   follow: UserPlusIcon,
+  follow_redirect: UserPlusIcon,
   join_community: HeartIcon,
+  community_redirect: HeartIcon,
   engage_tweet: ChatBubbleLeftRightIcon,
   custom: SparklesIcon,
   referral: ShareIcon
@@ -53,7 +56,7 @@ const statusBadges = {
   claimed: { variant: 'layeredge' as const, text: 'Claimed' }
 }
 
-export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false }: QuestCardProps) {
+export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoading = false }: QuestCardProps) {
   const [submissionData, setSubmissionData] = useState<any>({})
   const [showSubmissionForm, setShowSubmissionForm] = useState(false)
 
@@ -75,6 +78,14 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false
     await onClaim(quest.questId)
   }
 
+  const handleRedirect = async (url: string) => {
+    // Open the URL in a new tab
+    window.open(url, '_blank', 'noopener,noreferrer')
+
+    // Award points immediately
+    await onRedirect(quest.questId)
+  }
+
   const renderSubmissionForm = () => {
     switch (quest.quest.type) {
       case 'follow':
@@ -94,6 +105,11 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false
             </div>
           </div>
         )
+
+      case 'follow_redirect':
+      case 'community_redirect':
+        // These quest types don't need submission forms - they're redirect-based
+        return null
 
       case 'join_community':
         return (
@@ -179,8 +195,8 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false
 
     if (quest.status === 'completed') {
       return (
-        <Button 
-          variant="layeredge" 
+        <Button
+          variant="layeredge"
           onClick={handleClaim}
           disabled={isLoading}
           className="w-full"
@@ -191,21 +207,42 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false
       )
     }
 
+    // Handle redirect-based quests
+    if (quest.quest.type === 'follow_redirect' || quest.quest.type === 'community_redirect') {
+      if (quest.status === 'not_started') {
+        const redirectUrl = quest.quest.type === 'follow_redirect'
+          ? quest.quest.metadata?.accountUrl
+          : quest.quest.metadata?.communityUrl
+
+        return (
+          <Button
+            variant="layeredge"
+            onClick={() => handleRedirect(redirectUrl)}
+            disabled={isLoading || !redirectUrl}
+            className="w-full"
+          >
+            <ArrowTopRightOnSquareIcon className="h-4 w-4 mr-2" />
+            Visit & Earn {quest.quest.points} Points
+          </Button>
+        )
+      }
+    }
+
     if (quest.status === 'in_progress') {
       if (showSubmissionForm) {
         return (
           <div className="space-y-3">
             {renderSubmissionForm()}
             <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowSubmissionForm(false)}
                 className="flex-1"
               >
                 Cancel
               </Button>
-              <Button 
-                variant="layeredge" 
+              <Button
+                variant="layeredge"
                 onClick={handleSubmit}
                 disabled={isLoading}
                 className="flex-1"
@@ -218,8 +255,8 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false
       }
 
       return (
-        <Button 
-          variant="layeredge" 
+        <Button
+          variant="layeredge"
           onClick={() => setShowSubmissionForm(true)}
           disabled={isLoading}
           className="w-full"
@@ -230,8 +267,8 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false
     }
 
     return (
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         onClick={handleStart}
         disabled={isLoading}
         className="w-full"
@@ -242,7 +279,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false
   }
 
   const renderQuestMetadata = () => {
-    if (quest.quest.type === 'follow' && quest.quest.metadata?.accountUrl) {
+    if ((quest.quest.type === 'follow' || quest.quest.type === 'follow_redirect') && quest.quest.metadata?.accountUrl) {
       return (
         <a
           href={quest.quest.metadata.accountUrl}
@@ -256,7 +293,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, isLoading = false
       )
     }
 
-    if (quest.quest.type === 'join_community' && quest.quest.metadata?.communityUrl) {
+    if ((quest.quest.type === 'join_community' || quest.quest.type === 'community_redirect') && quest.quest.metadata?.communityUrl) {
       return (
         <a
           href={quest.quest.metadata.communityUrl}

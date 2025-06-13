@@ -56,6 +56,21 @@ export async function POST(request: NextRequest) {
           quest: startedQuest
         })
 
+      case 'redirect':
+        if (!questId) {
+          return NextResponse.json(
+            { error: 'Quest ID is required' },
+            { status: 400 }
+          )
+        }
+
+        const redirectQuest = await QuestService.handleRedirectQuest(userId, questId)
+        return NextResponse.json({
+          success: true,
+          quest: redirectQuest,
+          message: `Congratulations! You earned ${redirectQuest.quest.points} points!`
+        })
+
       case 'submit':
         if (!questId) {
           return NextResponse.json(

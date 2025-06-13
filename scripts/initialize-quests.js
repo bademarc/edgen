@@ -1,5 +1,6 @@
 // Load environment variables
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 async function initializeQuests() {
   try {
