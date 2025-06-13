@@ -632,16 +632,104 @@ a:focus-visible,
   }
 }
 
-/* Mobile viewport optimizations */
+/* Mobile viewport optimizations - Comprehensive */
+@media (max-width: 640px) {
+  /* Enhanced container padding for all mobile screens */
+  .container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Mobile text spacing and alignment */
+  .mobile-text-spacing {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* Mobile card padding improvements */
+  .mobile-card-padding {
+    padding: 16px !important;
+  }
+
+  /* Mobile grid improvements */
+  .mobile-grid-spacing {
+    gap: 16px;
+  }
+
+  /* Text responsive sizing */
+  .text-responsive {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Mobile section padding */
+  .mobile-section-padding {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  /* Ensure text never touches edges */
+  .mobile-safe-text {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
+  /* Mobile-optimized headings */
+  h1, h2, h3, h4, h5, h6 {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* Mobile-optimized paragraphs */
+  p {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* Override for elements that already have proper spacing */
+  .container h1, .container h2, .container h3, .container h4, .container h5, .container h6,
+  .container p {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* Very small screens (iPhone SE, etc.) */
 @media (max-width: 375px) {
   .container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .mobile-text-spacing {
     padding-left: 12px;
     padding-right: 12px;
   }
 
-  .text-responsive {
-    font-size: 14px;
-    line-height: 1.5;
+  .mobile-card-padding {
+    padding: 12px !important;
+  }
+
+  .mobile-grid-spacing {
+    gap: 12px;
+  }
+
+  .mobile-safe-text {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+
+  /* Ultra-compact text spacing for very small screens */
+  h1, h2, h3, h4, h5, h6 {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  p {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 }
 
