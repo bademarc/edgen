@@ -25,8 +25,8 @@ const nextConfig = {
     ignoreDuringBuilds: process.env.NODE_ENV === 'production',
   },
   typescript: {
-    // Temporarily ignore TypeScript errors to isolate syntax issues
-    ignoreBuildErrors: true,
+    // Only ignore TypeScript errors in production builds for faster deployment
+    ignoreBuildErrors: process.env.NODE_ENV === 'production',
   },
   images: {
     remotePatterns: [
@@ -139,10 +139,10 @@ const nextConfig = {
 
     return config;
   },
-  // Temporarily disable experimental features for debugging
-  // experimental: {
-  //   optimizePackageImports: ['framer-motion', 'lucide-react'],
-  // },
+  // Optimize chunk splitting for better performance
+  experimental: {
+    optimizePackageImports: ['framer-motion', 'lucide-react'],
+  },
 };
 
 export default nextConfig;
