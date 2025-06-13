@@ -22,6 +22,7 @@ interface AuthContextType {
   isLoading: boolean
   signInWithTwitter: () => Promise<void>
   signOut: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -152,6 +153,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const refreshUser = async () => {
+    try {
+      if (supabaseUser) {
+        await syncUserData(supabaseUser)
+      } else {
+        await checkCustomSession()
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error)
+    }
+  }
+
   const signOut = async () => {
     setIsLoading(true)
     try {
@@ -190,6 +203,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     signInWithTwitter,
     signOut,
+    refreshUser,
   }
 
   return (

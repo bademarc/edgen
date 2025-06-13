@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           quest: redirectQuest,
-          message: `Congratulations! You earned ${redirectQuest.quest.points} points!`
+          message: `Congratulations! You earned ${redirectQuest.quest.points} points!`,
+          refreshUser: true // Signal frontend to refresh user data
         })
 
       case 'submit':
@@ -101,7 +102,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           quest: claimedQuest,
-          message: `Congratulations! You earned ${claimedQuest.quest.points} points!`
+          message: `Congratulations! You earned ${claimedQuest.quest.points} points!`,
+          refreshUser: true // Signal frontend to refresh user data
         })
 
       default:

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { PointsSyncService } from '@/lib/points-sync-service'
 
 export interface QuestData {
   id: string
@@ -257,6 +258,9 @@ export class QuestService {
       })
     })
 
+    // Sync user points and clear caches
+    await PointsSyncService.syncUserPointsAfterQuest(userId)
+
     const updatedUserQuest = await prisma.userQuest.findUnique({
       where: {
         userId_questId: { userId, questId }
@@ -317,8 +321,41 @@ export class QuestService {
       }
     })
 
-    // Award points immediately upon redirect
-    await prisma.$transaction(async (tx) => {
+    // Check if already completed or claimed to prevent double awarding
+    if (userQuest.status === 'completed' || userQuest.status === 'claimed') {
+      const existingQuest = await prisma.userQuest.findUnique({
+        where: { userId_questId: { userId, questId } },
+        include: { quest: true }
+      })
+      return {
+        ...existingQuest!,
+        quest: existingQuest!.quest
+      }
+    }
+
+    // Award points immediately upon redirect and mark as claimed (prevents double awarding)
+    const updatedUserQuest = await prisma.$transaction(async (tx) => {
+      // Update quest status to claimed (skip completed state for redirect quests)
+      const questUpdate = await tx.userQuest.update({
+        where: {
+          userId_questId: { userId, questId }
+        },
+        data: {
+          status: 'claimed',
+          progress: 1,
+          completedAt: new Date(),
+          claimedAt: new Date(),
+          submissionData: {
+            redirectedAt: new Date(),
+            autoCompleted: true
+          },
+          updatedAt: new Date()
+        },
+        include: {
+          quest: true
+        }
+      })
+
       // Award points to user
       await tx.user.update({
         where: { id: userId },
@@ -337,28 +374,12 @@ export class QuestService {
           reason: `Quest redirect completed: ${quest.title}`
         }
       })
+
+      return questUpdate
     })
 
-    // Set up 1-minute verification timer (in a real app, you'd use a job queue)
-    // For now, we'll mark it as completed immediately and let the verification happen later
-    const updatedUserQuest = await prisma.userQuest.update({
-      where: {
-        userId_questId: { userId, questId }
-      },
-      data: {
-        status: 'completed',
-        progress: 1,
-        completedAt: new Date(),
-        submissionData: {
-          redirectedAt: new Date(),
-          autoCompleted: true
-        },
-        updatedAt: new Date()
-      },
-      include: {
-        quest: true
-      }
-    })
+    // Sync user points and clear caches
+    await PointsSyncService.syncUserPointsAfterQuest(userId)
 
     return {
       ...updatedUserQuest,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '../AuthProvider'
@@ -41,11 +41,23 @@ const moreNavigation = [
 
 export function NavigationProfessional() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { user, isLoading, signInWithTwitter, signOut } = useAuth()
+  const { user, isLoading, signInWithTwitter, signOut, refreshUser } = useAuth()
 
   const filteredNavigation = navigation.filter(item =>
     !item.requiresAuth || (item.requiresAuth && user)
   )
+
+  // Refresh user data when page becomes visible (useful for mobile)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        refreshUser()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [user, refreshUser])
 
   return (
     <motion.nav
