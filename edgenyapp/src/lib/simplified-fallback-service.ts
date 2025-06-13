@@ -279,19 +279,18 @@ export class SimplifiedFallbackService {
           username: authorUsername,
           name: oembedData.author_name || 'Unknown',
           // verified: false, // Removed - not part of author interface
-          followersCount: 0,
-          followingCount: 0
+          // followersCount: 0, // Removed - not part of author interface
+          // followingCount: 0 // Removed - not part of author interface
         },
-        engagement: {
-          likes: 0, // oEmbed doesn't provide engagement metrics
-          retweets: 0,
-          replies: 0,
-          quotes: 0
-        },
+        // engagement field is not part of FallbackTweetData interface
+        // Use individual fields instead
+        likes: 0, // oEmbed doesn't provide engagement metrics
+        retweets: 0,
+        replies: 0,
         createdAt: new Date(), // oEmbed doesn't provide exact date
         isFromLayerEdgeCommunity: textContent.toLowerCase().includes('@layeredge') || textContent.toLowerCase().includes('$edgen'),
-        url: tweetUrl,
-        source: 'api' as const // Changed from 'oembed' to valid source type
+        source: 'api' as const, // Changed from 'oembed' to valid source type
+        // url field is not part of FallbackTweetData interface
       }
     } catch (error) {
       console.error('oEmbed scraping failed:', error)

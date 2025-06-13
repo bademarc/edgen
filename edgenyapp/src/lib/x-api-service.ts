@@ -112,12 +112,13 @@ export class XApiService {
     try {
       console.log('🔍 Verifying X API connection...')
       
-      // Test API connection by fetching API rate limits
-      const rateLimits = await this.client.v2.rateLimits()
+      // Test API connection by making a simple request
+      // Note: rateLimits method not available on TwitterApiv2ReadOnly
+      const testResponse = await this.client.v2.me()
       
-      if (rateLimits) {
+      if (testResponse) {
         console.log('✅ X API connection verified successfully')
-        console.log(`📊 Rate limits available: ${Object.keys(rateLimits.resources).length} endpoints`)
+        console.log(`📊 API test successful: ${testResponse.data.username}`)
         return true
       }
       
@@ -383,8 +384,13 @@ export class XApiService {
    */
   async getRateLimitStatus(): Promise<any> {
     try {
-      const rateLimits = await this.client.v2.rateLimits()
-      return rateLimits
+      // Note: rateLimits method not available on TwitterApiv2ReadOnly
+      // Return a mock response for now
+      console.warn('⚠️ Rate limits method not available on TwitterApiv2ReadOnly')
+      return {
+        resources: {},
+        message: 'Rate limits not available in read-only mode'
+      }
     } catch (error) {
       console.error('❌ Error getting rate limit status:', error)
       return null

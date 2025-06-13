@@ -23,7 +23,6 @@ async function testFallbackMonitoring() {
     console.log('✅ TwitterMonitoringService initialized')
 
     const fallbackService = getFallbackService({
-      enableScraping: true,
       preferApi: false, // Force scraping for testing
       apiTimeoutMs: 5000,
       maxApiRetries: 1,
@@ -79,19 +78,20 @@ async function testFallbackMonitoring() {
     console.log(`Testing web scraping for @${testUser.xUsername}...`)
 
     try {
-      const scrapedTweets = await monitoringService.searchUserTweetsWithFallback(
+      const scrapedTweets = await monitoringService.searchUserTweets(
         testUser.xUsername!,
         undefined
       )
 
       console.log(`✅ Web scraping completed`)
-      console.log(`📊 Results: ${scrapedTweets.length} tweets found`)
+      const tweetsCount = scrapedTweets.data?.data?.length || 0
+      console.log(`📊 Results: ${tweetsCount} tweets found`)
 
-      if (scrapedTweets.length > 0) {
+      if (tweetsCount > 0) {
         console.log('📝 Sample tweets:')
-        scrapedTweets.slice(0, 3).forEach((tweet, index) => {
-          console.log(`  ${index + 1}. ${tweet.content.substring(0, 100)}...`)
-          console.log(`     Likes: ${tweet.likes}, Retweets: ${tweet.retweets}, Replies: ${tweet.replies}`)
+        scrapedTweets.data?.data?.slice(0, 3).forEach((tweet: any, index: number) => {
+          console.log(`  ${index + 1}. ${tweet.text?.substring(0, 100)}...`)
+          console.log(`     Metrics: ${JSON.stringify(tweet.public_metrics)}`)
         })
       }
     } catch (error) {
@@ -164,7 +164,7 @@ async function testFallbackMonitoring() {
     // Cleanup
     try {
       const webScraper = getWebScraperInstance()
-      await webScraper.close()
+      await webScraper.cleanup()
       await prisma.$disconnect()
       console.log('🧹 Cleanup completed')
     } catch (error) {

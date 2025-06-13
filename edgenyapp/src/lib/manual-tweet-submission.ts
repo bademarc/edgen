@@ -137,12 +137,11 @@ export class ManualTweetSubmissionService {
         let errorMessage = 'Could not fetch tweet data'
         if (fallbackStatus.isApiRateLimited) {
           errorMessage = 'Twitter API is currently rate limited. Please try again in a few minutes.'
-        } else if (fallbackStatus.lastError?.includes('404') || fallbackStatus.lastError?.includes('Not Found')) {
-          errorMessage = 'Tweet not found. It may be deleted, private, or the URL is incorrect.'
-        } else if (fallbackStatus.lastError?.includes('403') || fallbackStatus.lastError?.includes('Forbidden')) {
-          errorMessage = 'Tweet is private or access is restricted.'
-        } else if (fallbackStatus.lastError?.includes('monthly usage limit')) {
-          errorMessage = 'Twitter API monthly limit exceeded. Manual tweet submission is temporarily unavailable. Please try again later.'
+        } else if (fallbackStatus.apiFailureCount > 5) {
+          errorMessage = 'Multiple API failures detected. Please try again later.'
+        } else if (fallbackStatus.rateLimitResetTime && new Date() < fallbackStatus.rateLimitResetTime) {
+          const waitTime = Math.ceil((fallbackStatus.rateLimitResetTime.getTime() - Date.now()) / 1000 / 60)
+          errorMessage = `Twitter API rate limited. Please try again in ${waitTime} minutes.`
         }
 
         return {
@@ -448,19 +447,15 @@ export class ManualTweetSubmissionService {
           data: {
             userId: userId,
             pointsAwarded: totalPoints,
-            reason: `Manual tweet submission: ${verification.tweetData!.id}`,
             tweetId: createdTweet.id,
-            description: JSON.stringify({
-              tweetId: verification.tweetData!.id,
-              tweetUrl: tweetUrl,
+            // description field is not available in PointsHistory model
+            // Store metadata in reason field instead
+            reason: `Manual tweet submission: ${verification.tweetData!.id} - ${JSON.stringify({
               engagement: verification.tweetData!.engagement,
               basePoints,
               bonusPoints,
-              submissionType: 'manual',
-              timestamp: new Date().toISOString(),
-              userPointsBefore: userBeforeUpdate.totalPoints,
-              userPointsAfter: updatedUser.totalPoints
-            })
+              submissionType: 'manual'
+            })}`
           }
         })
 
@@ -611,16 +606,15 @@ export class ManualTweetSubmissionService {
           data: {
             userId: userId,
             pointsAwarded: totalPoints,
-            reason: `Manual tweet submission (fallback mode): ${tweetData.id}`,
             tweetId: createdTweet.id,
-            description: JSON.stringify({
-              tweetId: tweetData.id,
-              tweetUrl: tweetUrl,
+            // description field is not available in PointsHistory model
+            // Store metadata in reason field instead
+            reason: `Manual tweet submission (fallback mode): ${tweetData.id} - ${JSON.stringify({
               basePoints,
               bonusPoints: 0,
               submissionType: 'manual_fallback',
               fallbackReason: 'API limitations'
-            })
+            })}`
           }
         })
 

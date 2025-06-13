@@ -55,12 +55,11 @@ export class PointsSyncService {
       if (isFreeTier) {
         const freeTierService = getFreeTierService()
         // Clear user stats cache
-        await freeTierService.cache.del(`user:stats:${userId}`)
-        await freeTierService.cache.del(`user:${userId}`)
+        await freeTierService.clearUserCache(userId)
       } else {
         const budgetDb = getBudgetDbService()
         // Clear user cache
-        await budgetDb.cache.del(`user:${userId}`)
+        await budgetDb.deleteCacheEntry(`user:${userId}`)
       }
     } catch (error) {
       console.error('Error clearing user caches:', error)
@@ -107,16 +106,16 @@ export class PointsSyncService {
         // Clear leaderboard caches with different limits
         const limits = [10, 25, 50, 100]
         for (const limit of limits) {
-          await freeTierService.cache.del(`leaderboard:${limit}`)
+          await freeTierService.deleteCacheEntry(`leaderboard:${limit}`)
         }
       } else {
         const budgetDb = getBudgetDbService()
         // Clear leaderboard cache
-        await budgetDb.cache.del('leaderboard:top100')
+        await budgetDb.clearLeaderboardCache()
         // Clear other common leaderboard cache keys
         const limits = [10, 25, 50, 100]
         for (const limit of limits) {
-          await budgetDb.cache.del(`leaderboard:${limit}`)
+          await budgetDb.clearLeaderboardCache(limit)
         }
       }
 

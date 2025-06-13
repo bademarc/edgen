@@ -76,7 +76,7 @@ class TweetFunctionalityTester {
     let passed = 0
     for (const testCase of testCases) {
       const result = validateTweetContent(testCase.content)
-      const success = result === testCase.expected
+      const success = result.isValid === testCase.expected
       
       console.log(`   ${success ? '✅' : '❌'} "${testCase.content}" -> ${result} (expected: ${testCase.expected})`)
       
@@ -261,7 +261,8 @@ class TweetFunctionalityTester {
 
     try {
       // Check if API is healthy and get rate limit info
-      const isHealthy = await this.twitterApi.checkApiHealth()
+      const healthStatus = this.twitterApi.getHealthStatus()
+      const isHealthy = healthStatus.isHealthy
       
       console.log(`   API Health: ${isHealthy ? '✅ Healthy' : '❌ Unhealthy'}`)
       

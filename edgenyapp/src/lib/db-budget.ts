@@ -325,6 +325,24 @@ class BudgetDatabaseService {
   async disconnect(): Promise<void> {
     await this.prisma.$disconnect()
   }
+
+  /**
+   * Public method to delete cache entries
+   */
+  async deleteCacheEntry(key: string): Promise<void> {
+    await this.cache.delete(key)
+  }
+
+  /**
+   * Public method to clear leaderboard cache
+   */
+  async clearLeaderboardCache(limit?: number): Promise<void> {
+    if (limit) {
+      await this.cache.delete(`leaderboard:${limit}`)
+    } else {
+      await this.cache.delete('leaderboard:top100')
+    }
+  }
 }
 
 // Singleton instance

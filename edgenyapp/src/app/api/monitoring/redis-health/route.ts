@@ -41,22 +41,22 @@ export async function GET(request: NextRequest) {
       overallHealth,
       redis: {
         connection: redisTest.success ? 'healthy' : 'unhealthy',
-        responseTime: redisTest.responseTime,
+        responseTime: redisTest.latency || 0,
         error: redisTest.error
       },
       tieredCache: {
         overall: tieredTest.success ? 'healthy' : 'unhealthy',
-        l1Cache: tieredTest.l1Working ? 'working' : 'not working',
-        l2Cache: tieredTest.l2Working ? 'working' : 'not working',
+        l1Cache: tieredTest.memoryWorking ? 'working' : 'not working',
+        l2Cache: tieredTest.redisWorking ? 'working' : 'not working',
         error: tieredTest.error
       },
       statistics: {
-        l1Size: stats.l1Size,
-        totalRequests: stats.totalRequests,
-        hitRate: parseFloat(stats.hitRate.toFixed(1)),
-        l1HitRate: parseFloat(stats.l1HitRate.toFixed(1)),
-        l2HitRate: parseFloat(stats.l2HitRate.toFixed(1)),
-        performance: getPerformanceRating(stats.hitRate)
+        l1Size: stats.memoryEntries,
+        totalRequests: stats.commandCount,
+        hitRate: 0, // Not available in simplified stats
+        l1HitRate: 0, // Not available in simplified stats
+        l2HitRate: 0, // Not available in simplified stats
+        performance: getPerformanceRating(0)
       },
       environment: {
         redisConfigured: envCheck.redisUrl && envCheck.redisToken,

@@ -80,7 +80,7 @@ class TweetSubmissionFixDeployment {
       await cache.set(testKey, testValue, 60)
       const retrieved = await cache.get(testKey)
       
-      if (!retrieved || retrieved.test !== true) {
+      if (!retrieved || (retrieved as any).test !== true) {
         throw new Error('Cache service validation failed')
       }
       
@@ -147,7 +147,7 @@ class TweetSubmissionFixDeployment {
         const cache = getCacheService()
         await cache.set('status_check', { test: true }, 10)
         const result = await cache.get('status_check')
-        status.cache = result?.test === true ? 'healthy' : 'degraded'
+        status.cache = (result as any)?.test === true ? 'healthy' : 'degraded'
         await cache.delete('status_check')
       } catch {
         status.cache = 'failed'

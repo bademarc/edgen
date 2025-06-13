@@ -318,11 +318,26 @@ class FreeTierService {
         this.db.healthCheck(),
         this.scraper.healthCheck()
       ])
-      
+
       return cacheHealth && dbHealth && scraperHealth
     } catch {
       return false
     }
+  }
+
+  /**
+   * Public method to delete cache entries
+   */
+  async deleteCacheEntry(key: string): Promise<void> {
+    await this.cache.delete(key)
+  }
+
+  /**
+   * Public method to clear user-related cache entries
+   */
+  async clearUserCache(userId: string): Promise<void> {
+    await this.cache.delete(`user:stats:${userId}`)
+    await this.cache.delete(`user:${userId}`)
   }
 }
 

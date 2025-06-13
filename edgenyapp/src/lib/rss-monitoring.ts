@@ -330,7 +330,7 @@ export class RSSMonitoringService {
 
       // Check if we have an unclaimed tweet for this URL
       const existingUnclaimed = await prisma.unclaimedTweet.findFirst({
-        where: { url: tweetData.url }
+        where: { authorUsername: tweetData.username }
       })
 
       if (existingUnclaimed) {
@@ -399,7 +399,7 @@ export class RSSMonitoringService {
     await prisma.pointsHistory.create({
       data: {
         userId,
-        points,
+        pointsAwarded: points,
         reason: 'Auto-discovered tweet via RSS',
         createdAt: new Date()
       }
@@ -414,10 +414,15 @@ export class RSSMonitoringService {
 
     await prisma.unclaimedTweet.create({
       data: {
-        username: tweetData.username,
+        tweetId: tweetData.url || `rss_${Date.now()}`, // Generate ID from URL or timestamp
+        authorUsername: tweetData.username,
+        authorId: tweetData.username, // Use username as authorId for RSS feeds
         content: tweetData.content,
-        url: tweetData.url,
-        points,
+        createdAt: tweetData.pubDate || new Date(), // Use pubDate or current date
+        likes: 0, // Default values for RSS feeds
+        retweets: 0,
+        replies: 0,
+        source: 'rss',
         discoveredAt: new Date(),
         claimed: false
       }

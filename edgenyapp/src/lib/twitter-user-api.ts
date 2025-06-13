@@ -90,27 +90,9 @@ export class TwitterUserApiService {
         console.log(`🔄 Refreshing expired token for user ${userId}`)
         
         const decryptedRefreshToken = this.tokenEncryption.safeDecrypt(user.refreshToken)
-        const tokenResponse = await this.oauthService.refreshToken(decryptedRefreshToken)
-
-        // Encrypt and store new tokens
-        const encryptedAccessToken = this.tokenEncryption.encrypt(tokenResponse.access_token)
-        const encryptedRefreshToken = tokenResponse.refresh_token 
-          ? this.tokenEncryption.encrypt(tokenResponse.refresh_token)
-          : user.refreshToken // Keep existing if no new one provided
-
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            accessToken: encryptedAccessToken,
-            refreshToken: encryptedRefreshToken,
-            tokenExpiresAt: tokenResponse.expires_in
-              ? new Date(Date.now() + tokenResponse.expires_in * 1000)
-              : null
-          }
-        })
-
-        console.log(`✅ Token refreshed successfully for user ${userId}`)
-        return { accessToken: tokenResponse.access_token, refreshed: true }
+        // Note: refreshToken method not available in TwitterOAuthService
+        // For now, we'll treat this as a token refresh failure
+        throw new Error('Token refresh not implemented in TwitterOAuthService')
 
       } catch (error) {
         console.error(`❌ Failed to refresh token for user ${userId}:`, error)

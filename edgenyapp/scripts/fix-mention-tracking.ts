@@ -183,7 +183,7 @@ class MentionTrackingDiagnostic {
       }
 
       const isAvailable = webScraper.isBrowserAvailable()
-      const status = webScraper.getBrowserStatus()
+      const status = webScraper.isBrowserAvailable()
 
       if (isAvailable) {
         this.results.push({
