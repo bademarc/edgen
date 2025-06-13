@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSimplifiedTweetSubmissionService } from '@/lib/simplified-tweet-submission'
 import { getAuthenticatedUser } from '@/lib/auth-utils'
+import { getEnhancedContentValidator } from '@/lib/enhanced-content-validator'
 
 export async function POST(request: NextRequest) {
   try {

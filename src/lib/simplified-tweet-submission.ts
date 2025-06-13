@@ -2,6 +2,7 @@ import { getSimplifiedXApiService } from './simplified-x-api'
 import { getSimplifiedCircuitBreaker } from './simplified-circuit-breaker'
 import { getSimplifiedCacheService } from './simplified-cache'
 import { prisma } from './db'
+import { getEnhancedContentValidator } from './enhanced-content-validator'
 
 export interface TweetSubmissionResult {
   success: boolean
@@ -424,6 +425,31 @@ export class SimplifiedTweetSubmissionService {
           isValid: false,
           error: 'Tweet must mention @layeredge or $EDGEN to be eligible for points.'
         }
+      }
+
+      // FUD Detection - Validate content for harmful material
+      console.log('🛡️ Performing FUD detection on tweet content')
+      const contentValidator = getEnhancedContentValidator()
+      const contentValidation = await contentValidator.validateContent(tweetData.content, {
+        enableFUDDetection: true,
+        strictMode: false,
+        requireLayerEdgeKeywords: true,
+        allowWarnings: true
+      })
+
+      if (!contentValidation.allowSubmission) {
+        console.log(`🚫 Content blocked by FUD detection: ${contentValidation.message}`)
+        return {
+          isValid: false,
+          error: contentValidation.message + (contentValidation.suggestions.length > 0
+            ? ` Suggestions: ${contentValidation.suggestions.join(', ')}`
+            : '')
+        }
+      }
+
+      if (contentValidation.requiresReview) {
+        console.log(`⚠️ Content flagged for review: ${contentValidation.message}`)
+        // Log for monitoring but allow submission
       }
 
       return {
