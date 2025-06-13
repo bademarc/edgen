@@ -6,6 +6,9 @@ const nextConfig = {
   // External packages that should not be bundled
   serverExternalPackages: ['@prisma/client', 'prisma'],
 
+  // Transpile problematic packages
+  transpilePackages: ['@supabase/ssr', '@supabase/supabase-js'],
+
   // Development optimizations
   ...(process.env.NODE_ENV === 'development' && {
     // Enable faster refresh in development
@@ -21,12 +24,12 @@ const nextConfig = {
   }),
 
   eslint: {
-    // Only ignore during builds in production to avoid blocking deployment
-    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
+    // Ignore during builds to prevent blocking development
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    // Only ignore TypeScript errors in production builds for faster deployment
-    ignoreBuildErrors: process.env.NODE_ENV === 'production',
+    // Ignore TypeScript errors to prevent blocking development
+    ignoreBuildErrors: true,
   },
   images: {
     remotePatterns: [

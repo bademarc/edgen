@@ -22,6 +22,7 @@ interface AuthContextType {
   isLoading: boolean
   signInWithTwitter: () => Promise<void>
   signOut: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -45,6 +46,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const supabase = createClientComponentClient()
 
   useEffect(() => {
+    let subscription: any = null
+
     const initAuth = async () => {
       try {
         // Get initial session
@@ -59,7 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             if (session?.user) {
               setSupabaseUser(session.user)
@@ -73,7 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
         )
 
-        return () => subscription.unsubscribe()
+        subscription = authSubscription
       } catch (error) {
         console.error('Auth initialization error:', error)
       } finally {
@@ -82,6 +85,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     initAuth()
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
   }, []) // CRITICAL FIX: Remove supabase.auth dependency to prevent multiple GoTrueClient instances
 
   const checkCustomSession = async () => {
@@ -152,6 +161,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const refreshUser = async () => {
+    try {
+      if (supabaseUser) {
+        await syncUserData(supabaseUser)
+      } else {
+        await checkCustomSession()
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error)
+    }
+  }
+
   const signOut = async () => {
     setIsLoading(true)
     try {
@@ -190,6 +211,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     signInWithTwitter,
     signOut,
+    refreshUser,
   }
 
   return (

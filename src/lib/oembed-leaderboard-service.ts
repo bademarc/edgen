@@ -4,13 +4,13 @@
  */
 
 import { PrismaClient } from '@prisma/client'
-import { getTieredCache } from './tiered-cache'
+import { tieredCache } from './tiered-cache'
 
 interface LeaderboardUser {
   id: string
-  name: string
-  xUsername: string
-  image: string
+  name: string | null
+  xUsername: string | null
+  image: string | null
   totalPoints: number
   rank: number
   tweetsCount: number
@@ -38,7 +38,7 @@ export class OEmbedLeaderboardService {
 
   constructor() {
     this.prisma = new PrismaClient()
-    this.cache = getTieredCache()
+    this.cache = tieredCache
   }
 
   /**

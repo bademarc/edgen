@@ -215,24 +215,18 @@ export class FallbackService {
       return {
         id: tweetId,
         content: textContent,
+        likes: 0, // oEmbed doesn't provide engagement metrics
+        retweets: 0,
+        replies: 0,
         author: {
           id: 'unknown',
           username: authorUsername,
           name: oembedData.author_name || 'Unknown',
-          verified: false,
-          followersCount: 0,
-          followingCount: 0
-        },
-        engagement: {
-          likes: 0, // oEmbed doesn't provide engagement metrics
-          retweets: 0,
-          replies: 0,
-          quotes: 0
+          profileImage: undefined
         },
         createdAt: new Date(), // oEmbed doesn't provide exact date
-        isFromLayerEdgeCommunity: textContent.toLowerCase().includes('@layeredge') || textContent.toLowerCase().includes('$edgen'),
-        url: tweetUrl,
-        source: 'oembed' as const
+        source: 'api' as const, // Use 'api' instead of 'oembed' to match interface
+        isFromLayerEdgeCommunity: textContent.toLowerCase().includes('@layeredge') || textContent.toLowerCase().includes('$edgen')
       }
     } catch (error) {
       console.error('oEmbed scraping failed:', error)
@@ -333,9 +327,9 @@ export class FallbackService {
           const fallbackData: FallbackTweetData = {
             id: xApiData.id,
             content: xApiData.content,
-            likes: xApiData.engagement.likes,
-            retweets: xApiData.engagement.retweets,
-            replies: xApiData.engagement.replies,
+            likes: xApiData.engagement?.likes || 0,
+            retweets: xApiData.engagement?.retweets || 0,
+            replies: xApiData.engagement?.replies || 0,
             author: {
               id: xApiData.author.id,
               username: xApiData.author.username,
@@ -344,7 +338,7 @@ export class FallbackService {
             },
             createdAt: xApiData.createdAt,
             source: 'x-api' as const,
-            isFromLayerEdgeCommunity: xApiData.isFromLayerEdgeCommunity
+            isFromLayerEdgeCommunity: xApiData.isFromLayerEdgeCommunity || false
           }
 
           console.log('✅ Successfully fetched tweet data via X API (SECONDARY)')
@@ -374,7 +368,13 @@ export class FallbackService {
           const isFromCommunity = await this.twitterApi!.verifyTweetFromCommunity(tweetUrl)
 
           const fallbackData: FallbackTweetData = {
-            ...apiData,
+            id: apiData.id,
+            content: apiData.content,
+            likes: apiData.likes || 0,
+            retweets: apiData.retweets || 0,
+            replies: apiData.replies || 0,
+            author: apiData.author,
+            createdAt: apiData.createdAt,
             source: 'api' as const,
             isFromLayerEdgeCommunity: isFromCommunity
           }

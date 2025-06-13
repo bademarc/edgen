@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev-cross-platform.js",
+    "dev": "node simple-dev-start.js",
     "dev:next": "next dev",
+    "dev:cross-platform": "node scripts/dev-cross-platform.js",
     "dev:fix": "node scripts/fix-dev-server.js",
     "test:platform": "node scripts/test-cross-platform.js",
     "setup:dev": "node scripts/setup-development.js",

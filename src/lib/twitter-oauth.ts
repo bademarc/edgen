@@ -35,10 +35,10 @@ export class TwitterOAuthService {
   private config: TwitterOAuthConfig
 
   constructor() {
-    // Always use production URL for OAuth
+    // Use environment-specific URL configuration
     const siteUrl = process.env.NODE_ENV === 'production'
       ? 'https://edgen.koyeb.app'
-      : (process.env.NEXT_PUBLIC_SITE_URL || 'https://edgen.koyeb.app')
+      : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
 
     this.config = {
       clientId: process.env.TWITTER_CLIENT_ID!,
@@ -47,21 +47,27 @@ export class TwitterOAuthService {
     }
 
     if (!this.config.clientId || !this.config.clientSecret) {
-      throw new Error('Twitter OAuth credentials are not configured')
+      throw new Error('Twitter OAuth credentials are not configured. Please check TWITTER_CLIENT_ID and TWITTER_CLIENT_SECRET environment variables.')
+    }
+
+    // Validate Client ID format
+    try {
+      const decoded = Buffer.from(this.config.clientId, 'base64').toString('utf-8')
+      if (!decoded.includes(':')) {
+        console.warn('⚠️ Twitter Client ID format may be incorrect - expected format: base64(clientId:1:ci)')
+      }
+    } catch (error) {
+      console.warn('⚠️ Twitter Client ID is not valid base64 format')
     }
 
     // Log configuration for debugging (mask sensitive data)
-    console.log('Twitter OAuth Config:', {
-      clientId: this.config.clientId.substring(0, 10) + '...',
+    console.log('🔧 Twitter OAuth Configuration:', {
+      clientId: this.config.clientId.substring(0, 15) + '...',
       clientSecret: this.config.clientSecret.substring(0, 10) + '...',
       redirectUri: this.config.redirectUri,
-      environment: process.env.NODE_ENV
+      environment: process.env.NODE_ENV,
+      siteUrl: siteUrl
     })
-
-    // Validate new credentials format
-    if (!this.config.clientId.includes(':')) {
-      console.warn('⚠️ Twitter Client ID format may be incorrect - expected format with colon separator')
-    }
   }
 
   /**

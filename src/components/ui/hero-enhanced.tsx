@@ -26,6 +26,9 @@ function useTypewriter(text: string, speed: number = 50) {
 
       return () => clearTimeout(timeout)
     }
+
+    // Return undefined for other cases
+    return undefined
   }, [currentIndex, text, speed])
 
   return displayText
@@ -61,6 +64,9 @@ function useAnimatedCounter(end: number, duration: number = 2000, start: number 
       animationFrame = requestAnimationFrame(animate)
       return () => cancelAnimationFrame(animationFrame)
     }
+
+    // Return undefined for other cases
+    return undefined
   }, [inView, isVisible, end, duration, start])
 
   return { count, ref }

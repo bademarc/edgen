@@ -93,6 +93,9 @@ export function TweetCardEnhanced({
 
       return () => clearTimeout(timer)
     }
+
+    // Return undefined for other cases
+    return undefined
   }, [tweet.likes, tweet.retweets, tweet.replies, tweet.totalPoints, previousMetrics])
 
   const handleUpdateEngagement = async () => {

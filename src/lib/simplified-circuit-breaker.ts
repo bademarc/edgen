@@ -154,7 +154,7 @@ export class SimplifiedCircuitBreaker {
     }
   }
 
-  private async getStatus(): Promise<CircuitBreakerStatus> {
+  async getStatus(): Promise<CircuitBreakerStatus> {
     try {
       const cached = await this.cache.get<CircuitBreakerStatus>(this.cacheKey)
       
@@ -258,6 +258,35 @@ export class SimplifiedCircuitBreaker {
   async reset(): Promise<void> {
     await this.closeCircuit()
     console.log(`🔄 Circuit breaker reset for ${this.name}`)
+  }
+
+  /**
+   * Get circuit breaker metrics
+   */
+  async getMetrics(): Promise<{
+    name: string
+    status: CircuitBreakerStatus
+    config: CircuitBreakerConfig
+    healthScore: number
+  }> {
+    const status = await this.getStatus()
+
+    // Calculate health score (0-100)
+    let healthScore = 100
+    if (status.state === CircuitState.OPEN) {
+      healthScore = 0
+    } else if (status.state === CircuitState.HALF_OPEN) {
+      healthScore = 50
+    } else if (status.failureCount > 0) {
+      healthScore = Math.max(0, 100 - (status.failureCount / this.config.failureThreshold) * 100)
+    }
+
+    return {
+      name: this.name,
+      status,
+      config: this.config,
+      healthScore
+    }
   }
 }
 

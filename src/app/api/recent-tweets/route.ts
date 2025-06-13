@@ -100,7 +100,6 @@ export async function GET(request: NextRequest) {
     const enhancedTweets = tweets.map(tweet => ({
       ...tweet,
       totalEngagement: tweet.likes + tweet.retweets + tweet.replies,
-      submittedAt: tweet.submittedAt || tweet.createdAt, // Fallback for older tweets
       // Ensure dates are properly serialized
       createdAt: tweet.createdAt.toISOString(),
       submittedAt: tweet.submittedAt?.toISOString() || tweet.createdAt.toISOString(),
@@ -134,7 +133,7 @@ export async function GET(request: NextRequest) {
         success: false,
         error: 'Failed to fetch tweets',
         message: 'An error occurred while fetching tweets from the database',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
       },
       { status: 500 }
     )

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSimplifiedXApiService } from '@/lib/simplified-x-api'
+import { validateTweetURL } from '@/lib/url-validator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +48,19 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      tweetData = await xApiService.getTweetByUrl(tweetUrl)
+      // Extract tweet ID from URL and use getTweetById
+      const tweetIdFromUrl = xApiService.extractTweetId(tweetUrl)
+      if (!tweetIdFromUrl) {
+        return NextResponse.json(
+          {
+            error: 'Invalid tweet URL format',
+            details: 'Could not extract tweet ID from URL',
+            message: 'Please provide a valid X/Twitter tweet URL'
+          },
+          { status: 400 }
+        )
+      }
+      tweetData = await xApiService.getTweetById(tweetIdFromUrl)
     } else {
       tweetData = await xApiService.getTweetById(tweetId)
     }
@@ -146,7 +159,7 @@ export async function GET(request: NextRequest) {
         data: {
           username,
           tweetCount: userTweets.length,
-          tweets: userTweets.map(tweet => ({
+          tweets: userTweets.map((tweet: any) => ({
             id: tweet.id,
             content: tweet.content,
             author: {

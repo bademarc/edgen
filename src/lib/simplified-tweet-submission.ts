@@ -29,6 +29,11 @@ interface TweetValidationResult {
 }
 
 export class SimplifiedTweetSubmissionService {
+  private lastError?: any;
+  private verified = false;
+  private followersCount = 0;
+  private followingCount = 0;
+  private url = '';
   private xApi = getSimplifiedXApiService()
   private cache = getSimplifiedCacheService()
   private circuitBreaker = getSimplifiedCircuitBreaker('tweet-submission', {
@@ -97,10 +102,11 @@ export class SimplifiedTweetSubmissionService {
         let errorMessage = 'Could not fetch tweet data'
         if (fallbackStatus.isApiRateLimited) {
           errorMessage = 'Twitter API is currently rate limited. Please try again in a few minutes.'
-        } else if (fallbackStatus.lastError?.includes('404') || fallbackStatus.lastError?.includes('Not Found')) {
-          errorMessage = 'Tweet not found. It may be deleted, private, or the URL is incorrect.'
-        } else if (fallbackStatus.lastError?.includes('403') || fallbackStatus.lastError?.includes('Forbidden')) {
-          errorMessage = 'Tweet is private or access is restricted.'
+        } else if (fallbackStatus.apiFailureCount > 5) {
+          errorMessage = 'Multiple API failures detected. Please try again later.'
+        } else if (fallbackStatus.rateLimitResetTime && new Date() < fallbackStatus.rateLimitResetTime) {
+          const waitTime = Math.ceil((fallbackStatus.rateLimitResetTime.getTime() - Date.now()) / 1000 / 60)
+          errorMessage = `Twitter API rate limited. Please try again in ${waitTime} minutes.`
         }
 
         return {
@@ -156,10 +162,10 @@ export class SimplifiedTweetSubmissionService {
             id: fallbackData.author.id,
             username: fallbackData.author.username,
             name: fallbackData.author.name,
-            verified: fallbackData.author.verified || false,
+            verified: false, // Not available in simplified author interface
             profileImage: fallbackData.author.profileImage || '',
-            followersCount: fallbackData.author.followersCount || 0,
-            followingCount: fallbackData.author.followingCount || 0
+            followersCount: 0, // Not available in simplified author interface
+            followingCount: 0 // Not available in simplified author interface
           },
           engagement: {
             likes: fallbackData.likes || 0,
@@ -382,10 +388,10 @@ export class SimplifiedTweetSubmissionService {
           id: fallbackData.author.id,
           username: fallbackData.author.username,
           name: fallbackData.author.name,
-          verified: fallbackData.author.verified || false,
+          verified: false, // Not available in simplified author interface
           profileImage: fallbackData.author.profileImage || '',
-          followersCount: fallbackData.author.followersCount || 0,
-          followingCount: fallbackData.author.followingCount || 0
+          followersCount: 0, // Not available in simplified author interface
+          followingCount: 0 // Not available in simplified author interface
         },
         engagement: {
           likes: fallbackData.likes || 0,
@@ -395,7 +401,7 @@ export class SimplifiedTweetSubmissionService {
         },
         createdAt: fallbackData.createdAt,
         isFromLayerEdgeCommunity: fallbackData.isFromLayerEdgeCommunity,
-        url: fallbackData.url
+        url: tweetUrl // Use the original URL parameter instead of fallbackData.url
       }
 
       // Get user data to verify ownership
