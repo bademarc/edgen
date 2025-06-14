@@ -4,9 +4,9 @@ import Link from 'next/link'
 import {
   ChatBubbleLeftRightIcon,
   ChartBarIcon,
-  KeyIcon,
-  CubeIcon,
-  EyeIcon,
+  LockClosedIcon,
+  CubeTransparentIcon,
+  InformationCircleIcon,
   UsersIcon,
   ShieldCheckIcon,
   HeartIcon
@@ -32,12 +32,12 @@ const solutionFeatures = [
   {
     name: 'Own & Port Your Reputation',
     description: 'Your score lives in a decentralized ledger—no centralized platform can revoke or take it away.',
-    icon: KeyIcon,
+    icon: LockClosedIcon,
   },
   {
     name: 'Integrate & Unlock',
     description: 'Future airdrops, beta‑access, exclusive roles: your reputation opens doors across the LayerEdge ecosystem.',
-    icon: CubeIcon,
+    icon: CubeTransparentIcon,
   },
 ]
 
@@ -45,7 +45,7 @@ const coreValues = [
   {
     name: 'Transparency',
     description: 'Clear rules, open leaderboard, full auditability.',
-    icon: EyeIcon,
+    icon: InformationCircleIcon,
   },
   {
     name: 'Inclusion',
