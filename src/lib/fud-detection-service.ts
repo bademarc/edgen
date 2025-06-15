@@ -105,14 +105,23 @@ export class FUDDetectionService {
   ]
 
   constructor(config?: Partial<FUDDetectionConfig>) {
+    // Load environment variables with fallbacks
+    const blockThreshold = process.env.FUD_BLOCK_THRESHOLD ? parseInt(process.env.FUD_BLOCK_THRESHOLD) : 10 // Optimal threshold for scam detection
+    const warnThreshold = process.env.FUD_WARN_THRESHOLD ? parseInt(process.env.FUD_WARN_THRESHOLD) : 4 // Lowered from 5 to 4
+
     this.config = {
       enabled: process.env.FUD_DETECTION_ENABLED !== 'false',
       strictMode: process.env.FUD_STRICT_MODE === 'true',
-      blockThreshold: parseInt(process.env.FUD_BLOCK_THRESHOLD || '15'),
-      warnThreshold: parseInt(process.env.FUD_WARN_THRESHOLD || '8'),
+      blockThreshold,
+      warnThreshold,
       whitelistEnabled: process.env.FUD_WHITELIST_ENABLED !== 'false',
       customKeywords: process.env.FUD_CUSTOM_KEYWORDS?.split(',') || [],
       ...config
+    }
+
+    // Log configuration in development mode only
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 FUD Detection Service Configuration:', JSON.stringify(this.config, null, 2))
     }
   }
 
@@ -136,19 +145,24 @@ export class FUDDetectionService {
 
     const analysis = this.analyzeContent(content)
     const totalScore = this.calculateTotalScore(analysis)
-    
+
     // Check whitelist - but don't completely bypass FUD detection for high-risk content
     const isWhitelisted = this.config.whitelistEnabled && this.isWhitelisted(content)
     let adjustedScore = totalScore
 
     if (isWhitelisted) {
-      // Only apply whitelist reduction if the content doesn't have severe FUD indicators
-      if (totalScore < this.config.blockThreshold) {
-        adjustedScore = Math.max(0, totalScore - 3) // Reduced from -5 to -3 for safety
-      }
-      // If content has severe FUD (>= block threshold), whitelist doesn't help much
-      else {
-        adjustedScore = Math.max(this.config.warnThreshold, totalScore - 2) // Minimal reduction for severe FUD
+      // Check if content has obvious scam indicators - whitelist should NOT help with these
+      const hasObviousScamContent = this.hasObviousScamContent(content)
+
+      if (hasObviousScamContent) {
+        // No whitelist reduction for obvious scam content
+        adjustedScore = totalScore
+      } else if (totalScore < this.config.blockThreshold) {
+        // Only apply whitelist reduction for non-scam content below block threshold
+        adjustedScore = Math.max(0, totalScore - 3)
+      } else {
+        // Minimal reduction for severe FUD
+        adjustedScore = Math.max(this.config.warnThreshold, totalScore - 2)
       }
     }
 
@@ -234,13 +248,20 @@ export class FUDDetectionService {
    */
   private calculateCategoryScore(content: string, keywords: Array<{terms: string[], weight: number}>): number {
     let score = 0
+    const foundTerms = []
 
     for (const keywordGroup of keywords) {
       for (const term of keywordGroup.terms) {
         if (content.includes(term)) {
           score += keywordGroup.weight
+          foundTerms.push(`${term}(+${keywordGroup.weight})`)
         }
       }
+    }
+
+    // Log found terms in development mode only
+    if (foundTerms.length > 0 && process.env.NODE_ENV === 'development') {
+      console.log(`🔍 Found keywords in "${content}": ${foundTerms.join(', ')} = ${score} points`)
     }
 
     return score
@@ -296,6 +317,19 @@ export class FUDDetectionService {
    */
   private isWhitelisted(content: string): boolean {
     return this.WHITELIST_PATTERNS.some(pattern => pattern.test(content))
+  }
+
+  /**
+   * Check if content has obvious scam indicators that should never be whitelisted
+   */
+  private hasObviousScamContent(content: string): boolean {
+    const normalizedContent = content.toLowerCase()
+    const obviousScamTerms = [
+      'scam', 'fraud', 'fake', 'ponzi', 'rug pull', 'rugpull', 'exit scam',
+      'pyramid scheme', 'pump and dump', 'worthless', 'steal'
+    ]
+
+    return obviousScamTerms.some(term => normalizedContent.includes(term))
   }
 
   /**

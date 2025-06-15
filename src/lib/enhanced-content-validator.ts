@@ -101,6 +101,12 @@ export class EnhancedContentValidator {
     let fudAnalysis: FUDAnalysisResult
     let advancedFudAnalysis: AdvancedFUDAnalysis | undefined
 
+    // Log validation process in development mode only
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Enhanced Content Validator - Starting FUD detection')
+      console.log('📝 Content to analyze:', JSON.stringify(trimmedContent))
+    }
+
     if (enableFUDDetection) {
       if (enableAdvancedFUDDetection) {
         advancedFudAnalysis = await this.advancedFudService.analyzeAdvanced(trimmedContent)
