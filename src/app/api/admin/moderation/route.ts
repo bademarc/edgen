@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/lib/auth-utils'
 import { getFUDDetectionService } from '@/lib/fud-detection-service'
-import { runFUDDetectionTests } from '@/scripts/test-fud-detection'
-import { prisma } from '@/lib/prisma'
+// Note: Import removed to avoid build issues - test functionality implemented inline
+import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
