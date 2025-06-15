@@ -57,22 +57,26 @@ export class FUDDetectionService {
     // High severity
     { terms: ['hate', 'terrible', 'awful', 'worst', 'garbage', 'trash'], weight: 8 },
     { terms: ['useless', 'pointless', 'waste', 'stupid', 'dumb'], weight: 6 },
-    
+
     // Medium severity
     { terms: ['bad', 'poor', 'disappointing', 'failed', 'failing', 'risky', 'dangerous'], weight: 4 },
-    { terms: ['doubt', 'uncertain', 'worried', 'concerned', 'skeptical'], weight: 2 }
+    { terms: ['doubt', 'uncertain', 'worried', 'concerned', 'skeptical'], weight: 3 }, // Increased from 2 to 3
+    { terms: ['issues with', 'problems with', 'concerns about', 'not sure about'], weight: 2 } // New subtle patterns
   ]
 
   private readonly PROFANITY_KEYWORDS = [
-    // Common profanity (configurable based on community standards)
-    { terms: ['damn', 'hell', 'crap', 'shit', 'fuck', 'bitch'], weight: 7 },
-    { terms: ['ass', 'piss', 'bastard', 'idiot', 'moron'], weight: 5 }
+    // Severe profanity (always block)
+    { terms: ['bitch', 'bastard'], weight: 8 },
+    // Moderate profanity (warn for positive content, block for negative)
+    { terms: ['damn', 'hell', 'crap', 'shit', 'fuck'], weight: 4 }, // Reduced from 7 to 4
+    { terms: ['ass', 'piss', 'idiot', 'moron'], weight: 3 } // Reduced from 5 to 3
   ]
 
   private readonly MISINFORMATION_INDICATORS = [
     { terms: ['fake news', 'conspiracy', 'hoax', 'lie', 'lying'], weight: 8 },
     { terms: ['misleading', 'false', 'untrue', 'deceptive'], weight: 6 },
-    { terms: ['rumor', 'unconfirmed', 'allegedly', 'supposedly'], weight: 3 }
+    { terms: ['rumor', 'unconfirmed', 'allegedly', 'supposedly'], weight: 4 }, // Increased from 3 to 4
+    { terms: ['heard that', 'word is', 'people say', 'they say'], weight: 3 } // New subtle FUD patterns
   ]
 
   private readonly SPAM_INDICATORS = [
@@ -200,7 +204,16 @@ export class FUDDetectionService {
   private analyzeContent(content: string): ContentAnalysis {
     const normalizedContent = content.toLowerCase().trim()
     const words = normalizedContent.split(/\s+/)
-    
+
+    // Check for positive context to adjust profanity scoring
+    const hasPositiveContext = this.hasPositiveContext(normalizedContent)
+    let profanityScore = this.calculateCategoryScore(normalizedContent, this.PROFANITY_KEYWORDS)
+
+    // Reduce profanity score if content has positive context, but keep minimum for warning
+    if (hasPositiveContext && profanityScore > 0) {
+      profanityScore = Math.max(3, profanityScore * 0.6) // Reduce by 40% but keep minimum of 3 for warning
+    }
+
     return {
       content,
       normalizedContent,
@@ -208,7 +221,7 @@ export class FUDDetectionService {
       categories: {
         scam: this.calculateCategoryScore(normalizedContent, this.SCAM_KEYWORDS),
         negative: this.calculateCategoryScore(normalizedContent, this.NEGATIVE_SENTIMENT),
-        profanity: this.calculateCategoryScore(normalizedContent, this.PROFANITY_KEYWORDS),
+        profanity: profanityScore,
         misinformation: this.calculateCategoryScore(normalizedContent, this.MISINFORMATION_INDICATORS),
         spam: this.calculateCategoryScore(normalizedContent, this.SPAM_INDICATORS)
       },
@@ -221,7 +234,7 @@ export class FUDDetectionService {
    */
   private calculateCategoryScore(content: string, keywords: Array<{terms: string[], weight: number}>): number {
     let score = 0
-    
+
     for (const keywordGroup of keywords) {
       for (const term of keywordGroup.terms) {
         if (content.includes(term)) {
@@ -229,8 +242,21 @@ export class FUDDetectionService {
         }
       }
     }
-    
+
     return score
+  }
+
+  /**
+   * Check if content has positive context that might mitigate profanity concerns
+   */
+  private hasPositiveContext(content: string): boolean {
+    const positiveIndicators = [
+      'excited', 'amazing', 'awesome', 'love', 'great', 'fantastic', 'revolutionary',
+      'bullish', 'optimistic', 'incredible', 'brilliant', 'outstanding', 'excellent',
+      'wonderful', 'impressive', 'innovative', 'groundbreaking', 'to the moon'
+    ]
+
+    return positiveIndicators.some(indicator => content.includes(indicator))
   }
 
   /**

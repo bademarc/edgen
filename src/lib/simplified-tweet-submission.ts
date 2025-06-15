@@ -434,10 +434,11 @@ export class SimplifiedTweetSubmissionService {
       }
 
       // FUD Detection - Validate content for harmful material
-      console.log('🛡️ Performing FUD detection on tweet content')
+      console.log('🛡️ Performing advanced FUD detection on tweet content')
       const contentValidator = getEnhancedContentValidator()
       const contentValidation = await contentValidator.validateContent(tweetData.content, {
         enableFUDDetection: true,
+        enableAdvancedFUDDetection: true,
         strictMode: false,
         requireLayerEdgeKeywords: true,
         allowWarnings: true

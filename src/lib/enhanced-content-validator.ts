@@ -6,11 +6,13 @@
  */
 
 import { getFUDDetectionService, FUDAnalysisResult } from './fud-detection-service'
+import { getAdvancedFUDDetectionService, AdvancedFUDAnalysis } from './advanced-fud-detection'
 
 export interface ContentValidationResult {
   isValid: boolean
   hasRequiredKeywords: boolean
   fudAnalysis: FUDAnalysisResult
+  advancedFudAnalysis?: AdvancedFUDAnalysis
   message: string
   suggestions: string[]
   allowSubmission: boolean
@@ -19,6 +21,7 @@ export interface ContentValidationResult {
 
 export interface ValidationOptions {
   enableFUDDetection?: boolean
+  enableAdvancedFUDDetection?: boolean
   strictMode?: boolean
   requireLayerEdgeKeywords?: boolean
   allowWarnings?: boolean
@@ -26,7 +29,8 @@ export interface ValidationOptions {
 
 export class EnhancedContentValidator {
   private fudService: ReturnType<typeof getFUDDetectionService>
-  
+  private advancedFudService: ReturnType<typeof getAdvancedFUDDetectionService>
+
   // Required keywords for LayerEdge community
   private readonly REQUIRED_KEYWORDS = [
     '@layeredge',
@@ -44,6 +48,7 @@ export class EnhancedContentValidator {
 
   constructor() {
     this.fudService = getFUDDetectionService()
+    this.advancedFudService = getAdvancedFUDDetectionService()
   }
 
   /**
@@ -55,6 +60,7 @@ export class EnhancedContentValidator {
   ): Promise<ContentValidationResult> {
     const {
       enableFUDDetection = true,
+      enableAdvancedFUDDetection = true,
       strictMode = false,
       requireLayerEdgeKeywords = true,
       allowWarnings = true
@@ -93,8 +99,15 @@ export class EnhancedContentValidator {
 
     // Perform FUD detection
     let fudAnalysis: FUDAnalysisResult
+    let advancedFudAnalysis: AdvancedFUDAnalysis | undefined
+
     if (enableFUDDetection) {
-      fudAnalysis = await this.fudService.detectFUD(trimmedContent)
+      if (enableAdvancedFUDDetection) {
+        advancedFudAnalysis = await this.advancedFudService.analyzeAdvanced(trimmedContent)
+        fudAnalysis = advancedFudAnalysis // Use advanced analysis as primary
+      } else {
+        fudAnalysis = await this.fudService.detectFUD(trimmedContent)
+      }
     } else {
       fudAnalysis = await this.createEmptyFUDAnalysis()
     }
@@ -111,6 +124,7 @@ export class EnhancedContentValidator {
       isValid: validationResult.isValid,
       hasRequiredKeywords,
       fudAnalysis,
+      advancedFudAnalysis,
       message: validationResult.message,
       suggestions: validationResult.suggestions,
       allowSubmission: validationResult.allowSubmission,
