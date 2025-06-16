@@ -433,32 +433,79 @@ export class SimplifiedTweetSubmissionService {
         }
       }
 
-      // FUD Detection - Validate content for harmful material
-      console.log('🛡️ Performing advanced FUD detection on tweet content')
-      const contentValidator = getEnhancedContentValidator()
-      const contentValidation = await contentValidator.validateContent(tweetData.content, {
-        enableFUDDetection: true,
-        enableAdvancedFUDDetection: true,
-        strictMode: false,
-        requireLayerEdgeKeywords: true,
-        allowWarnings: true
-      })
+      // SECURITY: FUD Detection - Validate content for harmful material
+      console.log('🛡️ SECURITY: Performing advanced FUD detection on tweet content')
+      console.log(`📝 SECURITY: Tweet URL: ${tweetUrl}`)
+      console.log(`📝 SECURITY: Tweet Content: "${tweetData.content}"`)
+      console.log(`📝 SECURITY: User ID: ${userId}`)
 
-      if (!contentValidation.allowSubmission) {
-        console.log(`🚫 Content blocked by FUD detection: ${contentValidation.message}`)
+      const contentValidator = getEnhancedContentValidator()
+
+      try {
+        const contentValidation = await contentValidator.validateContent(tweetData.content, {
+          enableFUDDetection: true,
+          enableAdvancedFUDDetection: true,
+          strictMode: false,
+          requireLayerEdgeKeywords: true,
+          allowWarnings: true
+        })
+
+        // SECURITY: Always log validation result
+        console.log('🔍 SECURITY: FUD validation result:', {
+          allowSubmission: contentValidation.allowSubmission,
+          isValid: contentValidation.isValid,
+          isBlocked: contentValidation.fudAnalysis?.isBlocked,
+          isWarning: contentValidation.fudAnalysis?.isWarning,
+          score: contentValidation.fudAnalysis?.score,
+          flaggedTerms: contentValidation.fudAnalysis?.flaggedTerms,
+          message: contentValidation.message
+        })
+
+        if (!contentValidation.allowSubmission) {
+          console.log(`🚫 SECURITY: Content blocked by FUD detection: ${contentValidation.message}`)
+          console.log(`🚫 SECURITY: FUD Analysis:`, contentValidation.fudAnalysis)
+          return {
+            isValid: false,
+            error: contentValidation.message + (contentValidation.suggestions.length > 0
+              ? ` Suggestions: ${contentValidation.suggestions.join(', ')}`
+              : '')
+          }
+        }
+
+      } catch (validationError) {
+        console.error('🚨 CRITICAL: FUD validation error in simplified submission:', validationError)
+        console.error('🚨 CRITICAL: Blocking submission for safety')
         return {
           isValid: false,
-          error: contentValidation.message + (contentValidation.suggestions.length > 0
-            ? ` Suggestions: ${contentValidation.suggestions.join(', ')}`
-            : '')
+          error: 'Content validation failed due to system error. Please try again later.'
         }
       }
 
-      if (contentValidation.requiresReview) {
-        console.log(`⚠️ Content flagged for review: ${contentValidation.message}`)
-        // Log for monitoring but allow submission
+      // SECURITY: Additional FUD detection using basic service as fallback
+      console.log('🔒 SECURITY: Running additional FUD detection as fallback')
+      const { getFUDDetectionService } = await import('./fud-detection-service')
+      const fudService = getFUDDetectionService()
+      const basicFudResult = await fudService.detectFUD(tweetData.content)
+
+      console.log('🔍 SECURITY: Basic FUD detection result:', {
+        isBlocked: basicFudResult.isBlocked,
+        isWarning: basicFudResult.isWarning,
+        score: basicFudResult.score,
+        flaggedTerms: basicFudResult.flaggedTerms
+      })
+
+      if (basicFudResult.isBlocked) {
+        console.log(`🚫 SECURITY: Content blocked by fallback FUD detection: ${basicFudResult.message}`)
+        return {
+          isValid: false,
+          error: `Content blocked by security system: ${basicFudResult.message}`
+        }
       }
 
+      // Note: contentValidation is only available inside the try block above
+      // If we reach here, validation passed, so no review needed
+
+      console.log('✅ SECURITY: All validation checks passed in simplified submission')
       return {
         isValid: true,
         tweetId,

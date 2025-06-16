@@ -105,11 +105,12 @@ export class FUDDetectionService {
   ]
 
   constructor(config?: Partial<FUDDetectionConfig>) {
-    // Load environment variables with fallbacks
+    // Load environment variables with fallbacks - ALWAYS ENABLE FUD DETECTION
     const blockThreshold = process.env.FUD_BLOCK_THRESHOLD ? parseInt(process.env.FUD_BLOCK_THRESHOLD) : 10 // Optimal threshold for scam detection
     const warnThreshold = process.env.FUD_WARN_THRESHOLD ? parseInt(process.env.FUD_WARN_THRESHOLD) : 4 // Lowered from 5 to 4
 
     this.config = {
+      // SECURITY FIX: Always enable FUD detection unless explicitly disabled with 'false'
       enabled: process.env.FUD_DETECTION_ENABLED !== 'false',
       strictMode: process.env.FUD_STRICT_MODE === 'true',
       blockThreshold,
@@ -119,18 +120,54 @@ export class FUDDetectionService {
       ...config
     }
 
-    // Log configuration in development mode only
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 FUD Detection Service Configuration:', JSON.stringify(this.config, null, 2))
+    // SECURITY: Force enable if not explicitly configured
+    if (this.config.enabled === undefined || this.config.enabled === null) {
+      this.config.enabled = true
+      console.warn('⚠️ FUD Detection was undefined - forcing enabled for security')
     }
+
+    // SECURITY: Ensure reasonable thresholds
+    if (this.config.blockThreshold > 15) {
+      console.warn(`⚠️ FUD block threshold too high (${this.config.blockThreshold}), reducing to 10`)
+      this.config.blockThreshold = 10
+    }
+
+    // Always log configuration for security auditing
+    console.log('🛡️ FUD Detection Service Configuration:', {
+      enabled: this.config.enabled,
+      blockThreshold: this.config.blockThreshold,
+      warnThreshold: this.config.warnThreshold,
+      whitelistEnabled: this.config.whitelistEnabled,
+      strictMode: this.config.strictMode,
+      customKeywordsCount: this.config.customKeywords.length
+    })
   }
 
   /**
    * Main FUD detection method - analyzes content and returns result
    */
   async detectFUD(content: string): Promise<FUDAnalysisResult> {
-    // If FUD detection is disabled, allow all content
+    // SECURITY: Log all content being analyzed for audit trail
+    console.log(`🔍 FUD Detection analyzing content: "${content}"`)
+
+    // SECURITY FIX: Never allow FUD detection to be disabled for scam content
     if (!this.config.enabled) {
+      console.warn('⚠️ FUD Detection is disabled - this is a security risk!')
+      // Still check for obvious scam content even if disabled
+      if (this.hasObviousScamContent(content)) {
+        console.error('🚨 SECURITY ALERT: Obvious scam content detected but FUD detection is disabled!')
+        return {
+          isBlocked: true,
+          isWarning: false,
+          score: 100,
+          detectedCategories: ['scam-related'],
+          flaggedTerms: ['scam'],
+          suggestions: ['Remove scam-related content'],
+          message: 'Content blocked due to security policy violation',
+          allowResubmit: true
+        }
+      }
+
       return {
         isBlocked: false,
         isWarning: false,
@@ -138,7 +175,7 @@ export class FUDDetectionService {
         detectedCategories: [],
         flaggedTerms: [],
         suggestions: [],
-        message: 'Content approved',
+        message: 'Content approved (FUD detection disabled)',
         allowResubmit: true
       }
     }
