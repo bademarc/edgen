@@ -163,9 +163,9 @@ function startDevServer(osInfo) {
   logStep('SERVER', 'Starting development server...');
   
   return new Promise((resolve, reject) => {
-    // Determine the correct command for the platform
-    const command = osInfo.isWindows ? 'npm.cmd' : 'npm';
-    const args = ['run', 'dev'];
+    // Determine the correct command for the platform - use next dev directly to avoid infinite loop
+    const command = osInfo.isWindows ? 'npx.cmd' : 'npx';
+    const args = ['next', 'dev'];
     
     // Set environment variables for better development experience
     const env = {

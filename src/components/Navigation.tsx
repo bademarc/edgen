@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { useAuth } from './AuthProvider'
 import { Button } from "@/components/ui/button"
 import {
@@ -24,9 +25,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export function Navigation() {
   const { user, isLoading, signInWithTwitter, signOut } = useAuth()
+  const pathname = usePathname()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -51,7 +54,8 @@ export function Navigation() {
                   <NavigationMenuLink
                     className={cn(
                       "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
-                      !user && "opacity-50 pointer-events-none"
+                      !user && "opacity-50 pointer-events-none",
+                      pathname === "/dashboard" && "bg-accent text-accent-foreground"
                     )}
                   >
                     Dashboard
@@ -64,6 +68,7 @@ export function Navigation() {
                     <NavigationMenuLink
                       className={cn(
                         "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                        pathname === "/quests" && "bg-accent text-accent-foreground"
                       )}
                     >
                       Quests
@@ -76,6 +81,7 @@ export function Navigation() {
                   <NavigationMenuLink
                     className={cn(
                       "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                      pathname === "/leaderboard" && "bg-accent text-accent-foreground"
                     )}
                   >
                     Leaderboard
@@ -99,8 +105,8 @@ export function Navigation() {
                         </a>
                       </NavigationMenuLink>
                     </li>
-                    <ListItem href="/recent" title="Recent Activity">
-                      Latest community engagement
+                    <ListItem href="/recent" title="Activity Feed">
+                      Latest community engagement and updates
                     </ListItem>
                     <ListItem href="/submit-tweet" title="Submit Tweet">
                       Submit your LayerEdge tweets manually
@@ -113,6 +119,7 @@ export function Navigation() {
                   <NavigationMenuLink
                     className={cn(
                       "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                      pathname === "/helper" && "bg-accent text-accent-foreground"
                     )}
                   >
                     Helper
@@ -124,6 +131,7 @@ export function Navigation() {
                   <NavigationMenuLink
                     className={cn(
                       "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                      pathname === "/about" && "bg-accent text-accent-foreground"
                     )}
                   >
                     About
@@ -135,6 +143,7 @@ export function Navigation() {
                   <NavigationMenuLink
                     className={cn(
                       "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
+                      pathname === "/faq" && "bg-accent text-accent-foreground"
                     )}
                   >
                     FAQ
@@ -144,41 +153,46 @@ export function Navigation() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          {/* Auth Button */}
-          {isLoading ? (
-            <div className="h-10 w-24 bg-muted animate-pulse rounded-lg" />
-          ) : user ? (
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3 bg-card border rounded-lg px-4 py-2">
-                {user.image && (
-                  <Image
-                    src={user.image}
-                    alt={user.name || 'User'}
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-full"
-                  />
-                )}
-                <div className="text-sm">
-                  <p className="font-medium">
-                    {user.name || user.xUsername}
-                  </p>
-                  {user.totalPoints !== undefined && (
-                    <p className="text-xs text-muted-foreground">
-                      {user.totalPoints} points
-                    </p>
+          {/* Theme Toggle and Auth Section */}
+          <div className="flex items-center space-x-3">
+            <ThemeToggle />
+
+            {/* Auth Button */}
+            {isLoading ? (
+              <div className="h-10 w-24 bg-muted animate-pulse rounded-lg" />
+            ) : user ? (
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3 bg-card border rounded-lg px-4 py-2">
+                  {user.image && (
+                    <Image
+                      src={user.image}
+                      alt={user.name || 'User'}
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full"
+                    />
                   )}
+                  <div className="text-sm">
+                    <p className="font-medium">
+                      {user.name || user.xUsername}
+                    </p>
+                    {user.totalPoints !== undefined && (
+                      <p className="text-xs text-muted-foreground">
+                        {user.totalPoints} points
+                      </p>
+                    )}
+                  </div>
                 </div>
+                <Button variant="ghost" onClick={() => signOut()}>
+                  Sign out
+                </Button>
               </div>
-              <Button variant="ghost" onClick={() => signOut()}>
-                Sign out
+            ) : (
+              <Button onClick={() => signInWithTwitter()}>
+                Sign in with X
               </Button>
-            </div>
-          ) : (
-            <Button onClick={() => signInWithTwitter()}>
-              Sign in with X
-            </Button>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Mobile Menu Button - Enhanced with Sheet */}
@@ -214,7 +228,7 @@ export function Navigation() {
                 <MobileNavLink href="/quests" icon={Target} label="Quests" requiresAuth />
                 <MobileNavLink href="/leaderboard" icon={Trophy} label="Leaderboard" />
                 <MobileNavLink href="/submit-tweet" icon={MessageSquare} label="Submit Tweet" />
-                <MobileNavLink href="/recent" icon={FileText} label="Recent Activity" />
+                <MobileNavLink href="/recent" icon={FileText} label="Activity Feed" />
                 <MobileNavLink href="/helper" icon={HelpCircle} label="Helper" />
                 <MobileNavLink href="/about" icon={FileText} label="About" />
                 <MobileNavLink href="/faq" icon={HelpCircle} label="FAQ" />
@@ -323,15 +337,21 @@ const MobileNavLink = ({
   requiresAuth?: boolean
 }) => {
   const { user } = useAuth()
+  const pathname = usePathname()
 
   if (requiresAuth && !user) {
     return null
   }
 
+  const isActive = pathname === href
+
   return (
     <Link
       href={href}
-      className="flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+      className={cn(
+        "flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+        isActive && "bg-accent text-accent-foreground"
+      )}
     >
       <Icon className="h-5 w-5" />
       <span>{label}</span>

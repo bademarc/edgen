@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { HelperOnboarding } from '@/components/ui/helper-onboarding'
 import { Separator } from '@/components/ui/separator'
 import {
   Send,
@@ -148,6 +149,7 @@ export default function HelperPage() {
   const [isOnline, setIsOnline] = useState(true)
   const [currentMode, setCurrentMode] = useState('AI Assistant')
   const [sessionStats, setSessionStats] = useState({ messagesCount: 0, tokensUsed: 0 })
+  const [showOnboarding, setShowOnboarding] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -186,8 +188,22 @@ export default function HelperPage() {
     }
   }, [messages.length])
 
+  const handleExampleClick = (query: string) => {
+    setInputMessage(query)
+    setShowOnboarding(false)
+    // Trigger send after setting the message
+    setTimeout(() => sendMessage(), 100)
+  }
+
+  const handleStartChat = () => {
+    setShowOnboarding(false)
+    inputRef.current?.focus()
+  }
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return
+
+    setShowOnboarding(false) // Hide onboarding when user starts chatting
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -367,6 +383,14 @@ export default function HelperPage() {
                 className="flex-1 px-3 sm:px-6 py-4 min-h-0"
               >
                 <div className="space-y-4 sm:space-y-6">
+                  {/* Show onboarding when no messages and onboarding is enabled */}
+                  {showOnboarding && messages.length === 0 && (
+                    <HelperOnboarding
+                      onExampleClick={handleExampleClick}
+                      onStartChat={handleStartChat}
+                    />
+                  )}
+
                   {messages.map((message) => (
                     <motion.div
                       key={message.id}
