@@ -91,6 +91,27 @@ export class TieredCacheService {
    */
   async set(key: string, value: any, ttlSeconds: number = 300): Promise<void> {
     try {
+      // Validate value before caching to prevent corruption
+      if (value === undefined) {
+        console.warn(`⚠️ Tiered cache: Refusing to cache undefined value for key: ${key}`)
+        return
+      }
+
+      // Test JSON serialization to prevent corruption
+      try {
+        const testSerialization = JSON.stringify(value)
+        if (testSerialization === '[object Object]' ||
+            testSerialization.includes('[object ') ||
+            testSerialization === 'undefined' ||
+            !testSerialization) {
+          console.error(`❌ Tiered cache: Invalid serialization for key ${key}: ${testSerialization}`)
+          return
+        }
+      } catch (serializationError) {
+        console.error(`❌ Tiered cache: Serialization test failed for key ${key}:`, serializationError)
+        return
+      }
+
       // Always set in L2 (Redis) for persistence
       await this.l2Cache.set(key, value, ttlSeconds)
       console.log(`💾 L2 cache set: ${key} (TTL: ${ttlSeconds}s)`)
@@ -101,6 +122,7 @@ export class TieredCacheService {
       }
     } catch (error) {
       console.error(`❌ Cache set error for key ${key}:`, error)
+      // Don't throw to prevent application crashes
     }
   }
 

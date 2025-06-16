@@ -326,6 +326,17 @@ class CacheService {
         if (value === null) {
           serializedValue = 'null'
         } else {
+          // Deep validation before serialization
+          if (typeof value === 'object' && value !== null) {
+            // Check for circular references and problematic objects
+            try {
+              JSON.stringify(value)
+            } catch (circularError) {
+              console.error(`❌ Circular reference detected for key: ${key}`, circularError)
+              return false
+            }
+          }
+
           // Perform JSON serialization
           serializedValue = JSON.stringify(value)
         }
@@ -335,8 +346,19 @@ class CacheService {
             serializedValue === '[object Object]' ||
             serializedValue === 'undefined' ||
             serializedValue === '[object Promise]' ||
-            serializedValue === '[object Function]') {
+            serializedValue === '[object Function]' ||
+            serializedValue.includes('[object ') ||
+            serializedValue === '{}' && typeof value !== 'object') {
           throw new Error(`Invalid serialization result: ${serializedValue}`)
+        }
+
+        // Additional validation for arrays and objects
+        if (Array.isArray(value) && !serializedValue.startsWith('[')) {
+          throw new Error(`Array serialization failed: ${serializedValue}`)
+        }
+
+        if (typeof value === 'object' && value !== null && !serializedValue.startsWith('{') && !Array.isArray(value)) {
+          throw new Error(`Object serialization failed: ${serializedValue}`)
         }
 
         // Test deserialization to ensure data integrity
@@ -362,25 +384,17 @@ class CacheService {
       } catch (serializationError) {
         console.error('❌ JSON serialization failed for key:', key, 'Error:', serializationError)
         console.error('❌ Value that failed to serialize:', {
-          value,
+          value: typeof value === 'object' ? '[Object]' : value,
           type: typeof value,
           isArray: Array.isArray(value),
           constructor: value?.constructor?.name,
-          keys: typeof value === 'object' && value !== null ? Object.keys(value) : 'N/A'
+          keys: typeof value === 'object' && value !== null ? Object.keys(value).slice(0, 5) : 'N/A',
+          stringified: String(value).slice(0, 100)
         })
 
-        // Create a safe fallback representation with more details
-        serializedValue = JSON.stringify({
-          error: 'serialization_failed',
-          originalType: typeof value,
-          isArray: Array.isArray(value),
-          constructor: value?.constructor?.name,
-          timestamp: Date.now(),
-          key: key,
-          errorMessage: serializationError instanceof Error ? serializationError.message : 'Unknown error'
-        })
-
-        console.warn(`⚠️ Using fallback serialization for key: ${key}`)
+        // Don't cache corrupted data - return false instead
+        console.error(`❌ Refusing to cache corrupted data for key: ${key}`)
+        return false
       }
 
       if (this.useUpstash && this.upstashRedis) {
@@ -395,8 +409,13 @@ class CacheService {
           }
 
           // Final validation before storing
-          if (serializedValue === '[object Object]') {
-            throw new Error('Refusing to store corrupted "[object Object]" data')
+          if (serializedValue === '[object Object]' ||
+              serializedValue.includes('[object ') ||
+              serializedValue === 'undefined' ||
+              !serializedValue ||
+              serializedValue.length === 0) {
+            console.error(`❌ Refusing to store corrupted data for key: ${key}, value: ${serializedValue}`)
+            return false
           }
 
           await this.upstashRedis.setex(key, ttlSeconds, serializedValue)

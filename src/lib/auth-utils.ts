@@ -17,17 +17,30 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthRe
   let userId: string | null = null
   let authMethod: 'supabase' | 'custom' | null = null
 
-  // Try Supabase authentication first
+  // Try Supabase authentication first with enhanced error handling
   try {
     const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!authError && user) {
-      userId = user.id
+    // Check for session first
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError) {
+      console.log('❌ Supabase session error:', sessionError.message)
+    } else if (session?.user) {
+      userId = session.user.id
       authMethod = 'supabase'
       console.log('✅ Authentication via Supabase session:', userId)
     } else {
-      console.log('❌ Supabase auth failed:', authError?.message || 'No user')
+      // Fallback to getUser if no session
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      if (!authError && user) {
+        userId = user.id
+        authMethod = 'supabase'
+        console.log('✅ Authentication via Supabase getUser:', userId)
+      } else {
+        console.log('❌ Supabase auth failed:', authError?.message || 'No user')
+      }
     }
   } catch (error) {
     console.log('❌ Supabase auth exception:', error instanceof Error ? error.message : 'Unknown error')

@@ -4,25 +4,45 @@ import { QuestService } from '@/lib/quest-service'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 Quest API: Fetching user quests')
     const userId = await getAuthenticatedUserId(request)
 
     if (!userId) {
+      console.log('❌ Quest API: No authenticated user')
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', message: 'Please log in to view quests' },
         { status: 401 }
       )
     }
 
-    const userQuests = await QuestService.getUserQuests(userId)
+    console.log('✅ Quest API: Authenticated user:', userId)
 
-    return NextResponse.json({
-      success: true,
-      quests: userQuests
-    })
+    try {
+      const userQuests = await QuestService.getUserQuests(userId)
+      console.log('✅ Quest API: Successfully fetched quests:', userQuests.length)
+
+      return NextResponse.json({
+        success: true,
+        quests: userQuests
+      })
+    } catch (questError) {
+      console.error('❌ Quest API: Error fetching user quests:', questError)
+      return NextResponse.json(
+        {
+          error: 'Failed to fetch quests',
+          message: 'Unable to load quest data. Please try again.',
+          details: questError instanceof Error ? questError.message : 'Unknown error'
+        },
+        { status: 500 }
+      )
+    }
   } catch (error) {
-    console.error('Error fetching quests:', error)
+    console.error('❌ Quest API: Unexpected error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch quests' },
+      {
+        error: 'Internal server error',
+        message: 'An unexpected error occurred. Please try again later.'
+      },
       { status: 500 }
     )
   }
@@ -30,16 +50,37 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔍 Quest API POST: Processing quest action')
     const userId = await getAuthenticatedUserId(request)
 
     if (!userId) {
+      console.log('❌ Quest API POST: No authenticated user')
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', message: 'Please log in to perform quest actions' },
         { status: 401 }
       )
     }
 
-    const { action, questId, submissionData } = await request.json()
+    let requestBody
+    try {
+      requestBody = await request.json()
+    } catch (parseError) {
+      console.error('❌ Quest API POST: Invalid JSON:', parseError)
+      return NextResponse.json(
+        { error: 'Invalid request', message: 'Request body must be valid JSON' },
+        { status: 400 }
+      )
+    }
+
+    const { action, questId, submissionData } = requestBody
+    console.log('✅ Quest API POST: Action:', action, 'QuestId:', questId, 'UserId:', userId)
+
+    if (!action) {
+      return NextResponse.json(
+        { error: 'Missing action', message: 'Action parameter is required' },
+        { status: 400 }
+      )
+    }
 
     switch (action) {
       case 'start':
