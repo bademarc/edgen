@@ -1,3 +1,19 @@
+/**
+ * LayerEdge Engagement Fix Validation Script
+ *
+ * Purpose: Validates the Twitter/oEmbed API integration fix implementation
+ * Usage: node scripts/validate-fix.cjs
+ *
+ * This script:
+ * - Checks environment configuration
+ * - Tests oEmbed and Twitter API connectivity
+ * - Validates engagement system files
+ * - Tests points calculation logic
+ * - Provides deployment recommendations
+ *
+ * Essential for production deployment validation.
+ */
+
 const { config } = require('dotenv')
 
 // Load environment variables

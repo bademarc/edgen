@@ -1,5 +1,15 @@
 -- LayerEdge Database Constraint Fixes
--- Resolves foreign key constraint violations and system user issues
+--
+-- Purpose: Resolves foreign key constraint violations and system user issues
+-- Usage: Run this directly in your Supabase SQL editor
+--
+-- This script:
+-- - Creates system and admin users
+-- - Fixes orphaned records
+-- - Validates data integrity
+-- - Creates utility functions for safe operations
+--
+-- Run when experiencing database constraint violations.
 
 -- 1. Create system user if it doesn't exist
 INSERT INTO "User" (

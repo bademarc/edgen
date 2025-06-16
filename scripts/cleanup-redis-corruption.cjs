@@ -1,9 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * Redis Corruption Cleanup Script
- * Cleans up corrupted Redis data and resets circuit breakers
- * Uses the new simplified services
+ * LayerEdge Redis Corruption Cleanup Script
+ *
+ * Purpose: Cleans up corrupted Redis data and resets circuit breakers
+ * Usage: node scripts/cleanup-redis-corruption.cjs
+ *
+ * This script:
+ * - Tests Redis connection
+ * - Cleans up corrupted keys
+ * - Resets circuit breaker states
+ * - Clears rate limiting data
+ *
+ * Use when experiencing Redis-related errors or circuit breaker issues.
  */
 
 const dotenv = require('dotenv')

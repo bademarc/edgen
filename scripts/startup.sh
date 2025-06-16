@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# LayerEdge Production Startup Script
+#
+# Purpose: Handles production environment setup and application startup
+# Usage: Called automatically during container startup
+#
+# This script:
+# - Installs Playwright browsers for web scraping
+# - Validates environment variables
+# - Handles database migrations with baseline support
+# - Generates Prisma client
+# - Starts the Next.js application
+#
+# Essential for production deployment.
+
 echo "🚀 Starting LayerEdge Community Platform..."
 
 # Check if we're in production

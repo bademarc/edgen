@@ -1,3 +1,19 @@
+/**
+ * LayerEdge Engagement Fix Testing Script
+ *
+ * Purpose: Tests the engagement tracking system with real database data
+ * Usage: node scripts/test-engagement-fix.cjs
+ *
+ * This script:
+ * - Identifies tweets with zero engagement
+ * - Simulates engagement updates and point calculations
+ * - Tests database operations for engagement tracking
+ * - Validates Twitter API connectivity
+ * - Provides engagement statistics
+ *
+ * Use for testing engagement system functionality in production.
+ */
+
 const { config } = require('dotenv')
 const { PrismaClient } = require('@prisma/client')
 
