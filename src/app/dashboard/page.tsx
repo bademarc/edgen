@@ -9,9 +9,9 @@ import {
   TrendingUp,
   Activity,
   Target,
-  Calendar
+  Calendar,
+  RotateCcw
 } from 'lucide-react'
-import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -368,7 +368,7 @@ export default function DashboardPage() {
                     className="h-8 w-8 p-0"
                     title="Refresh contributions"
                   >
-                    <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
               </CardHeader>

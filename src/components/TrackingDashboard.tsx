@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
-  ChartBarIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ArrowPathIcon,
-  MagnifyingGlassIcon,
-  CpuChipIcon
-} from '@heroicons/react/24/outline'
+  BarChart3,
+  Clock,
+  CheckCircle,
+  XCircle,
+  RotateCcw,
+  Search,
+  Cpu
+} from 'lucide-react'
 
 interface TrackingStatus {
   isRunning: boolean
@@ -88,7 +88,7 @@ export default function TrackingDashboard() {
     return (
       <div className="card-layeredge p-8">
         <div className="flex items-center justify-center">
-          <ArrowPathIcon className="h-8 w-8 animate-spin text-layeredge-orange" />
+          <RotateCcw className="h-8 w-8 animate-spin text-layeredge-orange" />
           <span className="ml-2 text-foreground">Loading tracking status...</span>
         </div>
       </div>
@@ -99,7 +99,7 @@ export default function TrackingDashboard() {
     return (
       <div className="card-layeredge p-8">
         <div className="text-center">
-          <XCircleIcon className="h-12 w-12 mx-auto text-red-500 mb-4" />
+          <XCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">Error Loading Status</h3>
           <p className="text-muted-foreground mb-4">{error || 'Unknown error occurred'}</p>
           <button onClick={fetchStatus} className="btn-layeredge-primary">
@@ -123,7 +123,7 @@ export default function TrackingDashboard() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                <CpuChipIcon className="h-5 w-5 text-layeredge-orange" />
+                <Cpu className="h-5 w-5 text-layeredge-orange" />
                 Tweet Tracking System
               </h2>
               <p className="text-muted-foreground mt-1">
@@ -137,9 +137,9 @@ export default function TrackingDashboard() {
                   : 'bg-red-500/20 text-red-400 border border-red-500/30'
               }`}>
                 {status.isRunning ? (
-                  <CheckCircleIcon className="h-3 w-3" />
+                  <CheckCircle className="h-3 w-3" />
                 ) : (
-                  <XCircleIcon className="h-3 w-3" />
+                  <XCircle className="h-3 w-3" />
                 )}
                 {status.isRunning ? 'Running' : 'Stopped'}
               </span>
@@ -149,7 +149,7 @@ export default function TrackingDashboard() {
                 disabled={refreshing}
               >
                 {refreshing ? (
-                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                  <RotateCcw className="h-4 w-4 animate-spin" />
                 ) : (
                   'Refresh'
                 )}
@@ -197,7 +197,7 @@ export default function TrackingDashboard() {
           transition={{ duration: 0.5, delay: 0.1 }}
         >
           <h3 className="text-lg font-medium text-foreground flex items-center gap-2 mb-4">
-            <ChartBarIcon className="h-4 w-4 text-layeredge-blue" />
+            <BarChart3 className="h-4 w-4 text-layeredge-blue" />
             Total Tweets
           </h3>
           <div className="text-3xl font-bold text-layeredge-blue">
@@ -213,7 +213,7 @@ export default function TrackingDashboard() {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <h3 className="text-lg font-medium text-foreground flex items-center gap-2 mb-4">
-            <CheckCircleIcon className="h-4 w-4 text-green-400" />
+            <CheckCircle className="h-4 w-4 text-green-400" />
             Claimed Tweets
           </h3>
           <div className="text-3xl font-bold text-green-400">
@@ -229,7 +229,7 @@ export default function TrackingDashboard() {
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           <h3 className="text-lg font-medium text-foreground flex items-center gap-2 mb-4">
-            <MagnifyingGlassIcon className="h-4 w-4 text-layeredge-orange" />
+            <Search className="h-4 w-4 text-layeredge-orange" />
             Unclaimed Tweets
           </h3>
           <div className="text-3xl font-bold text-layeredge-orange">
@@ -248,7 +248,7 @@ export default function TrackingDashboard() {
       >
         <div className="p-6">
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2 mb-4">
-            <ChartBarIcon className="h-5 w-5 text-layeredge-orange" />
+            <BarChart3 className="h-5 w-5 text-layeredge-orange" />
             Method Performance
           </h2>
           <p className="text-muted-foreground mb-6">
@@ -257,7 +257,7 @@ export default function TrackingDashboard() {
 
           {status.stats.methodStats.length === 0 ? (
             <div className="text-center py-8">
-              <ClockIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No data yet</h3>
               <p className="text-muted-foreground">
                 Method performance data will appear after the system runs for a while.

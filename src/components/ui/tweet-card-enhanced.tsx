@@ -3,14 +3,14 @@
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  HeartIcon,
-  ArrowPathRoundedSquareIcon,
-  ChatBubbleLeftIcon,
-  SparklesIcon,
-  CalendarIcon,
-  UserIcon,
-  ArrowPathIcon
-} from '@heroicons/react/24/outline'
+  Heart,
+  RotateCcw,
+  MessageCircle,
+  Sparkles,
+  Calendar,
+  User,
+  RotateCcw as ArrowPath
+} from 'lucide-react'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader } from './card'
@@ -148,7 +148,7 @@ export function TweetCardEnhanced({
               className="absolute inset-0 bg-card/50 backdrop-blur-sm rounded-lg flex items-center justify-center z-10"
             >
               <div className="flex items-center space-x-2 text-layeredge-blue">
-                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                <ArrowPath className="h-5 w-5 animate-spin" />
                 <span className="text-sm font-medium">Updating metrics...</span>
               </div>
             </motion.div>
@@ -169,7 +169,7 @@ export function TweetCardEnhanced({
                   />
                 ) : (
                   <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center ring-2 ring-border">
-                    <UserIcon className="h-6 w-6 text-muted-foreground" />
+                    <User className="h-6 w-6 text-muted-foreground" />
                   </div>
                 )}
               </div>
@@ -185,7 +185,7 @@ export function TweetCardEnhanced({
                   )}
                 </div>
                 <div className="flex items-center space-x-2 mt-1">
-                  <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                  <Calendar className="h-3 w-3 text-muted-foreground" />
                   <p className="text-xs text-muted-foreground">
                     {formatDate(tweet.createdAt)}
                   </p>
@@ -209,7 +209,7 @@ export function TweetCardEnhanced({
                 className="flex items-center space-x-1"
                 animate={showChanges.likes ? { scale: [1, 1.1, 1] } : {}}
               >
-                <HeartIcon className="h-4 w-4 text-muted-foreground" />
+                <Heart className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">{formatNumber(tweet.likes)}</span>
               </motion.div>
 
@@ -217,7 +217,7 @@ export function TweetCardEnhanced({
                 className="flex items-center space-x-1"
                 animate={showChanges.retweets ? { scale: [1, 1.1, 1] } : {}}
               >
-                <ArrowPathRoundedSquareIcon className="h-4 w-4 text-muted-foreground" />
+                <RotateCcw className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">{formatNumber(tweet.retweets)}</span>
               </motion.div>
 
@@ -225,7 +225,7 @@ export function TweetCardEnhanced({
                 className="flex items-center space-x-1"
                 animate={showChanges.replies ? { scale: [1, 1.1, 1] } : {}}
               >
-                <ChatBubbleLeftIcon className="h-4 w-4 text-muted-foreground" />
+                <MessageCircle className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">{formatNumber(tweet.replies)}</span>
               </motion.div>
             </div>
@@ -234,7 +234,7 @@ export function TweetCardEnhanced({
               animate={showChanges.totalPoints ? { scale: [1, 1.1, 1] } : {}}
             >
               <Badge variant="points" size="lg">
-                <SparklesIcon className="h-3 w-3 mr-1" />
+                <Sparkles className="h-3 w-3 mr-1" />
                 {formatNumber(tweet.totalPoints)} pts
               </Badge>
             </motion.div>
@@ -264,7 +264,7 @@ export function TweetCardEnhanced({
                 onClick={handleUpdateEngagement}
                 disabled={isUpdating}
               >
-                <ArrowPathIcon className="h-3 w-3 mr-1" />
+                <ArrowPath className="h-3 w-3 mr-1" />
                 Update
               </Button>
             )}
