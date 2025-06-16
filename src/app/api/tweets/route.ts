@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent, verifyTweetAuthor, extractUsernameFromTweetUrl } from '@/lib/utils'
 import { getFallbackService } from '@/lib/fallback-service'
 import { TweetErrorHandler, createErrorResponse } from '@/lib/tweet-error-handler'
+import { getEnhancedContentValidator } from '@/lib/enhanced-content-validator'
 
 export async function GET(request: NextRequest) {
   try {
@@ -189,19 +190,58 @@ export async function POST(request: NextRequest) {
       console.log(`Warning: Tweet may not be from LayerEdge community, but proceeding with content validation`)
     }
 
-    // Validate tweet content for required keywords
-    console.log(`Validating tweet content: "${tweetData.content}"`)
-    const isValidContent = validateTweetContent(tweetData.content)
-    if (!isValidContent) {
-      console.log(`Content validation failed for tweet: "${tweetData.content}"`)
-      const errorResponse = TweetErrorHandler.handleContentValidation(tweetData.content)
+    // ENHANCED FUD DETECTION - Validate content for harmful material
+    console.log(`🛡️ Performing enhanced FUD detection on tweet content: "${tweetData.content}"`)
+    const contentValidator = getEnhancedContentValidator()
+    const contentValidation = await contentValidator.validateContent(tweetData.content, {
+      enableFUDDetection: true,
+      enableAdvancedFUDDetection: true,
+      strictMode: false,
+      requireLayerEdgeKeywords: true,
+      allowWarnings: true
+    })
+
+    // Log validation result in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 FUD validation result:', {
+        allowSubmission: contentValidation.allowSubmission,
+        isValid: contentValidation.isValid,
+        isBlocked: contentValidation.fudAnalysis?.isBlocked,
+        isWarning: contentValidation.fudAnalysis?.isWarning,
+        score: contentValidation.fudAnalysis?.score
+      })
+    }
+
+    // Block submission if FUD is detected or content is invalid
+    if (!contentValidation.allowSubmission || !contentValidation.isValid) {
+      console.log(`🚫 Content validation failed for tweet: "${tweetData.content}"`)
+      console.log(`🚫 Reason: ${contentValidation.message}`)
+
+      // Create appropriate error response based on validation result
+      let errorMessage = contentValidation.message
+      if (contentValidation.fudAnalysis?.isBlocked) {
+        errorMessage = `Content blocked due to FUD detection: ${contentValidation.fudAnalysis.message}`
+      }
+
+      const errorResponse = TweetErrorHandler.handleContentValidation(errorMessage)
       return NextResponse.json(
         createErrorResponse(errorResponse),
         { status: errorResponse.httpStatus }
       )
     }
 
-    console.log('Content validation passed!')
+    // Also run legacy validation for backward compatibility
+    const legacyValidation = validateTweetContent(tweetData.content)
+    if (!legacyValidation.isValid) {
+      console.log(`📋 Legacy content validation failed for tweet: "${tweetData.content}"`)
+      const errorResponse = TweetErrorHandler.handleContentValidation(legacyValidation.reason || 'Content does not meet LayerEdge requirements')
+      return NextResponse.json(
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
+      )
+    }
+
+    console.log('✅ Enhanced content validation passed!')
 
     const basePoints = 5
     const totalPoints = calculatePoints({
