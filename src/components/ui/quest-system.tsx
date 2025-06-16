@@ -7,16 +7,16 @@ import { Badge } from './badge'
 import { Button } from './button'
 import { QuestCard } from './quest-card'
 import {
-  TrophyIcon,
-  SparklesIcon,
-  ClockIcon,
-  CheckIcon,
-  ArrowPathIcon
-} from '@heroicons/react/24/outline'
+  Trophy,
+  Sparkles,
+  Clock,
+  Check,
+  RotateCcw
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserQuestData } from '@/lib/quest-service'
 import { toast } from 'sonner'
-import { QuestRotationService, QUEST_DIFFICULTY_CONFIG } from '@/lib/quest-templates'
+
 
 interface QuestSystemProps {
   className?: string
@@ -26,11 +26,7 @@ export function QuestSystem({ className }: QuestSystemProps) {
   const [quests, setQuests] = useState<UserQuestData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
-  const [questRotation, setQuestRotation] = useState({
-    daily: QuestRotationService.getDailyQuests(),
-    weekly: QuestRotationService.getWeeklyQuests(),
-    special: QuestRotationService.getSpecialQuests(new Date(), 0)
-  })
+
 
   useEffect(() => {
     fetchQuests()
@@ -129,7 +125,7 @@ export function QuestSystem({ className }: QuestSystemProps) {
     return (
       <div className={cn("space-y-6", className)}>
         <div className="flex items-center justify-center py-12">
-          <ArrowPathIcon className="h-8 w-8 animate-spin text-primary" />
+          <RotateCcw className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     )
@@ -141,7 +137,7 @@ export function QuestSystem({ className }: QuestSystemProps) {
       <Card variant="layeredge">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <TrophyIcon className="h-6 w-6 text-primary" />
+            <Trophy className="h-6 w-6 text-primary" />
             <span>Quest Progress</span>
           </CardTitle>
         </CardHeader>
@@ -219,87 +215,7 @@ export function QuestSystem({ className }: QuestSystemProps) {
         </div>
       </div>
 
-      {/* Quest Rotation Preview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {/* Daily Quests */}
-        <Card className="border-blue-200 dark:border-blue-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center space-x-2 text-blue-600">
-              <CalendarIcon className="h-5 w-5" />
-              <span>Daily Quests</span>
-              <Badge variant="outline" className="text-xs">
-                {questRotation.daily.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {questRotation.daily.slice(0, 2).map((quest, index) => (
-              <div key={quest.id} className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{quest.title}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {quest.points}pts
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
 
-        {/* Weekly Quests */}
-        <Card className="border-purple-200 dark:border-purple-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center space-x-2 text-purple-600">
-              <FireIcon className="h-5 w-5" />
-              <span>Weekly Quests</span>
-              <Badge variant="outline" className="text-xs">
-                {questRotation.weekly.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {questRotation.weekly.slice(0, 2).map((quest, index) => (
-              <div key={quest.id} className="p-2 bg-purple-50 dark:bg-purple-950/30 rounded text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{quest.title}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {quest.points}pts
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Special Quests */}
-        <Card className="border-yellow-200 dark:border-yellow-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center space-x-2 text-yellow-600">
-              <StarIcon className="h-5 w-5" />
-              <span>Special Quests</span>
-              <Badge variant="outline" className="text-xs">
-                {questRotation.special.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {questRotation.special.length > 0 ? (
-              questRotation.special.slice(0, 2).map((quest, index) => (
-                <div key={quest.id} className="p-2 bg-yellow-50 dark:bg-yellow-950/30 rounded text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{quest.title}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {quest.points}pts
-                    </Badge>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-muted-foreground">No special quests available</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Quest Grid */}
       {quests.length > 0 ? (
@@ -319,7 +235,7 @@ export function QuestSystem({ className }: QuestSystemProps) {
       ) : (
         <Card>
           <CardContent className="text-center py-12">
-            <TrophyIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No Quests Available</h3>
             <p className="text-muted-foreground">
               Check back later for new quests and opportunities to earn points!

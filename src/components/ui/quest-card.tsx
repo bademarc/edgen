@@ -10,16 +10,16 @@ import { Input } from './input'
 import { Textarea } from './textarea'
 import { Label } from './label'
 import {
-  CheckIcon,
-  ClockIcon,
-  LockClosedIcon,
-  SparklesIcon,
-  UserPlusIcon,
-  ChatBubbleLeftRightIcon,
-  HeartIcon,
-  ShareIcon,
-  ArrowTopRightOnSquareIcon
-} from '@heroicons/react/24/outline'
+  Check,
+  Clock,
+  Lock,
+  Sparkles,
+  UserPlus,
+  MessageCircle,
+  Heart,
+  Share,
+  ExternalLink
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { UserQuestData } from '@/lib/quest-service'
 
@@ -33,13 +33,13 @@ interface QuestCardProps {
 }
 
 const questIcons = {
-  follow: UserPlusIcon,
-  follow_redirect: UserPlusIcon,
-  join_community: HeartIcon,
-  community_redirect: HeartIcon,
-  engage_tweet: ChatBubbleLeftRightIcon,
-  custom: SparklesIcon,
-  referral: ShareIcon
+  follow: UserPlus,
+  follow_redirect: UserPlus,
+  join_community: Heart,
+  community_redirect: Heart,
+  engage_tweet: MessageCircle,
+  custom: Sparkles,
+  referral: Share
 }
 
 const statusColors = {
@@ -60,7 +60,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoa
   const [submissionData, setSubmissionData] = useState<any>({})
   const [showSubmissionForm, setShowSubmissionForm] = useState(false)
 
-  const Icon = questIcons[quest.quest.type as keyof typeof questIcons] || SparklesIcon
+  const Icon = questIcons[quest.quest.type as keyof typeof questIcons] || Sparkles
   const progress = quest.maxProgress > 0 ? (quest.progress / quest.maxProgress) * 100 : 0
   const statusBadge = statusBadges[quest.status]
 
@@ -221,7 +221,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoa
             disabled={isLoading || !redirectUrl}
             className="w-full"
           >
-            <ArrowTopRightOnSquareIcon className="h-4 w-4 mr-2" />
+            <ExternalLink className="h-4 w-4 mr-2" />
             Visit & Earn {quest.quest.points} Points
           </Button>
         )
@@ -327,7 +327,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoa
                   : "text-muted-foreground border-muted bg-muted/20"
               )}>
                 {quest.status === 'claimed' ? (
-                  <CheckIcon className="h-6 w-6" />
+                  <Check className="h-6 w-6" />
                 ) : (
                   <Icon className="h-6 w-6" />
                 )}

@@ -6,10 +6,10 @@ import { useAuth } from '@/components/AuthProvider'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  TrophyIcon,
-  SparklesIcon,
-  RocketLaunchIcon
-} from '@heroicons/react/24/outline'
+  Trophy,
+  Sparkles,
+  Rocket
+} from 'lucide-react'
 import Link from 'next/link'
 
 export default function QuestsPage() {
@@ -40,7 +40,7 @@ export default function QuestsPage() {
             <div className="mb-12">
               <div className="flex justify-center mb-6">
                 <div className="p-4 rounded-full bg-primary/10 border border-primary/20">
-                  <TrophyIcon className="h-12 w-12 text-primary" />
+                  <Trophy className="h-12 w-12 text-primary" />
                 </div>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
@@ -55,7 +55,7 @@ export default function QuestsPage() {
             <div className="grid md:grid-cols-3 gap-6 mb-12">
               <Card variant="layeredge">
                 <CardContent className="p-6 text-center">
-                  <SparklesIcon className="h-8 w-8 text-primary mx-auto mb-3" />
+                  <Sparkles className="h-8 w-8 text-primary mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">Earn Points</h3>
                   <p className="text-sm text-muted-foreground">
                     Complete quests to earn up to 1000+ points each and climb the leaderboard.
@@ -65,7 +65,7 @@ export default function QuestsPage() {
 
               <Card variant="layeredge">
                 <CardContent className="p-6 text-center">
-                  <RocketLaunchIcon className="h-8 w-8 text-primary mx-auto mb-3" />
+                  <Rocket className="h-8 w-8 text-primary mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">Join Community</h3>
                   <p className="text-sm text-muted-foreground">
                     Connect with LayerEdge on X and join our growing community of AI enthusiasts.
@@ -75,7 +75,7 @@ export default function QuestsPage() {
 
               <Card variant="layeredge">
                 <CardContent className="p-6 text-center">
-                  <TrophyIcon className="h-8 w-8 text-primary mx-auto mb-3" />
+                  <Trophy className="h-8 w-8 text-primary mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">Unlock Rewards</h3>
                   <p className="text-sm text-muted-foreground">
                     Earn achievements and unlock exclusive rewards as you progress through quests.
@@ -125,7 +125,7 @@ export default function QuestsPage() {
         >
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-              <TrophyIcon className="h-6 w-6 text-primary" />
+              <Trophy className="h-6 w-6 text-primary" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground">Quests</h1>
