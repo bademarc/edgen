@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { QuestSystem } from '@/components/ui/quest-system'
+import { QuestErrorBoundary } from '@/components/ui/quest-error-boundary'
 import { useAuth } from '@/components/AuthProvider'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,7 +21,7 @@ export default function QuestsPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Loading quest system...</p>
         </div>
       </div>
     )
@@ -115,29 +116,31 @@ export default function QuestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <motion.div
-          className="mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-              <Trophy className="h-6 w-6 text-primary" />
+    <QuestErrorBoundary>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                <Trophy className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Quests</h1>
+                <p className="text-muted-foreground">
+                  Complete quests to earn points and grow the LayerEdge community
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Quests</h1>
-              <p className="text-muted-foreground">
-                Complete quests to earn points and grow the LayerEdge community
-              </p>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        <QuestSystem />
+          <QuestSystem />
+        </div>
       </div>
-    </div>
+    </QuestErrorBoundary>
   )
 }

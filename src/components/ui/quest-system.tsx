@@ -40,8 +40,13 @@ export function QuestSystem({ className }: QuestSystemProps) {
 
       if (data.success) {
         setQuests(data.quests)
+      } else if (response.status === 401) {
+        // Authentication required - this is expected for unauthenticated users
+        console.log('Authentication required for quests')
+        setQuests([])
       } else {
-        toast.error('Failed to load quests')
+        console.error('Quest fetch error:', data)
+        toast.error(data.message || 'Failed to load quests')
       }
     } catch (error) {
       console.error('Error fetching quests:', error)
