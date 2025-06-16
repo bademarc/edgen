@@ -18,8 +18,8 @@ import {
   SparklesIcon,
   CalendarIcon,
   UserIcon,
-  ActivityIcon,
-  TrendingUpIcon
+  ChartBarIcon,
+  ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline'
 import { formatNumber } from '@/lib/utils'
 
@@ -125,7 +125,7 @@ export function UserProfileModal({ user, isOpen, onClose }: UserProfileModalProp
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <ActivityIcon className="h-5 w-5 text-blue-500" />
+                  <ChartBarIcon className="h-5 w-5 text-blue-500" />
                 </div>
                 <div className="text-2xl font-bold">{user.tweetsCount}</div>
                 <p className="text-xs text-muted-foreground">Contributions</p>
@@ -135,7 +135,7 @@ export function UserProfileModal({ user, isOpen, onClose }: UserProfileModalProp
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <TrendingUpIcon className="h-5 w-5 text-green-500" />
+                  <ArrowTrendingUpIcon className="h-5 w-5 text-green-500" />
                 </div>
                 <div className="text-2xl font-bold">{averagePointsPerTweet}</div>
                 <p className="text-xs text-muted-foreground">Avg/Tweet</p>
