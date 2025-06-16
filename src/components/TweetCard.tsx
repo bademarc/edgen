@@ -2,12 +2,12 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Heart,
-  RotateCcw,
+  RotateCw,
   MessageCircle,
   Sparkles,
   Calendar,
   User,
-  RotateCcw as ArrowPath
+  RotateCw as ArrowPath
 } from 'lucide-react'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
@@ -237,7 +237,7 @@ export const TweetCard = memo(function TweetCard({
             animate={showChanges.retweets ? { scale: [1, 1.05, 1] } : {}}
             transition={{ duration: 0.3 }}
           >
-            <RotateCcw className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            <RotateCw className="h-4 w-4 group-hover:scale-110 transition-transform" />
             <span className="font-medium">{formatNumber(tweet.retweets)}</span>
             <AnimatePresence>
               {showChanges.retweets && (

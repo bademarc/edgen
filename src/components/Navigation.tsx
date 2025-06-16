@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -14,7 +14,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu"
-import { Menu, X, Home, BarChart3, MessageSquare, Trophy, HelpCircle, FileText, User, LogOut, Target } from "lucide-react"
+import { Menu, Home, BarChart3, MessageSquare, Trophy, HelpCircle, FileText, User, LogOut, Target } from "lucide-react"
 import { cn } from '@/lib/utils'
 import {
   Sheet,

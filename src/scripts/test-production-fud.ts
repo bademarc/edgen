@@ -113,8 +113,8 @@ async function testProductionFUD() {
   } catch (error) {
     console.error('❌ Test failed with error:', error)
     console.log('\n🔧 Error Details:')
-    console.log('   Message:', error.message)
-    console.log('   Stack:', error.stack)
+    console.log('   Message:', error instanceof Error ? error.message : String(error))
+    console.log('   Stack:', error instanceof Error ? error.stack : 'No stack trace available')
   }
 }
 

@@ -7,13 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
   TrophyIcon,
-  SparklesIcon,
-  FireIcon,
-  StarIcon,
-  BoltIcon,
-  HeartIcon,
-  RocketLaunchIcon,
-  CrownIcon
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 export interface UserBadge {

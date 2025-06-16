@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageSquare,
-  RotateCcw,
+  RotateCw,
   Filter,
   Search,
   ChevronDown,
@@ -339,7 +339,7 @@ export default function RecentSubmissionsPage() {
                   className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
                   title="Refresh tweets"
                 >
-                  <RotateCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <RotateCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>

@@ -1,11 +1,11 @@
-import { TwitterApi } from 'twitter-api-v2'
+import { TwitterApi, TwitterApiReadOnly } from 'twitter-api-v2'
 
 /**
  * Comprehensive API Testing Service
  * Tests both oEmbed and Twitter API integration for engagement metrics
  */
 export class ApiTestService {
-  private twitterClient: TwitterApi | null = null
+  private twitterClient: TwitterApiReadOnly | null = null
   
   constructor() {
     this.initializeTwitterApi()
@@ -254,8 +254,8 @@ export class ApiTestService {
     }
 
     const comparison = {
-      oembedHasEngagement,
-      twitterApiHasEngagement,
+      oembedHasEngagement: !!oembedHasEngagement,
+      twitterApiHasEngagement: !!twitterApiHasEngagement,
       recommendedApproach
     }
 

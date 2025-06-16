@@ -7,12 +7,12 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
+
 import { HelperOnboarding } from '@/components/ui/helper-onboarding'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -20,7 +20,7 @@ import {
   Bot,
   User,
   Loader2,
-  MessageCircle,
+
   Sparkles,
   RefreshCw,
   AlertCircle,

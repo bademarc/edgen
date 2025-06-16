@@ -24,7 +24,7 @@ import {
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl, extractUsernameFromTweetUrl } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'
@@ -720,7 +720,7 @@ export default function SubmitPage() {
                   </Badge>
                 </div>
                 <p className="text-sm mb-3">
-                  Your tweet has been added to the system and you've earned points!
+                  Your tweet has been added to the system and you&apos;ve earned points!
                   Bonus points will be added as the tweet receives engagement.
                 </p>
                 <div className="flex items-center space-x-2 text-xs">
@@ -761,7 +761,7 @@ export default function SubmitPage() {
                       <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                       <div>
                         <div className="font-semibold text-primary">@layeredge</div>
-                        <div className="text-xs text-muted-foreground">e.g., "Check out @layeredge!"</div>
+                        <div className="text-xs text-muted-foreground">e.g., &ldquo;Check out @layeredge!&rdquo;</div>
                       </div>
                     </div>
                     <div className="text-center text-sm text-muted-foreground font-medium">OR</div>
@@ -769,12 +769,12 @@ export default function SubmitPage() {
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                       <div>
                         <div className="font-semibold text-blue-500">$EDGEN</div>
-                        <div className="text-xs text-muted-foreground">e.g., "Bullish on $EDGEN"</div>
+                        <div className="text-xs text-muted-foreground">e.g., &ldquo;Bullish on $EDGEN&rdquo;</div>
                       </div>
                     </div>
                     <Alert className="border-green-500/20 bg-green-500/5">
                       <AlertDescription className="text-xs text-green-600 dark:text-green-400">
-                        💡 Case doesn't matter - both uppercase and lowercase work
+                        💡 Case doesn&apos;t matter - both uppercase and lowercase work
                       </AlertDescription>
                     </Alert>
                   </CardContent>

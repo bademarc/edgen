@@ -5,6 +5,23 @@ import { QuestService } from '@/lib/quest-service'
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Quest API: Fetching user quests')
+
+    // Test database connection first
+    try {
+      await QuestService.testConnection()
+      console.log('✅ Quest API: Database connection verified')
+    } catch (dbError) {
+      console.error('❌ Quest API: Database connection failed:', dbError)
+      return NextResponse.json(
+        {
+          error: 'Database connection failed',
+          message: 'Unable to connect to the database. Please try again later.',
+          details: dbError instanceof Error ? dbError.message : 'Database connection error'
+        },
+        { status: 503 }
+      )
+    }
+
     const userId = await getAuthenticatedUserId(request)
 
     if (!userId) {
@@ -20,6 +37,25 @@ export async function GET(request: NextRequest) {
     try {
       const userQuests = await QuestService.getUserQuests(userId)
       console.log('✅ Quest API: Successfully fetched quests:', userQuests.length)
+
+      // If no quests found, try to initialize default quests
+      if (userQuests.length === 0) {
+        console.log('⚠️ Quest API: No quests found, attempting to initialize defaults...')
+        try {
+          await QuestService.initializeDefaultQuests()
+          const retryQuests = await QuestService.getUserQuests(userId)
+          console.log('✅ Quest API: Initialized and fetched quests:', retryQuests.length)
+
+          return NextResponse.json({
+            success: true,
+            quests: retryQuests,
+            initialized: true
+          })
+        } catch (initError) {
+          console.error('❌ Quest API: Failed to initialize default quests:', initError)
+          // Continue with empty array rather than failing
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -41,7 +77,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: 'An unexpected error occurred. Please try again later.'
+        message: 'An unexpected error occurred. Please try again later.',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     )

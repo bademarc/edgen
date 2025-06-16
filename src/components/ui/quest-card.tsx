@@ -14,7 +14,7 @@ import {
   Clock,
   Lock,
   Sparkles,
-  UserPlus,
+  Users,
   MessageCircle,
   Heart,
   Share,
@@ -33,8 +33,8 @@ interface QuestCardProps {
 }
 
 const questIcons = {
-  follow: UserPlus,
-  follow_redirect: UserPlus,
+  follow: Users,
+  follow_redirect: Users,
   join_community: Heart,
   community_redirect: Heart,
   engage_tweet: MessageCircle,
@@ -187,7 +187,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoa
     if (quest.status === 'claimed') {
       return (
         <Button variant="layeredge" disabled className="w-full">
-          <CheckIcon className="h-4 w-4 mr-2" />
+          <Check className="h-4 w-4 mr-2" />
           Claimed
         </Button>
       )
@@ -201,7 +201,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoa
           disabled={isLoading}
           className="w-full"
         >
-          <SparklesIcon className="h-4 w-4 mr-2" />
+          <Sparkles className="h-4 w-4 mr-2" />
           Claim {quest.quest.points} Points
         </Button>
       )
@@ -288,7 +288,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoa
           className="inline-flex items-center text-sm text-primary hover:underline"
         >
           Visit @LayerEdge
-          <ArrowTopRightOnSquareIcon className="h-3 w-3 ml-1" />
+          <ExternalLink className="h-3 w-3 ml-1" />
         </a>
       )
     }
@@ -302,7 +302,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoa
           className="inline-flex items-center text-sm text-primary hover:underline"
         >
           Join Community
-          <ArrowTopRightOnSquareIcon className="h-3 w-3 ml-1" />
+          <ExternalLink className="h-3 w-3 ml-1" />
         </a>
       )
     }
@@ -339,7 +339,7 @@ export function QuestCard({ quest, onStart, onSubmit, onClaim, onRedirect, isLoa
                     {statusBadge.text}
                   </Badge>
                   <Badge variant="points" size="sm">
-                    <SparklesIcon className="h-3 w-3 mr-1" />
+                    <Sparkles className="h-3 w-3 mr-1" />
                     {quest.quest.points}
                   </Badge>
                 </div>

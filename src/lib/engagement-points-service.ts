@@ -1,5 +1,5 @@
 import { prisma } from './db'
-import { TwitterApi } from 'twitter-api-v2'
+import { TwitterApi, TwitterApiReadOnly } from 'twitter-api-v2'
 import { extractTweetId, calculatePoints } from './utils'
 
 interface EngagementUpdate {
@@ -16,7 +16,7 @@ interface EngagementUpdate {
  * Fixes the issue where users don't get points due to API rate limits
  */
 export class EngagementPointsService {
-  private twitterClient: TwitterApi | null = null
+  private twitterClient: TwitterApiReadOnly | null = null
   private isRateLimited = false
   private rateLimitResetTime = 0
 

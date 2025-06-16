@@ -19,6 +19,8 @@
     "cleanup:unclaimed": "node scripts/cleanup-unclaimed-tweets.cjs",
     "validate:engagement": "node scripts/validate-fix.cjs",
     "test:engagement": "node scripts/test-engagement-fix.cjs",
+    "quest:init": "node scripts/initialize-quests.mjs",
+    "quest:test": "node scripts/test-quest-api.js",
     "services:start": "curl -X POST http://localhost:3000/api/services/status -H 'Content-Type: application/json' -d '{\"action\":\"start\"}'",
     "services:stop": "curl -X POST http://localhost:3000/api/services/status -H 'Content-Type: application/json' -d '{\"action\":\"stop\"}'",
     "services:restart": "curl -X POST http://localhost:3000/api/services/status -H 'Content-Type: application/json' -d '{\"action\":\"restart\"}'",

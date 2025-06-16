@@ -9,6 +9,8 @@ import { QuestCard } from '@/components/ui/quest-card'
 
 // Mock quest data for testing
 const mockQuest = {
+  id: 'test-user-quest-id',
+  userId: 'test-user-id',
   questId: 'test-quest',
   quest: {
     id: 'test',
@@ -16,15 +18,24 @@ const mockQuest = {
     description: 'Test quest description',
     type: 'follow' as const,
     points: 100,
-    metadata: {}
+    isActive: true,
+    sortOrder: 1,
+    metadata: {},
+    requiresManualVerification: false,
+    autoVerifiable: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
   },
   status: 'not_started' as const,
   progress: 0,
   maxProgress: 1,
-  startedAt: null,
   completedAt: null,
   claimedAt: null,
-  submissionData: null
+  submissionData: null,
+  verifiedBy: null,
+  verifiedAt: null,
+  createdAt: new Date(),
+  updatedAt: new Date()
 }
 
 export function QuestSystemTest() {

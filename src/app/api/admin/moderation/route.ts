@@ -8,17 +8,29 @@ export async function GET(request: NextRequest) {
   try {
     // Check if user is authenticated and has admin privileges
     const authResult = await getAuthenticatedUser(request)
-    if (!authResult.success || !authResult.user) {
+    if (!authResult.isAuthenticated || !authResult.userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
+    // Get user from database to check admin status
+    const user = await prisma.user.findUnique({
+      where: { id: authResult.userId }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
     // For now, we'll check if the user is an admin by checking their username
     // In production, you'd have a proper role-based system
-    const isAdmin = authResult.user.xUsername === 'layeredge' || 
-                   process.env.ADMIN_USERNAMES?.split(',').includes(authResult.user.xUsername || '')
+    const isAdmin = user.xUsername === 'layeredge' ||
+                   process.env.ADMIN_USERNAMES?.split(',').includes(user.xUsername || '')
 
     if (!isAdmin) {
       return NextResponse.json(
@@ -48,15 +60,27 @@ export async function POST(request: NextRequest) {
   try {
     // Check authentication and admin privileges
     const authResult = await getAuthenticatedUser(request)
-    if (!authResult.success || !authResult.user) {
+    if (!authResult.isAuthenticated || !authResult.userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    const isAdmin = authResult.user.xUsername === 'layeredge' || 
-                   process.env.ADMIN_USERNAMES?.split(',').includes(authResult.user.xUsername || '')
+    // Get user from database to check admin status
+    const user = await prisma.user.findUnique({
+      where: { id: authResult.userId }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const isAdmin = user.xUsername === 'layeredge' ||
+                   process.env.ADMIN_USERNAMES?.split(',').includes(user.xUsername || '')
 
     if (!isAdmin) {
       return NextResponse.json(
@@ -202,19 +226,28 @@ async function runFUDDetectionTestsAPI() {
 // Helper function to validate admin access
 async function validateAdminAccess(request: NextRequest) {
   const authResult = await getAuthenticatedUser(request)
-  
-  if (!authResult.success || !authResult.user) {
+
+  if (!authResult.isAuthenticated || !authResult.userId) {
     return { isValid: false, error: 'Unauthorized', status: 401 }
   }
 
-  const isAdmin = authResult.user.xUsername === 'layeredge' || 
-                 process.env.ADMIN_USERNAMES?.split(',').includes(authResult.user.xUsername || '')
+  // Get user from database to check admin status
+  const user = await prisma.user.findUnique({
+    where: { id: authResult.userId }
+  })
+
+  if (!user) {
+    return { isValid: false, error: 'User not found', status: 404 }
+  }
+
+  const isAdmin = user.xUsername === 'layeredge' ||
+                 process.env.ADMIN_USERNAMES?.split(',').includes(user.xUsername || '')
 
   if (!isAdmin) {
     return { isValid: false, error: 'Admin access required', status: 403 }
   }
 
-  return { isValid: true, user: authResult.user }
+  return { isValid: true, user }
 }
 
 // Export helper functions for use in other parts of the application

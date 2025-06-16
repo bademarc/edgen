@@ -1,4 +1,4 @@
-import { TwitterApi } from 'twitter-api-v2'
+import { TwitterApi, TwitterApiReadOnly } from 'twitter-api-v2'
 import { extractTweetId } from './utils'
 
 interface EngagementMetrics {
@@ -27,7 +27,7 @@ interface TweetData {
  * Combines oEmbed and Twitter API for optimal engagement metrics
  */
 export class EnhancedHybridService {
-  private twitterClient: TwitterApi | null = null
+  private twitterClient: TwitterApiReadOnly | null = null
   private cache = new Map<string, { data: EngagementMetrics; expires: number }>()
   private readonly CACHE_TTL = 30 * 60 * 1000 // 30 minutes
   private rateLimitInfo = {

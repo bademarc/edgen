@@ -96,7 +96,7 @@ export default function ManualTweetSubmission() {
       } else {
         setMessage({ type: 'error', text: data.error || 'Verification failed' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Network error during verification' })
     } finally {
       setIsVerifying(false)
@@ -134,7 +134,7 @@ export default function ManualTweetSubmission() {
       } else {
         setMessage({ type: 'error', text: data.error || 'Submission failed' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Network error during submission' })
     } finally {
       setIsSubmitting(false)
@@ -151,7 +151,7 @@ export default function ManualTweetSubmission() {
         <CardHeader>
           <CardTitle className="text-white">Submit Tweet Manually</CardTitle>
           <CardDescription className="text-gray-400">
-            Submit your tweets containing "@layeredge" or "$EDGEN" mentions to earn points
+            Submit your tweets containing &ldquo;@layeredge&rdquo; or &ldquo;$EDGEN&rdquo; mentions to earn points
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -306,7 +306,7 @@ export default function ManualTweetSubmission() {
             <p><strong>Requirements:</strong></p>
             <ul className="list-disc list-inside space-y-1 ml-2">
               <li>Tweet must be authored by you (prevents point farming)</li>
-              <li>Tweet must contain "@layeredge" or "$EDGEN" mentions</li>
+              <li>Tweet must contain &ldquo;@layeredge&rdquo; or &ldquo;$EDGEN&rdquo; mentions</li>
               <li>5-minute cooldown between submissions</li>
               <li>Base points: 5 + engagement bonus</li>
             </ul>

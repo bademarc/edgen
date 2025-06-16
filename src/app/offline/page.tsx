@@ -133,10 +133,10 @@ export default function OfflinePage() {
               </div>
             ) : (
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-4">You're Offline</h1>
+                <h1 className="text-3xl md:text-4xl font-bold mb-4">You&apos;re Offline</h1>
                 <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                  It looks like you've lost your internet connection. Don't worry - some features may still work, 
-                  and we'll help you get back online to continue earning LayerEdge points!
+                  It looks like you&apos;ve lost your internet connection. Don&apos;t worry - some features may still work,
+                  and we&apos;ll help you get back online to continue earning LayerEdge points!
                 </p>
               </div>
             )}
@@ -157,7 +157,7 @@ export default function OfflinePage() {
               {isOnline ? (
                 "Your internet connection has been restored. You can now access all LayerEdge features."
               ) : (
-                "You're currently offline. Some features may not be available until your connection is restored."
+                "You&apos;re currently offline. Some features may not be available until your connection is restored."
               )}
               {retryCount > 0 && (
                 <span className="block mt-2 text-xs">

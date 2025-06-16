@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getFreeTierService } from '@/lib/free-tier-service'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const freeTierService = getFreeTierService()
     

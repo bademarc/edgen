@@ -22,7 +22,7 @@ import {
   Loader2,
   Minimize2,
   Maximize2,
-  HelpCircle,
+
   AlertCircle
 } from 'lucide-react'
 
@@ -61,11 +61,7 @@ const parseAIContent = (content: string): string => {
   return cleanContent
 }
 
-interface EdgenHelperChatbotProps {
-  className?: string
-}
-
-export function EdgenHelperChatbot({ className }: EdgenHelperChatbotProps) {
+export function EdgenHelperChatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])

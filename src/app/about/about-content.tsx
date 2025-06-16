@@ -77,9 +77,9 @@ export function AboutContent() {
             </span>
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted-foreground max-w-3xl mx-auto">
-            EDGEN is the SocialFi reputation platform built for the LayerEdge "People‑Backed Internet."
+            EDGEN is the SocialFi reputation platform built for the LayerEdge &ldquo;People‑Backed Internet.&rdquo;
             We help contributors, developers, and enthusiasts turn real engagement into a portable,
-            on‑chain reputation score—your $EDGEN Reputation Points—that lives wherever Web3 goes next.
+            on‑chain reputation score&mdash;your $EDGEN Reputation Points&mdash;that lives wherever Web3 goes next.
           </p>
         </motion.div>
 
@@ -106,8 +106,8 @@ export function AboutContent() {
             <div className="bg-card border border-border rounded-lg p-8">
               <h2 className="text-3xl font-bold text-foreground mb-6">The Problem</h2>
               <p className="text-muted-foreground text-lg leading-relaxed">
-                Web3's promise of self‑sovereign identity often stops at "wallet = identity."
-                But wallets don't show your code commits, your DAO votes, or your thoughtful tweets.
+                Web3&apos;s promise of self‑sovereign identity often stops at &ldquo;wallet = identity.&rdquo;
+                But wallets don&apos;t show your code commits, your DAO votes, or your thoughtful tweets.
                 That missing social proof keeps great contributors hidden—and great projects hampered by lack of trust.
               </p>
             </div>

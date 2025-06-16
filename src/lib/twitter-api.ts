@@ -320,8 +320,8 @@ export class TwitterApiService {
       console.log(`Accepting tweet ${tweetId} - security handled by author verification`)
       return true
 
-    } catch (error) {
-      console.error('Error verifying tweet community:', error)
+    } catch {
+      console.error('Error verifying tweet community')
       return false
     }
   }
@@ -342,8 +342,8 @@ export class TwitterApiService {
       }
 
       return response.data
-    } catch (error) {
-      console.error('Error fetching user data:', error)
+    } catch {
+      console.error('Error fetching user data')
       return null
     }
   }
@@ -401,8 +401,8 @@ export class TwitterApiService {
       console.log(`💾 Cached engagement metrics for tweet ${tweetId} for 12 hours (aggressive rate limit optimization)`)
 
       return metrics
-    } catch (error) {
-      console.error('Error fetching tweet engagement metrics:', error)
+    } catch {
+      console.error('Error fetching tweet engagement metrics')
       return null
     }
   }
@@ -486,8 +486,8 @@ export class TwitterApiService {
       }
 
       return response
-    } catch (error) {
-      console.error('Error searching tweets:', error)
+    } catch {
+      console.error('Error searching tweets')
       return null
     }
   }

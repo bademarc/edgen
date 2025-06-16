@@ -35,6 +35,17 @@ export interface UserQuestData {
 
 export class QuestService {
   /**
+   * Test database connection
+   */
+  static async testConnection(): Promise<void> {
+    try {
+      await prisma.$queryRaw`SELECT 1 as test`
+    } catch (error) {
+      throw new Error(`Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
    * Get all active quests with user progress
    */
   static async getUserQuests(userId: string): Promise<UserQuestData[]> {

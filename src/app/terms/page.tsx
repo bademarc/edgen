@@ -41,7 +41,7 @@ export default function TermsOfServicePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground leading-relaxed">
-                Welcome to the LayerEdge Community Platform ("Platform"). These Terms of Service ("Terms") govern your use of our community engagement platform that rewards users for Twitter/X interactions related to LayerEdge and the $EDGEN token.
+                Welcome to the LayerEdge Community Platform (&ldquo;Platform&rdquo;). These Terms of Service (&ldquo;Terms&rdquo;) govern your use of our community engagement platform that rewards users for Twitter/X interactions related to LayerEdge and the $EDGEN token.
               </p>
               <p className="text-muted-foreground leading-relaxed">
                 By accessing or using our Platform, you agree to be bound by these Terms. If you disagree with any part of these terms, you may not access the Platform.
@@ -62,7 +62,7 @@ export default function TermsOfServicePage() {
                 The LayerEdge Community Platform is a gamified engagement system that:
               </p>
               <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
-                <li>Rewards users with points for Twitter/X posts mentioning "@layeredge" or "$EDGEN"</li>
+                <li>Rewards users with points for Twitter/X posts mentioning &ldquo;@layeredge&rdquo; or &ldquo;$EDGEN&rdquo;</li>
                 <li>Tracks engagement metrics (likes, retweets, replies) to calculate bonus points</li>
                 <li>Maintains leaderboards and user rankings based on community participation</li>
                 <li>Provides analytics and insights into community engagement</li>
@@ -84,7 +84,7 @@ export default function TermsOfServicePage() {
                 To earn points, your tweets must:
               </p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Contain "@layeredge" or "$EDGEN" mentions (case-insensitive)</li>
+                <li>Contain &ldquo;@layeredge&rdquo; or &ldquo;$EDGEN&rdquo; mentions (case-insensitive)</li>
                 <li>Be posted by your authenticated Twitter/X account</li>
                 <li>Be original content created by you</li>
                 <li>Comply with Twitter/X Terms of Service</li>
@@ -176,7 +176,7 @@ export default function TermsOfServicePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground leading-relaxed">
-                The Platform is provided "as is" without warranties of any kind. LayerEdge does not guarantee:
+                The Platform is provided &ldquo;as is&rdquo; without warranties of any kind. LayerEdge does not guarantee:
               </p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                 <li>Continuous or uninterrupted access to the Platform</li>

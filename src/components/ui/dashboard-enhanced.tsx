@@ -7,6 +7,7 @@ import {
   Trophy,
   BarChart3,
   Plus,
+  RotateCw,
   RotateCcw,
   Calendar
 } from 'lucide-react'

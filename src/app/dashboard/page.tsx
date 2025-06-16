@@ -10,7 +10,7 @@ import {
   Activity,
   Target,
   Calendar,
-  RotateCcw
+  RotateCw
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -368,7 +368,7 @@ export default function DashboardPage() {
                     className="h-8 w-8 p-0"
                     title="Refresh contributions"
                   >
-                    <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
               </CardHeader>

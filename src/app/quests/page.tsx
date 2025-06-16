@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import {
   Trophy,
   Sparkles,
-  Rocket
+  Zap
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -66,7 +66,7 @@ export default function QuestsPage() {
 
               <Card variant="layeredge">
                 <CardContent className="p-6 text-center">
-                  <Rocket className="h-8 w-8 text-primary mx-auto mb-3" />
+                  <Zap className="h-8 w-8 text-primary mx-auto mb-3" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">Join Community</h3>
                   <p className="text-sm text-muted-foreground">
                     Connect with LayerEdge on X and join our growing community of AI enthusiasts.

@@ -7,9 +7,9 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  RotateCcw,
+  RotateCw,
   Search,
-  Cpu
+  Zap
 } from 'lucide-react'
 
 interface TrackingStatus {
@@ -88,7 +88,7 @@ export default function TrackingDashboard() {
     return (
       <div className="card-layeredge p-8">
         <div className="flex items-center justify-center">
-          <RotateCcw className="h-8 w-8 animate-spin text-layeredge-orange" />
+          <RotateCw className="h-8 w-8 animate-spin text-layeredge-orange" />
           <span className="ml-2 text-foreground">Loading tracking status...</span>
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function TrackingDashboard() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                <Cpu className="h-5 w-5 text-layeredge-orange" />
+                <Zap className="h-5 w-5 text-layeredge-orange" />
                 Tweet Tracking System
               </h2>
               <p className="text-muted-foreground mt-1">
@@ -149,7 +149,7 @@ export default function TrackingDashboard() {
                 disabled={refreshing}
               >
                 {refreshing ? (
-                  <RotateCcw className="h-4 w-4 animate-spin" />
+                  <RotateCw className="h-4 w-4 animate-spin" />
                 ) : (
                   'Refresh'
                 )}

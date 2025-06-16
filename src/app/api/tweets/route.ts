@@ -232,9 +232,9 @@ export async function POST(request: NextRequest) {
 
     // Also run legacy validation for backward compatibility
     const legacyValidation = validateTweetContent(tweetData.content)
-    if (!legacyValidation.isValid) {
+    if (!legacyValidation) {
       console.log(`📋 Legacy content validation failed for tweet: "${tweetData.content}"`)
-      const errorResponse = TweetErrorHandler.handleContentValidation(legacyValidation.reason || 'Content does not meet LayerEdge requirements')
+      const errorResponse = TweetErrorHandler.handleContentValidation('Content does not meet LayerEdge requirements')
       return NextResponse.json(
         createErrorResponse(errorResponse),
         { status: errorResponse.httpStatus }

@@ -7,7 +7,7 @@ import { getManualTweetSubmissionService } from '@/lib/manual-tweet-submission'
  * Debug endpoint to test and diagnose point awarding system
  * This endpoint provides comprehensive debugging information
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('🔍 Starting point system debug analysis...')
 

@@ -15,7 +15,7 @@ export interface AdvancedFUDAnalysis extends FUDAnalysisResult {
 }
 
 export interface PatternMatch {
-  pattern: string
+  pattern: RegExp
   weight: number
   description: string
   category: 'manipulation' | 'fear' | 'uncertainty' | 'doubt'
