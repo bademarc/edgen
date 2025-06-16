@@ -13,6 +13,7 @@ import {
   Check,
   RotateCcw
 } from 'lucide-react'
+import { ArrowPathIcon, ClockIcon, CheckIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import { UserQuestData } from '@/lib/quest-service'
 import { toast } from 'sonner'

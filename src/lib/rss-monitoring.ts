@@ -353,10 +353,10 @@ export class RSSMonitoringService {
         console.log(`✅ Points awarded to registered user @${tweetData.username}`)
         return true
       } else {
-        // User not registered - store as unclaimed tweet
-        await this.storeUnclaimedTweet(tweetData)
-        console.log(`📝 Stored unclaimed tweet for @${tweetData.username}`)
-        return true
+        // SECURITY FIX: Do NOT store tweets from unregistered users
+        console.log(`🔒 PRIVACY PROTECTION: Skipping tweet from @${tweetData.username} - user not registered`)
+        console.log(`📋 Only registered platform users should have their tweets tracked`)
+        return false
       }
 
     } catch (error) {
@@ -408,25 +408,15 @@ export class RSSMonitoringService {
 
   /**
    * Store unclaimed tweet
+   * DEPRECATED: This method is disabled for privacy compliance
    */
   private async storeUnclaimedTweet(tweetData: any): Promise<void> {
-    const points = this.calculatePoints(tweetData.content)
+    // SECURITY FIX: Disable unclaimed tweet storage for privacy compliance
+    console.log(`🔒 PRIVACY PROTECTION: Refusing to store unclaimed tweet from @${tweetData.username}`)
+    console.log(`📋 Reason: Only registered platform users should have their tweets tracked`)
+    console.log(`✅ Solution: User must sign up at LayerEdge platform to participate`)
 
-    await prisma.unclaimedTweet.create({
-      data: {
-        tweetId: tweetData.url || `rss_${Date.now()}`, // Generate ID from URL or timestamp
-        authorUsername: tweetData.username,
-        authorId: tweetData.username, // Use username as authorId for RSS feeds
-        content: tweetData.content,
-        createdAt: tweetData.pubDate || new Date(), // Use pubDate or current date
-        likes: 0, // Default values for RSS feeds
-        retweets: 0,
-        replies: 0,
-        source: 'rss',
-        discoveredAt: new Date(),
-        claimed: false
-      }
-    })
+    return Promise.resolve()
   }
 
   /**

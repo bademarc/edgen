@@ -213,9 +213,10 @@ export class TweetTracker {
           await this.awardPoints(user.id, tweet, source)
           processedCount++
         } else {
-          // Store as unclaimed tweet for later claiming
-          await this.storeUnclaimedTweet(tweet, source)
-          console.log(`Stored unclaimed tweet from @${tweet.user.username}`)
+          // SECURITY FIX: Do NOT store tweets from unregistered users
+          // Only track tweets from users who have explicitly signed up for the platform
+          console.log(`Skipping tweet from @${tweet.user.username} - user not registered on platform`)
+          console.log(`🔒 Privacy protection: Only tracking tweets from registered users`)
         }
 
       } catch (error) {
@@ -282,32 +283,19 @@ export class TweetTracker {
 
   /**
    * Store unclaimed tweet for later user claiming
+   * DEPRECATED: This method is disabled for privacy compliance
+   * Only registered users' tweets should be tracked
    */
   async storeUnclaimedTweet(tweetData: TweetData, source: string): Promise<void> {
-    try {
-      const metrics = tweetData.public_metrics || { like_count: 0, retweet_count: 0, reply_count: 0 }
+    // SECURITY FIX: Disable unclaimed tweet storage for privacy compliance
+    console.log(`🔒 PRIVACY PROTECTION: Refusing to store unclaimed tweet from @${tweetData.user.username}`)
+    console.log(`📋 Reason: Only registered platform users should have their tweets tracked`)
+    console.log(`✅ Solution: User must sign up at LayerEdge platform to participate`)
 
-      await prisma.unclaimedTweet.create({
-        data: {
-          tweetId: tweetData.id,
-          content: tweetData.text,
-          authorUsername: tweetData.user.username,
-          authorId: tweetData.user.id,
-          likes: metrics.like_count,
-          retweets: metrics.retweet_count,
-          replies: metrics.reply_count,
-          createdAt: new Date(tweetData.created_at),
-          source: source,
-        },
-      })
-    } catch (error) {
-      // Handle duplicate key errors gracefully
-      if (error instanceof Error && error.message.includes('unique constraint')) {
-        console.log(`Unclaimed tweet ${tweetData.id} already exists`)
-      } else {
-        throw error
-      }
-    }
+    // Log the attempt for monitoring purposes (without storing personal data)
+    console.log(`📊 Tweet tracking attempt: ${source} found tweet mentioning LayerEdge from unregistered user`)
+
+    return Promise.resolve()
   }
 
   /**

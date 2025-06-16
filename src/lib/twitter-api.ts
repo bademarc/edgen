@@ -375,6 +375,12 @@ export class TwitterApiService {
 
       if (response.errors && response.errors.length > 0) {
         console.error('Twitter API returned errors:', response.errors)
+        // Check if it's a rate limit error
+        const rateLimitError = response.errors.find(err => err.title?.includes('rate limit') || err.detail?.includes('rate limit'))
+        if (rateLimitError) {
+          console.log('🚫 Rate limit detected in API response')
+          return null
+        }
         return null
       }
 
