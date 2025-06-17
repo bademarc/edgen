@@ -33,6 +33,20 @@ services:
         value: ${UPSTASH_REDIS_REST_URL}
       - key: UPSTASH_REDIS_REST_TOKEN
         value: ${UPSTASH_REDIS_REST_TOKEN}
+      # SECURITY: FUD Detection Configuration
+      - key: FUD_DETECTION_ENABLED
+        value: "true"
+      - key: FUD_BLOCK_THRESHOLD
+        value: "10"
+      - key: FUD_WARN_THRESHOLD
+        value: "4"
+      - key: FUD_WHITELIST_ENABLED
+        value: "true"
+      - key: FUD_STRICT_MODE
+        value: "false"
+      # Community & Content Moderation
+      - key: LAYEREDGE_COMMUNITY_URL
+        value: ${LAYEREDGE_COMMUNITY_URL}
       # PRIORITY FIX: Playwright browser configuration
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /home/nextjs/.cache/ms-playwright
