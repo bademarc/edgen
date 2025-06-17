@@ -85,12 +85,16 @@ model Tweet {
   likes        Int      @default(0)
   retweets     Int      @default(0)
   replies      Int      @default(0)
+  quotes       Int      @default(0) // Enhanced: Quote tweets from Apify
+  views        Int      @default(0) // Enhanced: View count from Apify
+  bookmarks    Int      @default(0) // Enhanced: Bookmark count from Apify
   basePoints   Int      @default(5)
   bonusPoints  Int      @default(0)
   totalPoints  Int      @default(5)
   isVerified   Boolean  @default(false)
   lastEngagementUpdate DateTime? // Track when engagement was last updated
   engagementUpdateCount Int @default(0) // Track how many times engagement was updated
+  apifyMetadata Json? // Store additional Apify API response data
 
   // Automatic discovery fields
   tweetId      String?  // Twitter's internal tweet ID

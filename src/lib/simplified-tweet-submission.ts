@@ -299,10 +299,23 @@ export class SimplifiedTweetSubmissionService {
       }
     }
 
-    // Calculate points based on tweet engagement data (no API call needed!)
-    const points = this.calculatePointsFromData(tweetData)
+    // Calculate points based on tweet engagement data with enhanced Apify metrics
+    const points = await this.calculatePointsFromData(tweetData, tweetUrl)
 
-    // Save submission to database using Tweet model
+    // Get enhanced engagement metrics for database storage
+    let enhancedMetrics = null
+    try {
+      const { getApifyTwitterService } = await import('./apify-twitter-service')
+      const apifyService = getApifyTwitterService()
+
+      if (apifyService.isReady()) {
+        enhancedMetrics = await apifyService.getTweetEngagementMetricsByUrl(tweetUrl)
+      }
+    } catch (error) {
+      console.log('⚠️ Could not fetch enhanced metrics for storage:', error)
+    }
+
+    // Save submission to database using Tweet model with enhanced metrics
     try {
       await prisma.tweet.create({
         data: {
@@ -310,13 +323,21 @@ export class SimplifiedTweetSubmissionService {
           tweetId,
           url: tweetUrl,
           content: tweetData.content,
-          likes: tweetData.engagement.likes,
-          retweets: tweetData.engagement.retweets,
-          replies: tweetData.engagement.replies,
+          likes: enhancedMetrics?.likes || tweetData.engagement.likes,
+          retweets: enhancedMetrics?.retweets || tweetData.engagement.retweets,
+          replies: enhancedMetrics?.replies || tweetData.engagement.replies,
+          quotes: enhancedMetrics?.quotes || 0,
+          views: enhancedMetrics?.views || 0,
+          bookmarks: enhancedMetrics?.bookmarks || 0,
           totalPoints: points,
           isVerified: true,
           originalTweetDate: tweetData.createdAt,
-          submittedAt: new Date()
+          submittedAt: new Date(),
+          apifyMetadata: enhancedMetrics ? JSON.parse(JSON.stringify({
+            source: 'apify',
+            fetchedAt: new Date().toISOString(),
+            metrics: enhancedMetrics
+          })) : undefined
         }
       })
 
@@ -540,23 +561,51 @@ export class SimplifiedTweetSubmissionService {
   }
 
   /**
-   * Calculate points from tweet data (no API calls - uses already fetched data)
+   * Calculate points from tweet data with enhanced Apify metrics
    */
-  private calculatePointsFromData(tweetData: any): number {
+  private async calculatePointsFromData(tweetData: any, tweetUrl?: string): Promise<number> {
     try {
       // Base points for tweet submission
       let points = 10
 
-      // Bonus points based on engagement
-      const { likes, retweets, replies, quotes } = tweetData.engagement
+      // Try to get enhanced engagement metrics from Apify
+      let enhancedMetrics = null
+      if (tweetUrl) {
+        try {
+          const { getApifyTwitterService } = await import('./apify-twitter-service')
+          const apifyService = getApifyTwitterService()
 
-      // Engagement multipliers
-      points += Math.min(likes * 0.5, 50) // Max 50 points from likes
-      points += Math.min(retweets * 2, 100) // Max 100 points from retweets
-      points += Math.min(replies * 1, 30) // Max 30 points from replies
-      points += Math.min((quotes || 0) * 3, 90) // Max 90 points from quotes
+          if (apifyService.isReady()) {
+            enhancedMetrics = await apifyService.getTweetEngagementMetricsByUrl(tweetUrl)
+            console.log('📊 Enhanced metrics from Apify:', enhancedMetrics)
+          }
+        } catch (error) {
+          console.log('⚠️ Could not fetch enhanced metrics, using fallback:', error)
+        }
+      }
 
-      console.log(`📊 Points calculation: Base(10) + Likes(${likes}*0.5) + Retweets(${retweets}*2) + Replies(${replies}*1) = ${Math.round(points)}`)
+      if (enhancedMetrics) {
+        // Use enhanced metrics from Apify
+        points += Math.min(enhancedMetrics.likes * 0.5, 50) // Max 50 points from likes
+        points += Math.min(enhancedMetrics.retweets * 2, 100) // Max 100 points from retweets
+        points += Math.min(enhancedMetrics.replies * 1, 30) // Max 30 points from replies
+        points += Math.min(enhancedMetrics.quotes * 3, 90) // Max 90 points from quotes
+        points += Math.min(enhancedMetrics.views * 0.01, 25) // Max 25 points from views
+        points += Math.min(enhancedMetrics.bookmarks * 5, 75) // Max 75 points from bookmarks
+
+        console.log(`📊 Enhanced points calculation: Base(10) + Likes(${enhancedMetrics.likes}*0.5) + Retweets(${enhancedMetrics.retweets}*2) + Replies(${enhancedMetrics.replies}*1) + Quotes(${enhancedMetrics.quotes}*3) + Views(${enhancedMetrics.views}*0.01) + Bookmarks(${enhancedMetrics.bookmarks}*5) = ${Math.round(points)}`)
+      } else {
+        // Fallback to basic engagement metrics
+        const { likes, retweets, replies, quotes } = tweetData.engagement || {}
+
+        points += Math.min((likes || 0) * 0.5, 50) // Max 50 points from likes
+        points += Math.min((retweets || 0) * 2, 100) // Max 100 points from retweets
+        points += Math.min((replies || 0) * 1, 30) // Max 30 points from replies
+        points += Math.min((quotes || 0) * 3, 90) // Max 90 points from quotes
+
+        console.log(`📊 Fallback points calculation: Base(10) + Likes(${likes || 0}*0.5) + Retweets(${retweets || 0}*2) + Replies(${replies || 0}*1) + Quotes(${quotes || 0}*3) = ${Math.round(points)}`)
+
+      }
 
       return Math.round(points)
     } catch (error) {
@@ -587,14 +636,14 @@ export class SimplifiedTweetSubmissionService {
         return 10 // Base points if we can't fetch engagement data
       }
 
-      return this.calculatePointsFromData({
+      return await this.calculatePointsFromData({
         engagement: {
           likes: tweetData.likes || 0,
           retweets: tweetData.retweets || 0,
           replies: tweetData.replies || 0,
           quotes: 0
         }
-      })
+      }, `https://x.com/i/web/status/${tweetId}`)
     } catch (error) {
       console.error('❌ Error calculating points:', error)
       return 10 // Fallback to base points
