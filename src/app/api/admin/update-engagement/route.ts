@@ -22,14 +22,18 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'force-update':
-        // Force update all tweets
-        const scheduler = getEngagementScheduler()
-        const result = await scheduler.forceUpdate()
-        
+        // Force update all tweets using engagement service directly
+        const engagementService = new EngagementPointsService()
+        const result = await engagementService.batchUpdateEngagement(20) // Update 20 tweets
+
         return NextResponse.json({
           success: true,
           message: 'Engagement update completed',
-          result
+          result: {
+            processed: result.processed,
+            updated: result.updated,
+            totalPointsAwarded: result.totalPointsAwarded
+          }
         })
 
       case 'update-single':

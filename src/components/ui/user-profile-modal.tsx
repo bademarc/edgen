@@ -22,6 +22,7 @@ import {
   ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline'
 import { formatNumber } from '@/lib/utils'
+import { ActivityTimeline } from './activity-timeline'
 
 interface UserProfileModalProps {
   user: {
@@ -191,42 +192,7 @@ export function UserProfileModal({ user, isOpen, onClose }: UserProfileModalProp
           )}
 
           {/* Activity Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CalendarIcon className="h-5 w-5" />
-                <span>Activity Timeline</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {user.joinDate && (
-                  <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground">
-                      Joined {new Date(user.joinDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                {user.thisWeekPoints && user.thisWeekPoints > 0 && (
-                  <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-muted-foreground">
-                      Earned {user.thisWeekPoints} points this week
-                    </span>
-                  </div>
-                )}
-                {user.lastActivityDate && (
-                  <div className="flex items-center space-x-3 text-sm">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-muted-foreground">
-                      Last active {new Date(user.lastActivityDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <ActivityTimeline userId={user.id} limit={8} />
         </div>
       </DialogContent>
     </Dialog>

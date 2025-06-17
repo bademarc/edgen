@@ -168,7 +168,7 @@ export class ApifyTwitterService {
 
       // Wait for completion and get results
       const results = await this.waitForRunCompletion(runResponse.runId)
-      
+
       if (!results || results.length === 0) {
         console.log('❌ No results returned from Apify')
         return null
@@ -180,6 +180,13 @@ export class ApifyTwitterService {
       console.error('❌ Error getting tweet by ID:', error)
       return null
     }
+  }
+
+  /**
+   * Alias for getTweetById - used by engagement service
+   */
+  async getTweetData(tweetId: string): Promise<ApifyTweetData | null> {
+    return this.getTweetById(tweetId)
   }
 
   /**

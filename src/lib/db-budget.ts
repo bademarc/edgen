@@ -30,7 +30,7 @@ class BudgetDatabaseService {
       return cached
     }
 
-    // Optimized query with minimal data
+    // Optimized query with minimal data including tweet count
     const users = await this.prisma.user.findMany({
       where: { totalPoints: { gt: 0 } },
       select: {
@@ -39,6 +39,9 @@ class BudgetDatabaseService {
         xUsername: true,
         image: true,
         totalPoints: true,
+        _count: {
+          select: { tweets: true }
+        }
       },
       orderBy: { totalPoints: 'desc' },
       take: limit,
@@ -47,6 +50,8 @@ class BudgetDatabaseService {
     const leaderboard = users.map((user, index) => ({
       ...user,
       rank: index + 1,
+      tweetsCount: user._count.tweets,
+      averagePointsPerTweet: user._count.tweets > 0 ? Math.round(user.totalPoints / user._count.tweets) : 0,
     }))
 
     // Update ranks in database for dashboard synchronization

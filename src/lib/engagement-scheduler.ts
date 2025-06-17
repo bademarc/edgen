@@ -54,17 +54,41 @@ export class EngagementScheduler {
   private async runUpdate(): Promise<void> {
     try {
       console.log('🔄 Running scheduled engagement update...')
-      
-      const result = await this.engagementService.batchUpdateEngagement(100)
-      
+
+      // Get tweets that need engagement updates (prioritize recent ones)
+      const { prisma } = await import('@/lib/db')
+      const tweetsToUpdate = await prisma.tweet.findMany({
+        where: {
+          OR: [
+            { lastEngagementUpdate: null },
+            {
+              lastEngagementUpdate: {
+                lt: new Date(Date.now() - 2 * 60 * 60 * 1000) // Older than 2 hours
+              }
+            }
+          ]
+        },
+        orderBy: { submittedAt: 'desc' },
+        take: 50 // Process 50 tweets at a time
+      })
+
+      console.log(`📊 Found ${tweetsToUpdate.length} tweets needing engagement updates`)
+
+      if (tweetsToUpdate.length === 0) {
+        console.log('✅ All tweets are up to date')
+        return
+      }
+
+      const result = await this.engagementService.batchUpdateEngagement(tweetsToUpdate.length)
+
       // Log results to database for monitoring
       await this.logUpdateResults(result)
-      
+
       console.log(`✅ Scheduled update complete: ${result.updated} tweets updated, ${result.totalPointsAwarded} points awarded`)
-      
+
     } catch (error) {
       console.error('❌ Scheduled engagement update failed:', error)
-      
+
       // Log error to database
       await this.logError(error)
     }

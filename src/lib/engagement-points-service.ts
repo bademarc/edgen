@@ -84,9 +84,16 @@ export class EngagementPointsService {
   }
 
   /**
-   * Get fresh engagement metrics from Twitter API
+   * Get fresh engagement metrics from Twitter API or Apify
    */
   private async getFreshEngagementMetrics(tweetId: string): Promise<EngagementUpdate | null> {
+    // Try Apify first (more reliable and cost-effective)
+    const apifyResult = await this.getApifyEngagementMetrics(tweetId)
+    if (apifyResult) {
+      return apifyResult
+    }
+
+    // Fallback to Twitter API if available
     if (!this.twitterClient || this.isCurrentlyRateLimited()) {
       console.log('⏳ Twitter API not available or rate limited')
       return null
@@ -115,6 +122,41 @@ export class EngagementPointsService {
         console.log('🚫 Twitter API rate limit hit')
         this.handleRateLimit()
       }
+      return null
+    }
+  }
+
+  /**
+   * Get engagement metrics from Apify
+   */
+  private async getApifyEngagementMetrics(tweetId: string): Promise<EngagementUpdate | null> {
+    try {
+      const { getApifyTwitterService } = await import('@/lib/apify-twitter-service')
+      const apifyService = getApifyTwitterService()
+
+      if (!apifyService.isReady()) {
+        console.log('⏳ Apify service not configured')
+        return null
+      }
+
+      console.log(`🕷️ Fetching engagement for tweet ${tweetId} via Apify`)
+      const tweetData = await apifyService.getTweetData(tweetId)
+
+      if (!tweetData) {
+        console.log(`❌ Apify: Tweet ${tweetId} not found`)
+        return null
+      }
+
+      return {
+        tweetId,
+        likes: tweetData.likeCount || 0,
+        retweets: tweetData.retweetCount || 0,
+        replies: tweetData.replyCount || 0,
+        source: 'apify'
+      }
+
+    } catch (error) {
+      console.error(`❌ Apify error for tweet ${tweetId}:`, error)
       return null
     }
   }
