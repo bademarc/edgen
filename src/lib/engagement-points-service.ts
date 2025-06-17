@@ -7,7 +7,7 @@ interface EngagementUpdate {
   likes: number
   retweets: number
   replies: number
-  source: 'twitter-api' | 'manual' | 'estimated'
+  source: 'twitter-api' | 'manual' | 'estimated' | 'apify'
 }
 
 /**

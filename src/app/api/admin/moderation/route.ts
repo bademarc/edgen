@@ -250,5 +250,5 @@ async function validateAdminAccess(request: NextRequest) {
   return { isValid: true, user }
 }
 
-// Export helper functions for use in other parts of the application
-export { getModerationStats, runFUDDetectionTestsAPI, validateAdminAccess }
+// Helper functions are available within this module only
+// If needed elsewhere, create a separate service file

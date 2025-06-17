@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  CalendarIcon, 
-  SparklesIcon, 
-  MessageSquareIcon, 
-  TrophyIcon,
-  UserPlusIcon,
-  ClockIcon
+import {
+  Calendar,
+  Sparkles,
+  MessageSquare,
+  Trophy,
+  UserCheck,
+  Clock
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatNumber } from '@/lib/utils'
@@ -67,15 +67,15 @@ export function ActivityTimeline({ userId, limit = 10 }: ActivityTimelineProps) 
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'joined':
-        return <UserPlusIcon className="h-4 w-4 text-blue-500" />
+        return <UserCheck className="h-4 w-4 text-blue-500" />
       case 'tweet_submitted':
-        return <MessageSquareIcon className="h-4 w-4 text-green-500" />
+        return <MessageSquare className="h-4 w-4 text-green-500" />
       case 'points_earned':
-        return <SparklesIcon className="h-4 w-4 text-yellow-500" />
+        return <Sparkles className="h-4 w-4 text-yellow-500" />
       case 'rank_changed':
-        return <TrophyIcon className="h-4 w-4 text-purple-500" />
+        return <Trophy className="h-4 w-4 text-purple-500" />
       default:
-        return <ClockIcon className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4 text-gray-500" />
     }
   }
 
@@ -115,7 +115,7 @@ export function ActivityTimeline({ userId, limit = 10 }: ActivityTimelineProps) 
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <CalendarIcon className="h-5 w-5" />
+          <Calendar className="h-5 w-5" />
           <span>Activity Timeline</span>
         </CardTitle>
       </CardHeader>

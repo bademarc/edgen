@@ -20,10 +20,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const { action, tweetUrl, engagement } = body
 
+    // Create a single engagement service instance to avoid duplicate declarations
+    const engagementService = new EngagementPointsService()
+
     switch (action) {
       case 'force-update':
         // Force update all tweets using engagement service directly
-        const engagementService = new EngagementPointsService()
         const result = await engagementService.batchUpdateEngagement(20) // Update 20 tweets
 
         return NextResponse.json({
@@ -45,9 +47,8 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        const engagementService = new EngagementPointsService()
         const singleResult = await engagementService.updateTweetEngagement(tweetUrl)
-        
+
         return NextResponse.json({
           success: singleResult.success,
           message: singleResult.success ? 'Tweet updated successfully' : 'Failed to update tweet',
@@ -63,9 +64,8 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        const manualService = new EngagementPointsService()
-        const manualResult = await manualService.manualEngagementUpdate(tweetUrl, engagement)
-        
+        const manualResult = await engagementService.manualEngagementUpdate(tweetUrl, engagement)
+
         return NextResponse.json({
           success: manualResult.success,
           message: manualResult.success ? 'Manual engagement update completed' : 'Failed to update engagement',
@@ -74,9 +74,9 @@ export async function POST(request: NextRequest) {
 
       case 'scheduler-status':
         // Get scheduler status
-        const statusScheduler = getEngagementScheduler()
-        const status = statusScheduler.getStatus()
-        
+        const scheduler = getEngagementScheduler()
+        const status = scheduler.getStatus()
+
         return NextResponse.json({
           success: true,
           status
