@@ -64,7 +64,7 @@ export class ApifyTwitterService {
   constructor(config?: Partial<ApifyConfig>) {
     this.config = {
       apiToken: process.env.APIFY_API_TOKEN || '',
-      actorId: process.env.APIFY_ACTOR_ID || 'oavivo/cheap-simple-twitter-api',
+      actorId: process.env.APIFY_ACTOR_ID || 'gdN28kzr6QsU4nVh8',
       baseUrl: process.env.APIFY_BASE_URL || 'https://api.apify.com/v2',
       ...config
     }
@@ -187,29 +187,38 @@ export class ApifyTwitterService {
    */
   private async startApifyRun(endpoint: string, parameters: any): Promise<ApifyApiResponse> {
     try {
-      const url = `${this.config.baseUrl}/acts/${this.config.actorId}/runs`
+      // Use direct actor ID (no encoding needed for gdN28kzr6QsU4nVh8)
+      const url = `${this.config.baseUrl}/acts/${this.config.actorId}/runs?token=${this.config.apiToken}`
+
+      // The input should be passed directly as the POST body for this specific actor
       const requestBody = {
         endpoint,
         parameters
       }
 
       console.log(`🚀 Starting Apify run: ${endpoint}`, parameters)
+      console.log(`📡 Request URL: ${url}`)
+      console.log(`📦 Request body:`, requestBody)
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiToken}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
       })
 
+      console.log(`📊 Response status: ${response.status}`)
+
       if (!response.ok) {
         const errorText = await response.text()
+        console.error(`❌ API Error Response: ${errorText}`)
         throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
 
       const data = await response.json()
+      console.log(`📋 Response data:`, data)
+
       const runId = data.data?.id
 
       if (!runId) {
@@ -241,12 +250,8 @@ export class ApifyTwitterService {
     while (Date.now() - startTime < this.MAX_WAIT_TIME) {
       try {
         // Check run status
-        const statusUrl = `${this.config.baseUrl}/acts/${this.config.actorId}/runs/${runId}`
-        const statusResponse = await fetch(statusUrl, {
-          headers: {
-            'Authorization': `Bearer ${this.config.apiToken}`
-          }
-        })
+        const statusUrl = `${this.config.baseUrl}/acts/${this.config.actorId}/runs/${runId}?token=${this.config.apiToken}`
+        const statusResponse = await fetch(statusUrl)
 
         if (statusResponse.ok) {
           const statusData = await statusResponse.json()
@@ -281,15 +286,15 @@ export class ApifyTwitterService {
    */
   private async getRunResults(runId: string): Promise<any[] | null> {
     try {
-      const resultsUrl = `${this.config.baseUrl}/actor-runs/${runId}/dataset/items`
-      
-      const response = await fetch(resultsUrl, {
-        headers: {
-          'Authorization': `Bearer ${this.config.apiToken}`
-        }
-      })
+      const resultsUrl = `${this.config.baseUrl}/actor-runs/${runId}/dataset/items?token=${this.config.apiToken}`
+
+      console.log(`📥 Fetching results from: ${resultsUrl}`)
+
+      const response = await fetch(resultsUrl)
 
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`❌ Results fetch error: ${errorText}`)
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
