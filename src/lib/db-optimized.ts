@@ -3,6 +3,10 @@ import { getCacheService } from './cache'
 
 // Enhanced Prisma configuration for high-load scenarios
 const createOptimizedPrismaClient = () => {
+  // PRODUCTION FIX: Use connection pooling via DATABASE_URL parameters
+  // Connection pooling should be configured in the DATABASE_URL:
+  // postgresql://user:pass@host:port/db?connection_limit=100&pool_timeout=10&statement_timeout=10000
+
   return new PrismaClient({
     datasources: {
       db: {
@@ -11,16 +15,10 @@ const createOptimizedPrismaClient = () => {
     },
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     errorFormat: 'minimal',
-    // PRODUCTION FIX: Connection pool optimization for 100k users
-    __internal: {
-      engine: {
-        connectionLimit: 100, // Increase connection pool
-        poolTimeout: 10000,   // 10 second timeout
-        transactionOptions: {
-          maxWait: 5000,      // 5 second max wait
-          timeout: 10000,     // 10 second timeout
-        },
-      },
+    // Use documented Prisma configuration options only
+    transactionOptions: {
+      maxWait: 5000,      // 5 second max wait for transaction
+      timeout: 10000,     // 10 second transaction timeout
     },
   })
 }
