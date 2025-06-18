@@ -213,8 +213,15 @@ class CacheService {
           // Ensure we have a string value
           if (typeof rawValue === 'object') {
             console.warn(`🚨 Upstash returned object instead of string for key ${key}:`, rawValue)
-            // Try to extract string value if it's wrapped
-            value = rawValue.toString()
+            // CRITICAL FIX: If Upstash returns an object, it means the data is already parsed
+            // We should re-serialize it to JSON string for consistency
+            try {
+              value = JSON.stringify(rawValue)
+              console.log(`🔧 Fixed: Re-serialized object to JSON string for key ${key}`)
+            } catch (error) {
+              console.error(`❌ Failed to re-serialize object for key ${key}:`, error)
+              value = rawValue.toString()
+            }
           } else {
             value = rawValue as string
           }
