@@ -17,6 +17,9 @@ services:
         value: http://scweet-service:8001
       - key: DATABASE_URL
         value: ${DATABASE_URL}
+      # PRODUCTION FIX: Required for Prisma with Supabase
+      - key: DIRECT_URL
+        value: ${DIRECT_URL}
       - key: NEXTAUTH_SECRET
         value: ${NEXTAUTH_SECRET}
       - key: NEXTAUTH_URL

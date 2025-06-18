@@ -34,16 +34,34 @@ export function PlatformStatistics() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/platform/stats')
+      console.log('🔍 FRONTEND: Fetching platform statistics...')
+      const response = await fetch('/api/platform/stats', {
+        cache: 'no-cache', // PRODUCTION FIX: Disable cache for debugging
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+
+      console.log('🔍 FRONTEND: Response status:', response.status)
+
       if (!response.ok) {
-        throw new Error('Failed to fetch statistics')
+        throw new Error(`HTTP ${response.status}: Failed to fetch statistics`)
       }
+
       const data = await response.json()
+      console.log('📊 FRONTEND: Received statistics data:', data)
+
+      // PRODUCTION FIX: Validate data structure
+      if (typeof data.totalUsers !== 'number' || typeof data.totalTweets !== 'number') {
+        console.warn('⚠️ FRONTEND: Invalid data structure received:', data)
+      }
+
       setStats(data)
       setError(null)
     } catch (err) {
-      setError('Failed to load statistics')
-      console.error('Error fetching platform stats:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(`Failed to load statistics: ${errorMessage}`)
+      console.error('❌ FRONTEND: Error fetching platform stats:', err)
     } finally {
       setIsLoading(false)
     }
