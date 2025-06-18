@@ -102,7 +102,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             <h1 className="text-3xl md:text-4xl font-bold mb-4">Oops! Something went wrong</h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               We encountered an unexpected error while processing your request. 
-              Don't worry - our team has been notified and is working on a fix.
+              Don&apos;t worry - our team has been notified and is working on a fix.
             </p>
           </motion.div>
         </motion.div>

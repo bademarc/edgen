@@ -7,15 +7,14 @@ import { Badge } from './badge'
 import { Button } from './button'
 import { QuestCard } from './quest-card'
 import {
-  TrophyIcon,
-  SparklesIcon,
-  ClockIcon,
-  CheckIcon,
-  ArrowPathIcon
-} from '@heroicons/react/24/outline'
+  Trophy,
+  RefreshCw
+} from 'lucide-react'
+import { ArrowPathIcon, ClockIcon, CheckIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import { UserQuestData } from '@/lib/quest-service'
 import { toast } from 'sonner'
+
 
 interface QuestSystemProps {
   className?: string
@@ -25,25 +24,49 @@ export function QuestSystem({ className }: QuestSystemProps) {
   const [quests, setQuests] = useState<UserQuestData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [hasError, setHasError] = useState(false)
+
 
   useEffect(() => {
     fetchQuests()
   }, [])
 
+  // Add retry mechanism for failed requests
+  const retryFetchQuests = async () => {
+    console.log('🔄 Quest System: Retrying quest fetch...')
+    await fetchQuests()
+  }
+
   const fetchQuests = async () => {
     try {
       setIsLoading(true)
+      setHasError(false)
+      console.log('🔍 Quest System: Fetching quests...')
+
       const response = await fetch('/api/quests')
+      console.log('🔍 Quest System: Response status:', response.status)
+
       const data = await response.json()
+      console.log('🔍 Quest System: Response data:', data)
 
       if (data.success) {
         setQuests(data.quests)
+        setHasError(false)
+        console.log('✅ Quest System: Successfully loaded', data.quests.length, 'quests')
+      } else if (response.status === 401) {
+        // Authentication required - this is expected for unauthenticated users
+        console.log('⚠️ Quest System: Authentication required for quests')
+        setQuests([])
+        setHasError(false)
       } else {
-        toast.error('Failed to load quests')
+        console.error('❌ Quest System: Quest fetch error:', data)
+        setHasError(true)
+        toast.error(data.message || 'Failed to load quests. Please try refreshing the page.')
       }
     } catch (error) {
-      console.error('Error fetching quests:', error)
-      toast.error('Failed to load quests')
+      console.error('❌ Quest System: Network error fetching quests:', error)
+      setHasError(true)
+      toast.error('Network error loading quests. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -123,7 +146,7 @@ export function QuestSystem({ className }: QuestSystemProps) {
     return (
       <div className={cn("space-y-6", className)}>
         <div className="flex items-center justify-center py-12">
-          <ArrowPathIcon className="h-8 w-8 animate-spin text-primary" />
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     )
@@ -135,7 +158,7 @@ export function QuestSystem({ className }: QuestSystemProps) {
       <Card variant="layeredge">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <TrophyIcon className="h-6 w-6 text-primary" />
+            <Trophy className="h-6 w-6 text-primary" />
             <span>Quest Progress</span>
           </CardTitle>
         </CardHeader>
@@ -213,8 +236,32 @@ export function QuestSystem({ className }: QuestSystemProps) {
         </div>
       </div>
 
+
+
       {/* Quest Grid */}
-      {quests.length > 0 ? (
+      {hasError ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 rounded-full bg-destructive/10 border border-destructive/20">
+                <Trophy className="h-12 w-12 text-destructive" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Quest System Error</h3>
+            <p className="text-muted-foreground mb-4">
+              We encountered an error while loading quests. This might be due to a temporary issue.
+            </p>
+            <Button
+              variant="outline"
+              onClick={retryFetchQuests}
+              className="mt-2"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      ) : quests.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {quests.map((quest) => (
             <QuestCard
@@ -231,11 +278,19 @@ export function QuestSystem({ className }: QuestSystemProps) {
       ) : (
         <Card>
           <CardContent className="text-center py-12">
-            <TrophyIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No Quests Available</h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Check back later for new quests and opportunities to earn points!
             </p>
+            <Button
+              variant="outline"
+              onClick={fetchQuests}
+              className="mt-2"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Quests
+            </Button>
           </CardContent>
         </Card>
       )}

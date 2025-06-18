@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { TrophyIcon, SparklesIcon, UserIcon } from '@heroicons/react/24/outline'
 import { formatNumber } from '@/lib/utils'
+import { UserProfileModal } from '@/components/ui/user-profile-modal'
 
 interface LeaderboardUser {
   id: string
@@ -20,6 +21,8 @@ export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedUser, setSelectedUser] = useState<LeaderboardUser | null>(null)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
   const fetchLeaderboard = async () => {
     setIsLoading(true)
@@ -76,6 +79,11 @@ export default function LeaderboardPage() {
       default:
         return <span className="text-lg font-bold text-muted-foreground">#{rank}</span>
     }
+  }
+
+  const handleUserClick = (user: LeaderboardUser) => {
+    setSelectedUser(user)
+    setIsProfileModalOpen(true)
   }
 
   const getRankBadge = (rank: number) => {
@@ -181,11 +189,12 @@ export default function LeaderboardPage() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
-              className={`relative bg-card border-2 rounded-lg p-4 sm:p-6 text-center touch-friendly ${
+              className={`relative bg-card border-2 rounded-lg p-4 sm:p-6 text-center touch-friendly cursor-pointer hover:shadow-lg transition-all duration-200 ${
                 user.rank === 1 ? 'border-yellow-500 md:order-2 sm:col-span-2 md:col-span-1' :
                 user.rank === 2 ? 'border-gray-400 md:order-1' :
                 'border-amber-600 md:order-3'
               }`}
+              onClick={() => handleUserClick(user)}
             >
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <div className={`px-3 py-1 rounded-full text-sm font-bold ${getRankBadge(user.rank)}`}>
@@ -245,7 +254,8 @@ export default function LeaderboardPage() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4, delay: 0.7 + index * 0.1 }}
-              className="bg-card border border-border rounded-lg p-4 sm:p-6 hover:border-primary/50 transition-colors touch-friendly"
+              className="bg-card border border-border rounded-lg p-4 sm:p-6 hover:border-primary/50 transition-colors touch-friendly cursor-pointer hover:shadow-md"
+              onClick={() => handleUserClick(user)}
             >
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
@@ -293,6 +303,16 @@ export default function LeaderboardPage() {
           )) : null}
         </motion.div>
       </div>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        user={selectedUser}
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false)
+          setSelectedUser(null)
+        }}
+      />
     </div>
   )
 }

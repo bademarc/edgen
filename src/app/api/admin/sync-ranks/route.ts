@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       method: 'POST',
       description: 'Triggers manual rank synchronization for dashboard fix'
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to get sync status' },
       { status: 500 }

@@ -6,9 +6,6 @@ const nextConfig = {
   // External packages that should not be bundled
   serverExternalPackages: ['@prisma/client', 'prisma'],
 
-  // Transpile problematic packages
-  transpilePackages: ['@supabase/ssr', '@supabase/supabase-js'],
-
   // Development optimizations
   ...(process.env.NODE_ENV === 'development' && {
     // Enable faster refresh in development
@@ -24,12 +21,13 @@ const nextConfig = {
   }),
 
   eslint: {
-    // Ignore during builds to prevent blocking development
-    ignoreDuringBuilds: true,
+    // Only ignore during builds in production to avoid blocking deployment
+    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
   },
   typescript: {
-    // Ignore TypeScript errors to prevent blocking development
-    ignoreBuildErrors: true,
+    // Enable strict TypeScript checking in all environments for better code quality
+    // This ensures type safety and prevents runtime errors
+    ignoreBuildErrors: false,
   },
   images: {
     remotePatterns: [
@@ -69,6 +67,9 @@ const nextConfig = {
     TWITTER_CLIENT_ID: process.env.TWITTER_CLIENT_ID,
     TWITTER_CLIENT_SECRET: process.env.TWITTER_CLIENT_SECRET,
     TWITTER_BEARER_TOKEN: process.env.TWITTER_BEARER_TOKEN,
+    APIFY_API_TOKEN: process.env.APIFY_API_TOKEN,
+    APIFY_ACTOR_ID: process.env.APIFY_ACTOR_ID,
+    APIFY_BASE_URL: process.env.APIFY_BASE_URL,
     DATABASE_URL: process.env.DATABASE_URL,
     DIRECT_URL: process.env.DIRECT_URL,
     LAYEREDGE_COMMUNITY_URL: process.env.LAYEREDGE_COMMUNITY_URL,

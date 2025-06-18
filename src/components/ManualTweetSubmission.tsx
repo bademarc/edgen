@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle, XCircle, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, AlertTriangle, ExternalLink, Heart, RotateCcw, MessageSquare, MessageCircle, Eye, Star, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { formatNumber } from '@/lib/utils'
 
 interface TweetVerificationData {
   isValid: boolean
@@ -27,6 +28,29 @@ interface TweetVerificationData {
     }
     createdAt: string
   }
+  engagementMetrics?: {
+    likes: number
+    retweets: number
+    replies: number
+    quotes: number
+    views: number
+    bookmarks: number
+  }
+  enhancedPoints?: {
+    basePoints: number
+    engagementPoints: number
+    totalPoints: number
+    breakdown: {
+      likes: number
+      retweets: number
+      replies: number
+      quotes: number
+      views: number
+      bookmarks: number
+    }
+  }
+  engagementError?: string
+  tweetId?: string
   error?: string
 }
 
@@ -71,7 +95,8 @@ export default function ManualTweetSubmission() {
     setMessage(null)
 
     try {
-      const response = await fetch('/api/tweets/verify', {
+      // Use enhanced verification endpoint that includes Apify engagement metrics
+      const response = await fetch('/api/tweets/verify-enhanced', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +108,7 @@ export default function ManualTweetSubmission() {
 
       if (response.ok) {
         setVerificationData(data)
-        
+
         if (!data.isValid) {
           setMessage({ type: 'error', text: data.error || 'Tweet verification failed' })
         } else if (!data.isOwnTweet) {
@@ -91,12 +116,16 @@ export default function ManualTweetSubmission() {
         } else if (!data.containsRequiredMentions) {
           setMessage({ type: 'warning', text: 'Tweet must contain "@layeredge" or "$EDGEN" mentions' })
         } else {
-          setMessage({ type: 'success', text: 'Tweet verified successfully! Ready to submit.' })
+          let successMessage = 'Tweet verified successfully! Ready to submit.'
+          if (data.engagementMetrics) {
+            successMessage += ` Potential points: ${data.enhancedPoints?.totalPoints || 'calculating...'}`
+          }
+          setMessage({ type: 'success', text: successMessage })
         }
       } else {
         setMessage({ type: 'error', text: data.error || 'Verification failed' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Network error during verification' })
     } finally {
       setIsVerifying(false)
@@ -134,7 +163,7 @@ export default function ManualTweetSubmission() {
       } else {
         setMessage({ type: 'error', text: data.error || 'Submission failed' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Network error during submission' })
     } finally {
       setIsSubmitting(false)
@@ -151,7 +180,7 @@ export default function ManualTweetSubmission() {
         <CardHeader>
           <CardTitle className="text-white">Submit Tweet Manually</CardTitle>
           <CardDescription className="text-gray-400">
-            Submit your tweets containing "@layeredge" or "$EDGEN" mentions to earn points
+            Submit your tweets containing &ldquo;@layeredge&rdquo; or &ldquo;$EDGEN&rdquo; mentions to earn points
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -248,11 +277,65 @@ export default function ManualTweetSubmission() {
                         </a>
                       </div>
                       <p className="text-gray-300 mb-3">{verificationData.tweetData.content}</p>
-                      <div className="flex gap-4 text-sm text-gray-400">
-                        <span>❤️ {verificationData.tweetData.engagement.likes}</span>
-                        <span>🔄 {verificationData.tweetData.engagement.retweets}</span>
-                        <span>💬 {verificationData.tweetData.engagement.replies}</span>
-                      </div>
+
+                      {/* Enhanced Engagement Metrics */}
+                      {verificationData.engagementMetrics ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Sparkles className="h-4 w-4 text-orange-500" />
+                            <span className="text-sm font-medium text-orange-400">Live Engagement Metrics</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-sm">
+                            <div className="flex items-center gap-2 p-2 rounded bg-red-500/10 border border-red-500/20">
+                              <Heart className="h-4 w-4 text-red-500" />
+                              <span className="text-white">{formatNumber(verificationData.engagementMetrics.likes)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-2 rounded bg-green-500/10 border border-green-500/20">
+                              <RotateCcw className="h-4 w-4 text-green-500" />
+                              <span className="text-white">{formatNumber(verificationData.engagementMetrics.retweets)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-2 rounded bg-blue-500/10 border border-blue-500/20">
+                              <MessageSquare className="h-4 w-4 text-blue-500" />
+                              <span className="text-white">{formatNumber(verificationData.engagementMetrics.replies)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-2 rounded bg-purple-500/10 border border-purple-500/20">
+                              <MessageCircle className="h-4 w-4 text-purple-500" />
+                              <span className="text-white">{formatNumber(verificationData.engagementMetrics.quotes)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
+                              <Eye className="h-4 w-4 text-yellow-500" />
+                              <span className="text-white">{formatNumber(verificationData.engagementMetrics.views)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-2 rounded bg-cyan-500/10 border border-cyan-500/20">
+                              <Star className="h-4 w-4 text-cyan-500" />
+                              <span className="text-white">{formatNumber(verificationData.engagementMetrics.bookmarks)}</span>
+                            </div>
+                          </div>
+
+                          {/* Points Breakdown */}
+                          {verificationData.enhancedPoints && (
+                            <div className="mt-3 p-3 rounded bg-orange-500/10 border border-orange-500/20">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-orange-400">Potential Points</span>
+                                <span className="text-lg font-bold text-orange-300">{verificationData.enhancedPoints.totalPoints}</span>
+                              </div>
+                              <div className="text-xs text-gray-400 space-y-1">
+                                <div>Base: {verificationData.enhancedPoints.basePoints} pts</div>
+                                <div>Engagement: {verificationData.enhancedPoints.engagementPoints} pts</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex gap-4 text-sm text-gray-400">
+                          <span>❤️ {verificationData.tweetData.engagement.likes}</span>
+                          <span>🔄 {verificationData.tweetData.engagement.retweets}</span>
+                          <span>💬 {verificationData.tweetData.engagement.replies}</span>
+                          {verificationData.engagementError && (
+                            <span className="text-yellow-400 text-xs">⚠️ {verificationData.engagementError}</span>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -302,13 +385,23 @@ export default function ManualTweetSubmission() {
           </Button>
 
           {/* Instructions */}
-          <div className="text-sm text-gray-400 space-y-1">
+          <div className="text-sm text-gray-400 space-y-2">
             <p><strong>Requirements:</strong></p>
             <ul className="list-disc list-inside space-y-1 ml-2">
               <li>Tweet must be authored by you (prevents point farming)</li>
-              <li>Tweet must contain "@layeredge" or "$EDGEN" mentions</li>
+              <li>Tweet must contain &ldquo;@layeredge&rdquo; or &ldquo;$EDGEN&rdquo; mentions</li>
               <li>5-minute cooldown between submissions</li>
-              <li>Base points: 5 + engagement bonus</li>
+            </ul>
+
+            <p><strong>Enhanced Point System:</strong></p>
+            <ul className="list-disc list-inside space-y-1 ml-2 text-xs">
+              <li>Base: 10 points</li>
+              <li>Likes: 0.5 pts each (max 50)</li>
+              <li>Retweets: 2 pts each (max 100)</li>
+              <li>Replies: 1 pt each (max 30)</li>
+              <li>Quotes: 3 pts each (max 90)</li>
+              <li>Views: 0.01 pts each (max 25)</li>
+              <li>Bookmarks: 5 pts each (max 75)</li>
             </ul>
           </div>
         </CardContent>

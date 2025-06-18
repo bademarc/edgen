@@ -54,11 +54,12 @@ export async function GET(request: NextRequest) {
       take: limit,
     })
 
-    // Add rank to each user
+    // Add rank and calculate average points per tweet
     const leaderboard = users.map((user, index) => ({
       ...user,
       rank: index + 1,
       tweetsCount: user._count.tweets,
+      averagePointsPerTweet: user._count.tweets > 0 ? Math.round(user.totalPoints / user._count.tweets) : 0,
     }))
 
     // Update ranks in database (you might want to do this periodically instead)

@@ -57,22 +57,26 @@ export class FUDDetectionService {
     // High severity
     { terms: ['hate', 'terrible', 'awful', 'worst', 'garbage', 'trash'], weight: 8 },
     { terms: ['useless', 'pointless', 'waste', 'stupid', 'dumb'], weight: 6 },
-    
+
     // Medium severity
     { terms: ['bad', 'poor', 'disappointing', 'failed', 'failing', 'risky', 'dangerous'], weight: 4 },
-    { terms: ['doubt', 'uncertain', 'worried', 'concerned', 'skeptical'], weight: 2 }
+    { terms: ['doubt', 'uncertain', 'worried', 'concerned', 'skeptical'], weight: 3 }, // Increased from 2 to 3
+    { terms: ['issues with', 'problems with', 'concerns about', 'not sure about'], weight: 2 } // New subtle patterns
   ]
 
   private readonly PROFANITY_KEYWORDS = [
-    // Common profanity (configurable based on community standards)
-    { terms: ['damn', 'hell', 'crap', 'shit', 'fuck', 'bitch'], weight: 7 },
-    { terms: ['ass', 'piss', 'bastard', 'idiot', 'moron'], weight: 5 }
+    // Severe profanity (always block)
+    { terms: ['bitch', 'bastard'], weight: 8 },
+    // Moderate profanity (warn for positive content, block for negative)
+    { terms: ['damn', 'hell', 'crap', 'shit', 'fuck'], weight: 4 }, // Reduced from 7 to 4
+    { terms: ['ass', 'piss', 'idiot', 'moron'], weight: 3 } // Reduced from 5 to 3
   ]
 
   private readonly MISINFORMATION_INDICATORS = [
     { terms: ['fake news', 'conspiracy', 'hoax', 'lie', 'lying'], weight: 8 },
     { terms: ['misleading', 'false', 'untrue', 'deceptive'], weight: 6 },
-    { terms: ['rumor', 'unconfirmed', 'allegedly', 'supposedly'], weight: 3 }
+    { terms: ['rumor', 'unconfirmed', 'allegedly', 'supposedly'], weight: 4 }, // Increased from 3 to 4
+    { terms: ['heard that', 'word is', 'people say', 'they say'], weight: 3 } // New subtle FUD patterns
   ]
 
   private readonly SPAM_INDICATORS = [
@@ -101,23 +105,69 @@ export class FUDDetectionService {
   ]
 
   constructor(config?: Partial<FUDDetectionConfig>) {
+    // Load environment variables with fallbacks - ALWAYS ENABLE FUD DETECTION
+    const blockThreshold = process.env.FUD_BLOCK_THRESHOLD ? parseInt(process.env.FUD_BLOCK_THRESHOLD) : 10 // Optimal threshold for scam detection
+    const warnThreshold = process.env.FUD_WARN_THRESHOLD ? parseInt(process.env.FUD_WARN_THRESHOLD) : 4 // Lowered from 5 to 4
+
     this.config = {
+      // SECURITY FIX: Always enable FUD detection unless explicitly disabled with 'false'
       enabled: process.env.FUD_DETECTION_ENABLED !== 'false',
       strictMode: process.env.FUD_STRICT_MODE === 'true',
-      blockThreshold: parseInt(process.env.FUD_BLOCK_THRESHOLD || '15'),
-      warnThreshold: parseInt(process.env.FUD_WARN_THRESHOLD || '8'),
+      blockThreshold,
+      warnThreshold,
       whitelistEnabled: process.env.FUD_WHITELIST_ENABLED !== 'false',
       customKeywords: process.env.FUD_CUSTOM_KEYWORDS?.split(',') || [],
       ...config
     }
+
+    // SECURITY: Force enable if not explicitly configured
+    if (this.config.enabled === undefined || this.config.enabled === null) {
+      this.config.enabled = true
+      console.warn('⚠️ FUD Detection was undefined - forcing enabled for security')
+    }
+
+    // SECURITY: Ensure reasonable thresholds
+    if (this.config.blockThreshold > 15) {
+      console.warn(`⚠️ FUD block threshold too high (${this.config.blockThreshold}), reducing to 10`)
+      this.config.blockThreshold = 10
+    }
+
+    // Always log configuration for security auditing
+    console.log('🛡️ FUD Detection Service Configuration:', {
+      enabled: this.config.enabled,
+      blockThreshold: this.config.blockThreshold,
+      warnThreshold: this.config.warnThreshold,
+      whitelistEnabled: this.config.whitelistEnabled,
+      strictMode: this.config.strictMode,
+      customKeywordsCount: this.config.customKeywords.length
+    })
   }
 
   /**
    * Main FUD detection method - analyzes content and returns result
    */
   async detectFUD(content: string): Promise<FUDAnalysisResult> {
-    // If FUD detection is disabled, allow all content
+    // SECURITY: Log all content being analyzed for audit trail
+    console.log(`🔍 FUD Detection analyzing content: "${content}"`)
+
+    // SECURITY FIX: Never allow FUD detection to be disabled for scam content
     if (!this.config.enabled) {
+      console.warn('⚠️ FUD Detection is disabled - this is a security risk!')
+      // Still check for obvious scam content even if disabled
+      if (this.hasObviousScamContent(content)) {
+        console.error('🚨 SECURITY ALERT: Obvious scam content detected but FUD detection is disabled!')
+        return {
+          isBlocked: true,
+          isWarning: false,
+          score: 100,
+          detectedCategories: ['scam-related'],
+          flaggedTerms: ['scam'],
+          suggestions: ['Remove scam-related content'],
+          message: 'Content blocked due to security policy violation',
+          allowResubmit: true
+        }
+      }
+
       return {
         isBlocked: false,
         isWarning: false,
@@ -125,26 +175,31 @@ export class FUDDetectionService {
         detectedCategories: [],
         flaggedTerms: [],
         suggestions: [],
-        message: 'Content approved',
+        message: 'Content approved (FUD detection disabled)',
         allowResubmit: true
       }
     }
 
     const analysis = this.analyzeContent(content)
     const totalScore = this.calculateTotalScore(analysis)
-    
+
     // Check whitelist - but don't completely bypass FUD detection for high-risk content
     const isWhitelisted = this.config.whitelistEnabled && this.isWhitelisted(content)
     let adjustedScore = totalScore
 
     if (isWhitelisted) {
-      // Only apply whitelist reduction if the content doesn't have severe FUD indicators
-      if (totalScore < this.config.blockThreshold) {
-        adjustedScore = Math.max(0, totalScore - 3) // Reduced from -5 to -3 for safety
-      }
-      // If content has severe FUD (>= block threshold), whitelist doesn't help much
-      else {
-        adjustedScore = Math.max(this.config.warnThreshold, totalScore - 2) // Minimal reduction for severe FUD
+      // Check if content has obvious scam indicators - whitelist should NOT help with these
+      const hasObviousScamContent = this.hasObviousScamContent(content)
+
+      if (hasObviousScamContent) {
+        // No whitelist reduction for obvious scam content
+        adjustedScore = totalScore
+      } else if (totalScore < this.config.blockThreshold) {
+        // Only apply whitelist reduction for non-scam content below block threshold
+        adjustedScore = Math.max(0, totalScore - 3)
+      } else {
+        // Minimal reduction for severe FUD
+        adjustedScore = Math.max(this.config.warnThreshold, totalScore - 2)
       }
     }
 
@@ -200,7 +255,16 @@ export class FUDDetectionService {
   private analyzeContent(content: string): ContentAnalysis {
     const normalizedContent = content.toLowerCase().trim()
     const words = normalizedContent.split(/\s+/)
-    
+
+    // Check for positive context to adjust profanity scoring
+    const hasPositiveContext = this.hasPositiveContext(normalizedContent)
+    let profanityScore = this.calculateCategoryScore(normalizedContent, this.PROFANITY_KEYWORDS)
+
+    // Reduce profanity score if content has positive context, but keep minimum for warning
+    if (hasPositiveContext && profanityScore > 0) {
+      profanityScore = Math.max(3, profanityScore * 0.6) // Reduce by 40% but keep minimum of 3 for warning
+    }
+
     return {
       content,
       normalizedContent,
@@ -208,7 +272,7 @@ export class FUDDetectionService {
       categories: {
         scam: this.calculateCategoryScore(normalizedContent, this.SCAM_KEYWORDS),
         negative: this.calculateCategoryScore(normalizedContent, this.NEGATIVE_SENTIMENT),
-        profanity: this.calculateCategoryScore(normalizedContent, this.PROFANITY_KEYWORDS),
+        profanity: profanityScore,
         misinformation: this.calculateCategoryScore(normalizedContent, this.MISINFORMATION_INDICATORS),
         spam: this.calculateCategoryScore(normalizedContent, this.SPAM_INDICATORS)
       },
@@ -221,16 +285,36 @@ export class FUDDetectionService {
    */
   private calculateCategoryScore(content: string, keywords: Array<{terms: string[], weight: number}>): number {
     let score = 0
-    
+    const foundTerms = []
+
     for (const keywordGroup of keywords) {
       for (const term of keywordGroup.terms) {
         if (content.includes(term)) {
           score += keywordGroup.weight
+          foundTerms.push(`${term}(+${keywordGroup.weight})`)
         }
       }
     }
-    
+
+    // Log found terms in development mode only
+    if (foundTerms.length > 0 && process.env.NODE_ENV === 'development') {
+      console.log(`🔍 Found keywords in "${content}": ${foundTerms.join(', ')} = ${score} points`)
+    }
+
     return score
+  }
+
+  /**
+   * Check if content has positive context that might mitigate profanity concerns
+   */
+  private hasPositiveContext(content: string): boolean {
+    const positiveIndicators = [
+      'excited', 'amazing', 'awesome', 'love', 'great', 'fantastic', 'revolutionary',
+      'bullish', 'optimistic', 'incredible', 'brilliant', 'outstanding', 'excellent',
+      'wonderful', 'impressive', 'innovative', 'groundbreaking', 'to the moon'
+    ]
+
+    return positiveIndicators.some(indicator => content.includes(indicator))
   }
 
   /**
@@ -270,6 +354,19 @@ export class FUDDetectionService {
    */
   private isWhitelisted(content: string): boolean {
     return this.WHITELIST_PATTERNS.some(pattern => pattern.test(content))
+  }
+
+  /**
+   * Check if content has obvious scam indicators that should never be whitelisted
+   */
+  private hasObviousScamContent(content: string): boolean {
+    const normalizedContent = content.toLowerCase()
+    const obviousScamTerms = [
+      'scam', 'fraud', 'fake', 'ponzi', 'rug pull', 'rugpull', 'exit scam',
+      'pyramid scheme', 'pump and dump', 'worthless', 'steal'
+    ]
+
+    return obviousScamTerms.some(term => normalizedContent.includes(term))
   }
 
   /**

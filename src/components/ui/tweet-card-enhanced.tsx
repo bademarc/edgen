@@ -3,14 +3,17 @@
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  HeartIcon,
-  ArrowPathRoundedSquareIcon,
-  ChatBubbleLeftIcon,
-  SparklesIcon,
-  CalendarIcon,
-  UserIcon,
-  ArrowPathIcon
-} from '@heroicons/react/24/outline'
+  Heart,
+  RotateCw,
+  RotateCcw,
+  MessageCircle,
+  Sparkles,
+  Calendar,
+  User,
+  RotateCw as ArrowPath,
+  Eye,
+  Star
+} from 'lucide-react'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader } from './card'
@@ -26,6 +29,9 @@ interface TweetCardEnhancedProps {
     likes: number
     retweets: number
     replies: number
+    quotes?: number
+    views?: number
+    bookmarks?: number
     totalPoints: number
     createdAt: Date
     user: {
@@ -148,7 +154,7 @@ export function TweetCardEnhanced({
               className="absolute inset-0 bg-card/50 backdrop-blur-sm rounded-lg flex items-center justify-center z-10"
             >
               <div className="flex items-center space-x-2 text-layeredge-blue">
-                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                <ArrowPath className="h-5 w-5 animate-spin" />
                 <span className="text-sm font-medium">Updating metrics...</span>
               </div>
             </motion.div>
@@ -169,7 +175,7 @@ export function TweetCardEnhanced({
                   />
                 ) : (
                   <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center ring-2 ring-border">
-                    <UserIcon className="h-6 w-6 text-muted-foreground" />
+                    <User className="h-6 w-6 text-muted-foreground" />
                   </div>
                 )}
               </div>
@@ -185,7 +191,7 @@ export function TweetCardEnhanced({
                   )}
                 </div>
                 <div className="flex items-center space-x-2 mt-1">
-                  <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                  <Calendar className="h-3 w-3 text-muted-foreground" />
                   <p className="text-xs text-muted-foreground">
                     {formatDate(tweet.createdAt)}
                   </p>
@@ -202,42 +208,69 @@ export function TweetCardEnhanced({
             </p>
           )}
 
-          {/* Engagement metrics */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <motion.div
-                className="flex items-center space-x-1"
-                animate={showChanges.likes ? { scale: [1, 1.1, 1] } : {}}
-              >
-                <HeartIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{formatNumber(tweet.likes)}</span>
-              </motion.div>
+          {/* Enhanced Engagement metrics */}
+          <div className="space-y-3">
+            {/* Primary metrics */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <motion.div
+                  className="flex items-center space-x-1"
+                  animate={showChanges.likes ? { scale: [1, 1.1, 1] } : {}}
+                >
+                  <Heart className="h-4 w-4 text-red-500" />
+                  <span className="text-sm font-medium">{formatNumber(tweet.likes)}</span>
+                </motion.div>
+
+                <motion.div
+                  className="flex items-center space-x-1"
+                  animate={showChanges.retweets ? { scale: [1, 1.1, 1] } : {}}
+                >
+                  <RotateCcw className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium">{formatNumber(tweet.retweets)}</span>
+                </motion.div>
+
+                <motion.div
+                  className="flex items-center space-x-1"
+                  animate={showChanges.replies ? { scale: [1, 1.1, 1] } : {}}
+                >
+                  <MessageCircle className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm font-medium">{formatNumber(tweet.replies)}</span>
+                </motion.div>
+              </div>
 
               <motion.div
-                className="flex items-center space-x-1"
-                animate={showChanges.retweets ? { scale: [1, 1.1, 1] } : {}}
+                animate={showChanges.totalPoints ? { scale: [1, 1.1, 1] } : {}}
               >
-                <ArrowPathRoundedSquareIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{formatNumber(tweet.retweets)}</span>
-              </motion.div>
-
-              <motion.div
-                className="flex items-center space-x-1"
-                animate={showChanges.replies ? { scale: [1, 1.1, 1] } : {}}
-              >
-                <ChatBubbleLeftIcon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{formatNumber(tweet.replies)}</span>
+                <Badge variant="points" size="lg">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  {formatNumber(tweet.totalPoints)} pts
+                </Badge>
               </motion.div>
             </div>
 
-            <motion.div
-              animate={showChanges.totalPoints ? { scale: [1, 1.1, 1] } : {}}
-            >
-              <Badge variant="points" size="lg">
-                <SparklesIcon className="h-3 w-3 mr-1" />
-                {formatNumber(tweet.totalPoints)} pts
-              </Badge>
-            </motion.div>
+            {/* Enhanced metrics (if available) */}
+            {(tweet.quotes || tweet.views || tweet.bookmarks) && (
+              <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                {tweet.quotes !== undefined && tweet.quotes > 0 && (
+                  <div className="flex items-center space-x-1">
+                    <MessageCircle className="h-3 w-3 text-purple-500" />
+                    <span>{formatNumber(tweet.quotes)}</span>
+                  </div>
+                )}
+                {tweet.views !== undefined && tweet.views > 0 && (
+                  <div className="flex items-center space-x-1">
+                    <Eye className="h-3 w-3 text-yellow-500" />
+                    <span>{formatNumber(tweet.views)}</span>
+                  </div>
+                )}
+                {tweet.bookmarks !== undefined && tweet.bookmarks > 0 && (
+                  <div className="flex items-center space-x-1">
+                    <Star className="h-3 w-3 text-cyan-500" />
+                    <span>{formatNumber(tweet.bookmarks)}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
@@ -264,7 +297,7 @@ export function TweetCardEnhanced({
                 onClick={handleUpdateEngagement}
                 disabled={isUpdating}
               >
-                <ArrowPathIcon className="h-3 w-3 mr-1" />
+                <ArrowPath className="h-3 w-3 mr-1" />
                 Update
               </Button>
             )}

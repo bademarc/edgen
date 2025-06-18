@@ -8,12 +8,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
-  ExclamationTriangleIcon,
-  ArrowPathIcon,
-  ClockIcon,
-  InformationCircleIcon,
-  ChatBubbleLeftEllipsisIcon
-} from '@heroicons/react/24/outline'
+  AlertTriangle,
+  RotateCw,
+  RotateCcw,
+  Clock,
+  Info,
+  MessageCircle
+} from 'lucide-react'
 
 interface ErrorDisplayProps {
   error: {
@@ -60,15 +61,15 @@ export function ErrorDisplay({ error, onRetry, onContactSupport, className }: Er
   const getErrorIcon = () => {
     switch (error.type) {
       case 'RATE_LIMITED':
-        return <ClockIcon className="h-5 w-5 text-yellow-500" />
+        return <Clock className="h-5 w-5 text-yellow-500" />
       case 'UNAUTHORIZED_SUBMISSION':
       case 'PRIVATE_TWEET':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+        return <AlertTriangle className="h-5 w-5 text-red-500" />
       case 'INVALID_URL':
       case 'CONTENT_VALIDATION_FAILED':
-        return <InformationCircleIcon className="h-5 w-5 text-blue-500" />
+        return <Info className="h-5 w-5 text-blue-500" />
       default:
-        return <ExclamationTriangleIcon className="h-5 w-5 text-orange-500" />
+        return <AlertTriangle className="h-5 w-5 text-orange-500" />
     }
   }
 
@@ -142,7 +143,7 @@ export function ErrorDisplay({ error, onRetry, onContactSupport, className }: Er
                   size="sm"
                   className="flex items-center space-x-2"
                 >
-                  <ArrowPathIcon className="h-4 w-4" />
+                  <RotateCcw className="h-4 w-4" />
                   <span>
                     {canRetry ? 'Try Again' : `Retry in ${formatCountdown(countdown)}`}
                   </span>
@@ -156,7 +157,7 @@ export function ErrorDisplay({ error, onRetry, onContactSupport, className }: Er
                   size="sm"
                   className="flex items-center space-x-2"
                 >
-                  <ChatBubbleLeftEllipsisIcon className="h-4 w-4" />
+                  <MessageCircle className="h-4 w-4" />
                   <span>Contact Support</span>
                 </Button>
               )}

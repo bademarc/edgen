@@ -6,6 +6,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/ui/footer";
 import { Toaster } from "@/components/ui/sonner";
 import { EdgenHelperChatbot } from "@/components/edgen-helper-chatbot";
+import { initEngagementSystem } from "@/lib/init-engagement-system";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -47,6 +48,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Initialize engagement system on server side
+  if (typeof window === 'undefined') {
+    initEngagementSystem();
+  }
+
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <body className={`${inter.className} antialiased min-h-screen bg-background text-foreground`}>

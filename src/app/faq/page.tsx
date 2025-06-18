@@ -11,12 +11,20 @@ const faqs = [
     category: 'Getting Started',
     question: 'How do I join the LayerEdge community?',
     answer: 'Simply click "Sign in with X" on our platform to authenticate with your X (Twitter) account. Once authenticated, you can start submitting tweets and earning points immediately.',
+    tags: ['signup', 'twitter', 'authentication', 'getting started'],
+    links: [
+      { text: 'Sign Up Now', url: '/login', internal: true }
+    ]
   },
   {
     id: 2,
     category: 'Points System',
     question: 'How are points calculated?',
     answer: 'You earn 5 base points for every verified tweet submission from the LayerEdge community. Additionally, you get bonus points: +1 point per like, +3 points per retweet, and +2 points per reply on your submitted tweets.',
+    tags: ['points', 'calculation', 'rewards', 'engagement'],
+    links: [
+      { text: 'View Dashboard', url: '/dashboard', internal: true }
+    ]
   },
   {
     id: 3,

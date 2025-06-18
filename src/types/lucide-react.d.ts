@@ -79,6 +79,53 @@ declare module 'lucide-react' {
   export const Maximize2: LucideIcon;
   export const Check: LucideIcon;
   export const BookOpen: LucideIcon;
+  export const RotateCw: LucideIcon;
+  export const RotateCcw: LucideIcon;
+  export const ChevronDown: LucideIcon;
+}
+
+declare module 'twitter-api-v2' {
+  export interface TweetV2 {
+    id: string;
+    text: string;
+    author_id?: string;
+    created_at?: string;
+    public_metrics?: {
+      like_count: number;
+      retweet_count: number;
+      reply_count: number;
+      quote_count: number;
+    };
+  }
+
+  export interface UserV2 {
+    id: string;
+    username: string;
+    name: string;
+    verified?: boolean;
+    profile_image_url?: string;
+    public_metrics?: {
+      followers_count: number;
+      following_count: number;
+      tweet_count: number;
+    };
+  }
+
+  export interface TwitterApiReadOnly {
+    v2: {
+      search: (query: string, options?: any) => Promise<any>;
+      singleTweet: (id: string, options?: any) => Promise<any>;
+      userByUsername: (username: string, options?: any) => Promise<any>;
+      userTimeline: (userId: string, options?: any) => Promise<any>;
+      me: () => Promise<any>;
+    };
+  }
+
+  export class TwitterApi {
+    constructor(bearerToken: string);
+    constructor(config: { appKey: string; appSecret: string; });
+    readOnly: TwitterApiReadOnly;
+  }
 }
 
 declare module 'date-fns' {

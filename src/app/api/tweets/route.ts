@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { isValidTwitterUrl, isLayerEdgeCommunityUrl, calculatePoints, validateTweetContent, verifyTweetAuthor, extractUsernameFromTweetUrl } from '@/lib/utils'
 import { getFallbackService } from '@/lib/fallback-service'
 import { TweetErrorHandler, createErrorResponse } from '@/lib/tweet-error-handler'
+import { getEnhancedContentValidator } from '@/lib/enhanced-content-validator'
 
 export async function GET(request: NextRequest) {
   try {
@@ -189,19 +190,104 @@ export async function POST(request: NextRequest) {
       console.log(`Warning: Tweet may not be from LayerEdge community, but proceeding with content validation`)
     }
 
-    // Validate tweet content for required keywords
-    console.log(`Validating tweet content: "${tweetData.content}"`)
-    const isValidContent = validateTweetContent(tweetData.content)
-    if (!isValidContent) {
-      console.log(`Content validation failed for tweet: "${tweetData.content}"`)
-      const errorResponse = TweetErrorHandler.handleContentValidation(tweetData.content)
+    // ENHANCED FUD DETECTION - Validate content for harmful material
+    console.log(`🛡️ SECURITY: Performing enhanced FUD detection on tweet content`)
+    console.log(`📝 Tweet URL: ${tweetUrl}`)
+    console.log(`📝 Tweet Content: "${tweetData.content}"`)
+    console.log(`📝 Tweet Author: ${tweetData.author.username}`)
+    console.log(`📝 User ID: ${userId}`)
+
+    const contentValidator = getEnhancedContentValidator()
+
+    try {
+      const contentValidation = await contentValidator.validateContent(tweetData.content, {
+        enableFUDDetection: true,
+        enableAdvancedFUDDetection: true,
+        strictMode: false,
+        requireLayerEdgeKeywords: true,
+        allowWarnings: true
+      })
+
+      // SECURITY: Always log validation result for audit trail
+      console.log('🔍 FUD validation result:', {
+        allowSubmission: contentValidation.allowSubmission,
+        isValid: contentValidation.isValid,
+        hasRequiredKeywords: contentValidation.hasRequiredKeywords,
+        isBlocked: contentValidation.fudAnalysis?.isBlocked,
+        isWarning: contentValidation.fudAnalysis?.isWarning,
+        score: contentValidation.fudAnalysis?.score,
+        flaggedTerms: contentValidation.fudAnalysis?.flaggedTerms,
+        detectedCategories: contentValidation.fudAnalysis?.detectedCategories,
+        message: contentValidation.message
+      })
+
+      // SECURITY: Block submission if FUD is detected or content is invalid
+      if (!contentValidation.allowSubmission || !contentValidation.isValid) {
+        console.log(`🚫 SECURITY: Content validation failed for tweet: "${tweetData.content}"`)
+        console.log(`🚫 SECURITY: Reason: ${contentValidation.message}`)
+        console.log(`🚫 SECURITY: FUD Analysis:`, contentValidation.fudAnalysis)
+
+        // Create appropriate error response based on validation result
+        let errorMessage = contentValidation.message
+        if (contentValidation.fudAnalysis?.isBlocked) {
+          errorMessage = `Content blocked due to FUD detection: ${contentValidation.fudAnalysis.message}`
+        }
+
+        const errorResponse = TweetErrorHandler.handleContentValidation(errorMessage)
+        return NextResponse.json(
+          createErrorResponse(errorResponse),
+          { status: errorResponse.httpStatus }
+        )
+      }
+
+    } catch (validationError) {
+      console.error('🚨 CRITICAL: FUD validation error:', validationError)
+      console.error('🚨 CRITICAL: This should never happen - blocking submission for safety')
+
+      const errorResponse = TweetErrorHandler.handleContentValidation('Content validation failed due to system error')
       return NextResponse.json(
         createErrorResponse(errorResponse),
         { status: errorResponse.httpStatus }
       )
     }
 
-    console.log('Content validation passed!')
+
+
+    // SECURITY: Additional FUD detection using basic service as fallback
+    console.log('🔒 SECURITY: Running additional FUD detection as fallback')
+    const { getFUDDetectionService } = await import('@/lib/fud-detection-service')
+    const fudService = getFUDDetectionService()
+    const basicFudResult = await fudService.detectFUD(tweetData.content)
+
+    console.log('🔍 SECURITY: Basic FUD detection result:', {
+      isBlocked: basicFudResult.isBlocked,
+      isWarning: basicFudResult.isWarning,
+      score: basicFudResult.score,
+      flaggedTerms: basicFudResult.flaggedTerms,
+      detectedCategories: basicFudResult.detectedCategories
+    })
+
+    if (basicFudResult.isBlocked) {
+      console.log(`🚫 SECURITY: Content blocked by fallback FUD detection: ${basicFudResult.message}`)
+      const errorResponse = TweetErrorHandler.handleContentValidation(`Content blocked by security system: ${basicFudResult.message}`)
+      return NextResponse.json(
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
+      )
+    }
+
+    // Also run legacy validation for backward compatibility
+    const legacyValidation = validateTweetContent(tweetData.content)
+    if (!legacyValidation) {
+      console.log(`📋 Legacy content validation failed for tweet: "${tweetData.content}"`)
+      const errorResponse = TweetErrorHandler.handleContentValidation('Content does not meet LayerEdge requirements')
+      return NextResponse.json(
+        createErrorResponse(errorResponse),
+        { status: errorResponse.httpStatus }
+      )
+    }
+
+    console.log('✅ SECURITY: All content validation checks passed!')
 
     const basePoints = 5
     const totalPoints = calculatePoints({

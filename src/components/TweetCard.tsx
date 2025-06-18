@@ -1,14 +1,14 @@
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  HeartIcon,
-  ArrowPathRoundedSquareIcon,
-  ChatBubbleLeftIcon,
-  SparklesIcon,
-  CalendarIcon,
-  UserIcon,
-  ArrowPathIcon
-} from '@heroicons/react/24/outline'
+  Heart,
+  RotateCw,
+  MessageCircle,
+  Sparkles,
+  Calendar,
+  User,
+  RotateCw as ArrowPath
+} from 'lucide-react'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { DateTooltip, ButtonTooltip } from '@/components/ui/tooltip'
@@ -127,7 +127,7 @@ export const TweetCard = memo(function TweetCard({
             className="absolute inset-0 bg-card/50 backdrop-blur-sm rounded-lg flex items-center justify-center z-10"
           >
             <div className="flex items-center space-x-2 text-layeredge-blue">
-              <ArrowPathIcon className="h-5 w-5 animate-spin" />
+              <ArrowPath className="h-5 w-5 animate-spin" />
               <span className="text-sm font-medium">Updating metrics...</span>
             </div>
           </motion.div>
@@ -152,7 +152,7 @@ export const TweetCard = memo(function TweetCard({
               </div>
             ) : (
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-muted to-muted-hover flex items-center justify-center ring-2 ring-border">
-                <UserIcon className="h-5 w-5 text-muted-foreground" />
+                <User className="h-5 w-5 text-muted-foreground" />
               </div>
             )}
             <div>
@@ -172,7 +172,7 @@ export const TweetCard = memo(function TweetCard({
             animate={showChanges.totalPoints ? { scale: [1, 1.1, 1] } : {}}
             transition={{ duration: 0.3 }}
           >
-            <SparklesIcon className="h-3 w-3 mr-1" />
+            <Sparkles className="h-3 w-3 mr-1" />
             {formatNumber(tweet.totalPoints)} points
             <AnimatePresence>
               {showChanges.totalPoints && (
@@ -193,7 +193,7 @@ export const TweetCard = memo(function TweetCard({
               onClick={handleUpdateClick}
               disabled={isUpdating}
             >
-              <ArrowPathIcon className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
+              <ArrowPath className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
             </ButtonTooltip>
           )}
         </div>
@@ -219,7 +219,7 @@ export const TweetCard = memo(function TweetCard({
             animate={showChanges.likes ? { scale: [1, 1.05, 1] } : {}}
             transition={{ duration: 0.3 }}
           >
-            <HeartIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            <Heart className="h-4 w-4 group-hover:scale-110 transition-transform" />
             <span className="font-medium">{formatNumber(tweet.likes)}</span>
             <AnimatePresence>
               {showChanges.likes && (
@@ -237,7 +237,7 @@ export const TweetCard = memo(function TweetCard({
             animate={showChanges.retweets ? { scale: [1, 1.05, 1] } : {}}
             transition={{ duration: 0.3 }}
           >
-            <ArrowPathRoundedSquareIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            <RotateCw className="h-4 w-4 group-hover:scale-110 transition-transform" />
             <span className="font-medium">{formatNumber(tweet.retweets)}</span>
             <AnimatePresence>
               {showChanges.retweets && (
@@ -255,7 +255,7 @@ export const TweetCard = memo(function TweetCard({
             animate={showChanges.replies ? { scale: [1, 1.05, 1] } : {}}
             transition={{ duration: 0.3 }}
           >
-            <ChatBubbleLeftIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            <MessageCircle className="h-4 w-4 group-hover:scale-110 transition-transform" />
             <span className="font-medium">{formatNumber(tweet.replies)}</span>
             <AnimatePresence>
               {showChanges.replies && (
@@ -276,7 +276,7 @@ export const TweetCard = memo(function TweetCard({
             submittedDate={tweet.submittedAt}
             className="flex items-center space-x-2 text-sm text-muted-foreground"
           >
-            <CalendarIcon className="h-4 w-4" />
+            <Calendar className="h-4 w-4" />
             <span>{formatDate(tweet.originalTweetDate || tweet.createdAt)}</span>
             {tweet.submittedAt && tweet.originalTweetDate && (
               <span className="text-xs text-muted-foreground/70 ml-1">ℹ️</span>

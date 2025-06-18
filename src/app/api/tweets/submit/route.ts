@@ -108,9 +108,21 @@ export async function POST(request: NextRequest) {
       console.log('🔓 Circuit breaker bypass enabled for manual submission')
     }
 
-    // Submit tweet with simplified error handling
+    // Submit tweet with enhanced error handling and logging
     try {
+      console.log('🔍 Tweet submission: Starting submission process')
+      console.log('📝 Tweet URL:', tweetUrl)
+      console.log('👤 User ID:', authResult.userId)
+      console.log('🔧 Bypass circuit breaker:', bypassCircuitBreaker)
+
       const result = await submissionService.submitTweet(tweetUrl, authResult.userId, bypassCircuitBreaker)
+
+      console.log('📊 Tweet submission result:', {
+        success: result.success,
+        message: result.message,
+        tweetId: result.tweetId || 'N/A',
+        points: result.points || 0
+      })
 
       if (result.success) {
         return NextResponse.json({
@@ -121,22 +133,41 @@ export async function POST(request: NextRequest) {
           bypassUsed: bypassCircuitBreaker
         })
       } else {
+        console.log('❌ Tweet submission failed:', result.message)
         return NextResponse.json(
           {
             success: false,
             error: result.message,
-            userMessage: result.message
+            userMessage: result.message || 'Tweet submission failed. Please try again.',
+            suggestions: [
+              'Ensure the tweet URL is valid and accessible',
+              'Check that the tweet mentions @layeredge or contains EDGEN',
+              'Verify you are the author of the tweet',
+              'Try again in a few minutes if rate limited'
+            ]
           },
           { status: 400 }
         )
       }
     } catch (submissionError) {
-      console.error('Tweet submission error:', submissionError)
+      console.error('❌ Tweet submission error:', submissionError)
+      console.error('❌ Error details:', {
+        name: submissionError instanceof Error ? submissionError.name : 'Unknown',
+        message: submissionError instanceof Error ? submissionError.message : String(submissionError),
+        stack: submissionError instanceof Error ? submissionError.stack : 'No stack trace'
+      })
+
       return NextResponse.json(
         {
           success: false,
           error: 'Submission failed',
-          userMessage: 'An unexpected error occurred. Please try again later.'
+          userMessage: 'An unexpected error occurred during tweet submission. Please try again later.',
+          suggestions: [
+            'Check your internet connection',
+            'Verify the tweet URL is correct',
+            'Try submitting again in a few minutes',
+            'Contact support if the issue persists'
+          ]
         },
         { status: 500 }
       )

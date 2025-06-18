@@ -3,14 +3,14 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ChatBubbleLeftRightIcon,
-  ArrowPathIcon,
-  FunnelIcon,
-  MagnifyingGlassIcon,
-  ChevronDownIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-} from '@heroicons/react/24/outline'
+  MessageSquare,
+  RotateCw,
+  Filter,
+  Search,
+  ChevronDown,
+  AlertTriangle,
+  CheckCircle,
+} from 'lucide-react'
 import { TweetCard } from '@/components/TweetCard'
 import { formatNumber } from '@/lib/utils'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
@@ -258,7 +258,7 @@ export default function RecentSubmissionsPage() {
       <div className="min-h-screen py-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="text-center py-12">
-            <ExclamationTriangleIcon className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">Failed to Load Tweets</h2>
             <p className="text-muted-foreground mb-6">{error}</p>
             <button
@@ -301,7 +301,7 @@ export default function RecentSubmissionsPage() {
               <div className="flex flex-col sm:flex-row gap-4 flex-1">
                 {/* Search */}
                 <div className="relative flex-1 max-w-md">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Search tweets or users..."
@@ -313,7 +313,7 @@ export default function RecentSubmissionsPage() {
 
                 {/* Sort */}
                 <div className="relative">
-                  <FunnelIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as 'recent' | 'points' | 'engagement')}
@@ -339,7 +339,7 @@ export default function RecentSubmissionsPage() {
                   className="btn-layeredge-ghost p-2 rounded-lg hover-lift disabled:opacity-50"
                   title="Refresh tweets"
                 >
-                  <ArrowPathIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <RotateCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
@@ -351,7 +351,7 @@ export default function RecentSubmissionsPage() {
                   Showing {filteredTweets.length} of {formatNumber(pagination?.total || 0)} tweets
                 </span>
                 <div className="flex items-center space-x-2">
-                  <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-green-500" />
                   <span className="text-green-600">Live community feed</span>
                 </div>
               </div>
@@ -367,7 +367,7 @@ export default function RecentSubmissionsPage() {
             {filteredTweets.length === 0 ? (
               <div className="text-center py-12">
                 <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
-                  <ChatBubbleLeftRightIcon className="h-12 w-12 text-muted-foreground" />
+                  <MessageSquare className="h-12 w-12 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground">
                   {searchTerm ? 'No tweets found matching your search.' : 'No tweets available.'}
@@ -432,7 +432,7 @@ export default function RecentSubmissionsPage() {
                 ) : (
                   <div className="flex items-center space-x-2">
                     <span>Load More Tweets</span>
-                    <ChevronDownIcon className="h-4 w-4" />
+                    <ChevronDown className="h-4 w-4" />
                   </div>
                 )}
               </button>
@@ -454,7 +454,7 @@ export default function RecentSubmissionsPage() {
               className="mt-8 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
             >
               <div className="flex items-center space-x-2 text-green-700 dark:text-green-300">
-                <CheckCircleIcon className="h-5 w-5" />
+                <CheckCircle className="h-5 w-5" />
                 <span className="text-sm font-medium">
                   ✅ Community feed is active and up-to-date!
                 </span>

@@ -236,7 +236,7 @@ export default function CookiePolicyPage() {
               </p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                 <li>Posting the updated policy on our platform</li>
-                <li>Updating the "Last updated" date at the top of this page</li>
+                <li>Updating the &ldquo;Last updated&rdquo; date at the top of this page</li>
                 <li>Sending notifications for significant changes</li>
               </ul>
             </CardContent>

@@ -19,29 +19,33 @@ import { OrbitControls, PerspectiveCamera } from "@react-three/drei"
 import { Suspense } from "react"
 import { ModernBackground, GridLines } from "./modern-background"
 
-const features = [
+const howItWorksSteps = [
   {
-    icon: SparklesIcon,
-    title: 'Earn Points',
-    description: 'Get rewarded for engaging with LayerEdge content on X/Twitter',
+    step: 1,
+    icon: UsersIcon,
+    title: 'Connect Your X Account',
+    description: 'Securely sign in with X (OAuth). We only read engagement data—never post on your behalf.',
     color: 'text-layeredge-orange'
   },
   {
-    icon: TrophyIcon,
-    title: 'Compete',
-    description: 'Climb the leaderboard and showcase your community involvement',
+    step: 2,
+    icon: ChatBubbleLeftRightIcon,
+    title: 'Engage on X',
+    description: 'Reply or comment on LayerEdge tweets with @LayerEdge or $EDGEN. Create original tweets/threads about LayerEdge milestones, tech, or vision.',
     color: 'text-layeredge-blue'
   },
   {
-    icon: ChatBubbleLeftRightIcon,
-    title: 'Engage',
-    description: 'Share, like, and comment on tweets mentioning @layeredge or $EDGEN',
+    step: 3,
+    icon: SparklesIcon,
+    title: 'Earn Reputation Points',
+    description: 'Points are based on quality and engagement (likes, RTs, replies). Track your $EDGEN score in real time.',
     color: 'text-success'
   },
   {
-    icon: ChartBarIcon,
-    title: 'Track Progress',
-    description: 'Monitor your engagement metrics and point accumulation',
+    step: 4,
+    icon: TrophyIcon,
+    title: 'Climb the Leaderboard',
+    description: 'Compete globally for top ranks. Top performers unlock special privileges (see below).',
     color: 'text-warning'
   }
 ]
@@ -163,16 +167,15 @@ export function HeroSection() {
             </Badge>
 
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-              <span className="block">Join the</span>
+              <span className="block">BUILD YOUR</span>
               <span className="block bg-gradient-to-r from-layeredge-orange via-layeredge-orange-light to-layeredge-blue bg-clip-text text-transparent">
-                LayerEdge
+                LAYEREDGE
               </span>
-              <span className="block">Community</span>
+              <span className="block">REPUTATION</span>
             </h1>
 
             <p className="mt-6 text-lg leading-8 text-muted-foreground max-w-2xl mx-auto">
-              Engage with LayerEdge content on X/Twitter and earn points for your participation.
-              Join thousands of community members building the future of decentralized AI.
+              Earn $EDGEN Reputation Points for real engagement on X/Twitter. Showcase your on‑chain impact, climb the leaderboard, and unlock future rewards.
             </p>
 
             <div className="mt-10 flex items-center justify-center gap-x-6">
@@ -224,7 +227,7 @@ export function HeroSection() {
             </div>
           </motion.div>
 
-          {/* Features section */}
+          {/* How It Works section */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -236,28 +239,32 @@ export function HeroSection() {
                 How It Works
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
-                Simple steps to start earning points and climbing the leaderboard
+                Simple steps to start earning $EDGEN Reputation Points
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              {features.map((feature, index) => (
+              {howItWorksSteps.map((step, index) => (
                 <motion.div
-                  key={feature.title}
+                  key={step.title}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
                 >
-                  <Card variant="layeredge" className="h-full hover-lift card-layeredge">
+                  <Card variant="layeredge" className="h-full hover-lift card-layeredge relative">
                     <CardHeader className="text-center">
-                      <div className={`mx-auto h-12 w-12 rounded-lg bg-muted flex items-center justify-center mb-4 ${feature.color}`}>
-                        <feature.icon className="h-6 w-6" />
+                      {/* Step number badge */}
+                      <div className="absolute -top-3 -right-3 w-8 h-8 bg-gradient-to-r from-layeredge-orange to-layeredge-blue rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {step.step}
                       </div>
-                      <CardTitle className="text-xl">{feature.title}</CardTitle>
+                      <div className={`mx-auto h-12 w-12 rounded-lg bg-muted flex items-center justify-center mb-4 ${step.color}`}>
+                        <step.icon className="h-6 w-6" />
+                      </div>
+                      <CardTitle className="text-xl">{step.title}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <CardDescription className="text-center">
-                        {feature.description}
+                        {step.description}
                       </CardDescription>
                     </CardContent>
                   </Card>
@@ -276,11 +283,10 @@ export function HeroSection() {
             <Card variant="elevated" className="mx-auto max-w-4xl">
               <CardContent className="text-center py-12">
                 <h3 className="text-2xl font-bold text-foreground mb-4">
-                  Ready to Start Earning?
+                  Ready to Build Your Reputation?
                 </h3>
                 <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-                  Connect your X/Twitter account and start engaging with LayerEdge content.
-                  Every like, retweet, and comment counts towards your community score.
+                  Connect your X account now and start earning $EDGEN Reputation Points!
                 </p>
                 {!user && (
                   <Button

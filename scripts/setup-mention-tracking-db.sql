@@ -1,5 +1,15 @@
--- Setup script for automated mention tracking
--- Run this directly in your Supabase SQL editor
+-- LayerEdge Mention Tracking Database Setup
+--
+-- Purpose: Sets up database tables and functions for automated mention tracking
+-- Usage: Run this directly in your Supabase SQL editor
+--
+-- This script creates:
+-- - TweetTracking table for processed tweets
+-- - SystemConfig table for configuration
+-- - Database functions for atomic operations
+-- - Indexes for performance optimization
+--
+-- Essential for production mention tracking system.
 
 -- Create TweetTracking table
 CREATE TABLE IF NOT EXISTS "TweetTracking" (

@@ -281,7 +281,7 @@ export async function PUT(request: NextRequest) {
     const previousTotal = user.totalPoints
 
     // Update user points
-    const updatedUser = await prisma.user.update({
+    await prisma.user.update({
       where: { id: userId },
       data: {
         totalPoints: recalculatedTotal

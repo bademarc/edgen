@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  SparklesIcon,
-  TrophyIcon,
-  ChartBarIcon,
-  PlusIcon,
-  ArrowPathIcon,
-  CalendarIcon
-} from '@heroicons/react/24/outline'
+  Sparkles,
+  Trophy,
+  BarChart3,
+  Plus,
+  RotateCw,
+  RotateCcw,
+  Calendar
+} from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Progress } from './progress'
@@ -105,7 +106,7 @@ export function DashboardEnhanced({
         <Card variant="layeredge" className="hover-lift">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Points</CardTitle>
-            <SparklesIcon className="h-4 w-4 text-layeredge-orange" />
+            <Sparkles className="h-4 w-4 text-layeredge-orange" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-layeredge-orange">
@@ -120,7 +121,7 @@ export function DashboardEnhanced({
         <Card variant="layeredge" className="hover-lift">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rank</CardTitle>
-            <TrophyIcon className="h-4 w-4 text-layeredge-blue" />
+            <Trophy className="h-4 w-4 text-layeredge-blue" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-layeredge-blue">
@@ -135,7 +136,7 @@ export function DashboardEnhanced({
         <Card variant="layeredge" className="hover-lift">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tweets</CardTitle>
-            <ChartBarIcon className="h-4 w-4 text-success" />
+            <BarChart3 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">
@@ -150,7 +151,7 @@ export function DashboardEnhanced({
         <Card variant="layeredge" className="hover-lift">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Points</CardTitle>
-            <CalendarIcon className="h-4 w-4 text-warning" />
+            <Calendar className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-warning">
@@ -172,7 +173,7 @@ export function DashboardEnhanced({
         <Card variant="elevated">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <SparklesIcon className="h-5 w-5 text-layeredge-orange" />
+              <Sparkles className="h-5 w-5 text-layeredge-orange" />
               <span>Level Progress</span>
             </CardTitle>
             <CardDescription>
@@ -209,7 +210,7 @@ export function DashboardEnhanced({
                 size="sm"
                 onClick={() => setShowSubmitForm(!showSubmitForm)}
               >
-                <PlusIcon className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2" />
                 Add Tweet
               </Button>
             </div>
@@ -268,7 +269,7 @@ export function DashboardEnhanced({
               onClick={() => tweets.forEach(tweet => onUpdateEngagement(tweet.id))}
               disabled={isUpdating}
             >
-              <ArrowPathIcon className="h-4 w-4 mr-2" />
+              <RotateCcw className="h-4 w-4 mr-2" />
               Update All
             </Button>
           )}
@@ -277,7 +278,7 @@ export function DashboardEnhanced({
         {tweets.length === 0 ? (
           <Card variant="glass">
             <CardContent className="text-center py-12">
-              <SparklesIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">
                 No tweets yet
               </h3>

@@ -41,7 +41,7 @@ export default function PrivacyPolicyPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground leading-relaxed">
-                LayerEdge ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our LayerEdge Community Platform.
+                LayerEdge (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our LayerEdge Community Platform.
               </p>
               <p className="text-muted-foreground leading-relaxed">
                 This policy applies to all users of our platform and covers both the information you provide directly and the data we collect through your Twitter/X interactions.

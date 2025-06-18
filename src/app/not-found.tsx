@@ -91,8 +91,8 @@ export default function NotFoundPage() {
             <h1 className="text-6xl md:text-8xl font-bold text-primary mb-4">404</h1>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Page Not Found</h2>
             <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
-              Oops! The page you're looking for seems to have wandered off into the decentralized void. 
-              Don't worry, we'll help you get back on track to earning those LayerEdge points!
+              Oops! The page you&apos;re looking for seems to have wandered off into the decentralized void.
+              Don&apos;t worry, we&apos;ll help you get back on track to earning those LayerEdge points!
             </p>
           </motion.div>
 
@@ -177,7 +177,7 @@ export default function NotFoundPage() {
                   <Search className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Still Can't Find What You're Looking For?</h3>
+              <h3 className="text-lg font-semibold mb-2">Still Can&apos;t Find What You&apos;re Looking For?</h3>
               <p className="text-muted-foreground mb-4">
                 Try checking our FAQ section or reach out to our community for help.
               </p>
@@ -206,7 +206,7 @@ export default function NotFoundPage() {
           className="text-center mt-8"
         >
           <p className="text-sm text-muted-foreground">
-            💡 <strong>Did you know?</strong> While you're here, you could be earning points by tweeting about @layeredge or $EDGEN!
+            💡 <strong>Did you know?</strong> While you&apos;re here, you could be earning points by tweeting about @layeredge or $EDGEN!
           </p>
         </motion.div>
       </div>

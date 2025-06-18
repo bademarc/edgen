@@ -9,9 +9,9 @@ import {
   TrendingUp,
   Activity,
   Target,
-  Calendar
+  Calendar,
+  RotateCw
 } from 'lucide-react'
-import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { SubmitTweetCTA } from '@/components/ui/submit-tweet-cta'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { DateTooltip } from '@/components/ui/tooltip'
+import { MetricTooltips } from '@/components/ui/metric-tooltip'
 
 
 interface DashboardStats {
@@ -254,7 +255,9 @@ export default function DashboardPage() {
             >
               <Card variant="professional" className="touch-friendly">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium">Trust Score</CardTitle>
+                  <MetricTooltips.TrustScore>
+                    <CardTitle className="text-xs sm:text-sm font-medium">Trust Score</CardTitle>
+                  </MetricTooltips.TrustScore>
                   <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
@@ -275,7 +278,9 @@ export default function DashboardPage() {
             >
               <Card variant="professional" className="touch-friendly">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium">Network Rank</CardTitle>
+                  <MetricTooltips.NetworkRank>
+                    <CardTitle className="text-xs sm:text-sm font-medium">Network Rank</CardTitle>
+                  </MetricTooltips.NetworkRank>
                   <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
@@ -294,7 +299,9 @@ export default function DashboardPage() {
             >
               <Card variant="professional" className="touch-friendly">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium">Contributions</CardTitle>
+                  <MetricTooltips.Contributions>
+                    <CardTitle className="text-xs sm:text-sm font-medium">Contributions</CardTitle>
+                  </MetricTooltips.Contributions>
                   <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
@@ -313,7 +320,9 @@ export default function DashboardPage() {
             >
               <Card variant="professional" className="touch-friendly">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium">This Week</CardTitle>
+                  <MetricTooltips.WeeklyPoints>
+                    <CardTitle className="text-xs sm:text-sm font-medium">This Week</CardTitle>
+                  </MetricTooltips.WeeklyPoints>
                   <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
@@ -359,7 +368,7 @@ export default function DashboardPage() {
                     className="h-8 w-8 p-0"
                     title="Refresh contributions"
                   >
-                    <ArrowPathIcon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
               </CardHeader>
