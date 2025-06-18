@@ -21,9 +21,10 @@ export async function GET() {
     const twitterOAuth = new TwitterOAuthService()
     const { url, codeVerifier, state } = twitterOAuth.generateAuthUrl()
 
-    // Test Bearer Token format
+    // Test Bearer Token format - Twitter Bearer Tokens should start with 'AAAAAAAAAAAAAAAAAAAAAA'
+    // and be at least 100 characters long (typical length is around 100-120 characters)
     const bearerToken = process.env.TWITTER_BEARER_TOKEN
-    const bearerTokenValid = bearerToken && bearerToken.startsWith('AAAAAAAAAAAAAAAAAAAAAD')
+    const bearerTokenValid = bearerToken && bearerToken.startsWith('AAAAAAAAAAAAAAAAAAAAAA') && bearerToken.length >= 100
 
     // Test Basic Auth header construction
     const clientId = process.env.TWITTER_CLIENT_ID

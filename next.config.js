@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Cross-platform compatibility
+  // Cross-platform compatibility - use standalone output for production Docker builds
+  // This creates a self-contained server.js file that can be run with "node server.js"
+  // For development, we use the regular Next.js server with "next start"
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
 
   // External packages that should not be bundled
@@ -146,13 +148,14 @@ const nextConfig = {
   // Optimize chunk splitting for better performance
   experimental: {
     optimizePackageImports: ['framer-motion', 'lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
-    // Enable modern bundling optimizations
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
+  },
+
+  // Turbopack configuration (moved from experimental.turbo)
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
       },
     },
   },

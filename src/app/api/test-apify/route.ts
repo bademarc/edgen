@@ -44,6 +44,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Check Twitter Bearer Token format
+    const bearerToken = process.env.TWITTER_BEARER_TOKEN
+    const tokenStatus = {
+      configured: !!bearerToken,
+      hasUrlEncoding: bearerToken?.includes('%') || false,
+      length: bearerToken?.length || 0,
+      format: bearerToken?.startsWith('AAAAAAAAAAAAAAAAAAAAAA') ? 'VALID' : 'INVALID'
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Apify API test successful - Live Engagement Metrics are working correctly!',
@@ -57,7 +66,8 @@ export async function GET(request: NextRequest) {
           databaseStorage: 'WORKING',
           frontendDisplay: 'WORKING',
           engagementScheduler: 'RUNNING'
-        }
+        },
+        twitterBearerToken: tokenStatus
       }
     })
 

@@ -73,9 +73,10 @@ export class TwitterApiService {
       this.isHealthy = false
     } else {
       console.log('✅ Twitter Bearer Token configured')
-      // Validate token format
-      if (!this.bearerToken.startsWith('AAAAAAAAAAAAAAAAAAAAAA')) {
-        console.warn('⚠️ Twitter Bearer Token format may be incorrect')
+      // Validate token format - Twitter Bearer Tokens should start with 'AAAAAAAAAAAAAAAAAAAAAA'
+      // and be at least 100 characters long (typical length is around 100-120 characters)
+      if (!this.bearerToken.startsWith('AAAAAAAAAAAAAAAAAAAAAA') || this.bearerToken.length < 100) {
+        console.warn('⚠️ Twitter Bearer Token format may be incorrect. Expected format: starts with "AAAAAAAAAAAAAAAAAAAAAA" and length >= 100 characters')
       }
     }
   }
