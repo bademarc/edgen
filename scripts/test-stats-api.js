@@ -90,7 +90,7 @@ async function runTests() {
   
   const testUrls = [
     'http://localhost:3000',
-    'https://layeredge.koyeb.app'
+    'https://edgen.koyeb.app'
   ];
   
   for (const baseUrl of testUrls) {

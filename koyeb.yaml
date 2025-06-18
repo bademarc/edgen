@@ -23,7 +23,7 @@ services:
       - key: NEXTAUTH_SECRET
         value: ${NEXTAUTH_SECRET}
       - key: NEXTAUTH_URL
-        value: ${NEXTAUTH_URL}
+        value: https://edgen.koyeb.app
       # Twitter API (now fallback only)
       - key: TWITTER_CLIENT_ID
         value: ${TWITTER_CLIENT_ID}
@@ -49,7 +49,7 @@ services:
         value: "false"
       # Community & Content Moderation
       - key: LAYEREDGE_COMMUNITY_URL
-        value: ${LAYEREDGE_COMMUNITY_URL}
+        value: https://edgen.koyeb.app
       # PRIORITY FIX: Playwright browser configuration
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /home/nextjs/.cache/ms-playwright

@@ -4,13 +4,17 @@ import { prisma } from '@/lib/db'
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 STATS API: Starting platform statistics fetch...')
+    console.log('🔍 STATS API: Environment check - NODE_ENV:', process.env.NODE_ENV)
+    console.log('🔍 STATS API: Database URL exists:', !!process.env.DATABASE_URL)
+    console.log('🔍 STATS API: Direct URL exists:', !!process.env.DIRECT_URL)
 
     // PRODUCTION FIX: Test database connection first
     try {
-      await prisma.$queryRaw`SELECT 1`
-      console.log('✅ STATS API: Database connection successful')
+      const connectionTest = await prisma.$queryRaw`SELECT 1 as test, NOW() as current_time`
+      console.log('✅ STATS API: Database connection successful:', connectionTest)
     } catch (dbError) {
       console.error('❌ STATS API: Database connection failed:', dbError)
+      console.error('❌ STATS API: DATABASE_URL format:', process.env.DATABASE_URL?.substring(0, 20) + '...')
       throw new Error(`Database connection failed: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`)
     }
 
