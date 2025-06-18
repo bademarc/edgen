@@ -36,6 +36,15 @@ services:
         value: ${UPSTASH_REDIS_REST_URL}
       - key: UPSTASH_REDIS_REST_TOKEN
         value: ${UPSTASH_REDIS_REST_TOKEN}
+      # Performance & Optimization
+      - key: OPTIMIZE_FOR_FREE_TIER
+        value: "true"
+      - key: ENABLE_CACHE
+        value: "true"
+      - key: ENABLE_AGGRESSIVE_CACHING
+        value: "true"
+      - key: CACHE_TTL_SECONDS
+        value: "1800"
       # SECURITY: FUD Detection Configuration
       - key: FUD_DETECTION_ENABLED
         value: "true"
