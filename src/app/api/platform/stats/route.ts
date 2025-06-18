@@ -3,10 +3,6 @@ import { prisma } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 STATS API: Starting platform statistics fetch...')
-    console.log('🔍 STATS API: Environment check - NODE_ENV:', process.env.NODE_ENV)
-    console.log('🔍 STATS API: Database URL exists:', !!process.env.DATABASE_URL)
-    console.log('🔍 STATS API: Direct URL exists:', !!process.env.DIRECT_URL)
 
     // PRODUCTION FIX: Test database connection first
     try {
@@ -30,25 +26,16 @@ export async function GET(request: NextRequest) {
       recentTweets
     ] = await Promise.all([
       // Total registered users
-      prisma.user.count().then(count => {
-        console.log(`📊 STATS API: Total users: ${count}`)
-        return count
-      }),
+      prisma.user.count(),
 
       // Total tweets tracked
-      prisma.tweet.count().then(count => {
-        console.log(`📊 STATS API: Total tweets: ${count}`)
-        return count
-      }),
+      prisma.tweet.count(),
 
       // Total points awarded across all users
       prisma.user.aggregate({
         _sum: {
           totalPoints: true
         }
-      }).then(result => {
-        console.log(`📊 STATS API: Total points: ${result._sum.totalPoints}`)
-        return result
       }),
       
       // Tweets containing @layeredge or $EDGEN mentions
@@ -106,22 +93,15 @@ export async function GET(request: NextRequest) {
       lastUpdated: new Date().toISOString()
     }
 
-    console.log('✅ STATS API: Final statistics:', stats)
-
     return NextResponse.json(stats, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' // PRODUCTION FIX: Reduced cache for debugging
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' // Cache for 5 minutes
       }
     })
   } catch (error) {
-    console.error('❌ STATS API: Error fetching platform stats:', error)
-    console.error('❌ STATS API: Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined
-    })
+    console.error('Error fetching platform stats:', error)
 
-    // PRODUCTION FIX: Return fallback data instead of error
+    // Return fallback data instead of error
     const fallbackStats = {
       totalUsers: 0,
       totalTweets: 0,
