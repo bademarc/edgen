@@ -146,7 +146,11 @@ const nextConfig = {
   // Optimize chunk splitting for better performance
   experimental: {
     optimizePackageImports: ['framer-motion', 'lucide-react'],
+    // Add these to fix module resolution issues
+    esmExternals: false,
+    serverComponentsExternalPackages: ['@supabase/ssr']
   },
 };
 
+// Use ES module export since package.json has "type": "module"
 export default nextConfig;
