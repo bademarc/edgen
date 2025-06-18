@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
+// Type definitions for database test response
+interface DbTestResponse {
+  status: 'success' | 'error'
+  connection: 'working' | 'failed'
+  tables?: any[]
+  counts?: {
+    users: number
+    tweets: number
+    pointsHistory: number
+  }
+  sampleData?: {
+    user: any
+    tweet: any
+  }
+  aggregation?: {
+    _sum: { totalPoints: number | null }
+  }
+  timestamp: string
+  error?: {
+    message: string
+    name?: string
+    stack?: string
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 DB TEST: Starting database connectivity test...')
@@ -72,18 +97,18 @@ export async function GET(request: NextRequest) {
     })
     console.log('📊 DB TEST: Total points aggregation:', totalPointsAgg)
     
-    const result = {
+    const result: DbTestResponse = {
       status: 'success',
       connection: 'working',
-      tables: tableCheck,
+      tables: tableCheck as any[],
       counts: {
         users: userCount,
         tweets: tweetCount,
         pointsHistory: pointsCount
       },
       sampleData: {
-        user: sampleUser,
-        tweet: sampleTweet
+        user: sampleUser || null,
+        tweet: sampleTweet || null
       },
       aggregation: totalPointsAgg,
       timestamp: new Date().toISOString()
@@ -95,8 +120,8 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ DB TEST: Database test failed:', error)
-    
-    const errorResult = {
+
+    const errorResult: DbTestResponse = {
       status: 'error',
       connection: 'failed',
       error: {
@@ -106,7 +131,7 @@ export async function GET(request: NextRequest) {
       },
       timestamp: new Date().toISOString()
     }
-    
+
     return NextResponse.json(errorResult, { status: 500 })
   }
 }

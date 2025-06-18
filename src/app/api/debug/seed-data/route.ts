@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
+// Type definitions for seed data response
+interface SeedDataResponse {
+  message: string
+  data?: {
+    usersCreated: number
+    tweetsCreated: number
+    pointsHistoryCreated: number
+    finalCounts: {
+      users: number
+      tweets: number
+      pointsHistory: number
+      totalPoints: {
+        _sum: { totalPoints: number | null }
+      }
+    }
+  }
+  userCount?: number
+  action?: string
+  timestamp: string
+  error?: string
+  details?: string
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('🌱 SEED DATA: Starting database seeding...')
@@ -8,11 +31,13 @@ export async function POST(request: NextRequest) {
     // Check if data already exists
     const userCount = await prisma.user.count()
     if (userCount > 0) {
-      return NextResponse.json({
+      const response: SeedDataResponse = {
         message: 'Database already has data',
         userCount,
-        action: 'skipped'
-      })
+        action: 'skipped',
+        timestamp: new Date().toISOString()
+      }
+      return NextResponse.json(response)
     }
     
     console.log('🌱 SEED DATA: Database is empty, creating test data...')
@@ -180,8 +205,8 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('✅ SEED DATA: Seeding complete:', finalCounts)
-    
-    return NextResponse.json({
+
+    const response: SeedDataResponse = {
       message: 'Test data seeded successfully',
       data: {
         usersCreated: testUsers.length,
@@ -190,15 +215,20 @@ export async function POST(request: NextRequest) {
         finalCounts
       },
       timestamp: new Date().toISOString()
-    })
+    }
+
+    return NextResponse.json(response)
     
   } catch (error) {
     console.error('❌ SEED DATA: Error seeding data:', error)
-    
-    return NextResponse.json({
+
+    const errorResponse: SeedDataResponse = {
+      message: 'Failed to seed data',
       error: 'Failed to seed data',
       details: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
-    }, { status: 500 })
+    }
+
+    return NextResponse.json(errorResponse, { status: 500 })
   }
 }
