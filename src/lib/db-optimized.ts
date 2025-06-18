@@ -11,6 +11,17 @@ const createOptimizedPrismaClient = () => {
     },
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     errorFormat: 'minimal',
+    // PRODUCTION FIX: Connection pool optimization for 100k users
+    __internal: {
+      engine: {
+        connectionLimit: 100, // Increase connection pool
+        poolTimeout: 10000,   // 10 second timeout
+        transactionOptions: {
+          maxWait: 5000,      // 5 second max wait
+          timeout: 10000,     // 10 second timeout
+        },
+      },
+    },
   })
 }
 

@@ -62,12 +62,16 @@ export async function GET(request: NextRequest) {
       averagePointsPerTweet: user._count.tweets > 0 ? Math.round(user.totalPoints / user._count.tweets) : 0,
     }))
 
-    // Update ranks in database (you might want to do this periodically instead)
-    for (const user of leaderboard) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { rank: user.rank },
-      })
+    // PRODUCTION FIX: Batch update ranks using raw SQL for performance
+    // This prevents N+1 query problem with large user bases
+    if (leaderboard.length > 0) {
+      const rankUpdates = leaderboard.map(user => `('${user.id}', ${user.rank})`).join(',')
+      await prisma.$executeRaw`
+        UPDATE "User"
+        SET rank = updates.new_rank::integer
+        FROM (VALUES ${rankUpdates}) AS updates(user_id, new_rank)
+        WHERE "User".id = updates.user_id
+      `
     }
 
     return NextResponse.json({

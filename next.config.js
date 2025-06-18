@@ -25,8 +25,9 @@ const nextConfig = {
     ignoreDuringBuilds: process.env.NODE_ENV === 'production',
   },
   typescript: {
-    // Only ignore TypeScript errors in production builds for faster deployment
-    ignoreBuildErrors: process.env.NODE_ENV === 'production',
+    // Enable strict TypeScript checking in all environments for better code quality
+    // This ensures type safety and prevents runtime errors
+    ignoreBuildErrors: false,
   },
   images: {
     remotePatterns: [
@@ -144,7 +145,23 @@ const nextConfig = {
   },
   // Optimize chunk splitting for better performance
   experimental: {
-    optimizePackageImports: ['framer-motion', 'lucide-react'],
+    optimizePackageImports: ['framer-motion', 'lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+    // Enable modern bundling optimizations
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+
+  // PRODUCTION FIX: Advanced bundle optimization
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn']
+    } : false,
   },
 };
 

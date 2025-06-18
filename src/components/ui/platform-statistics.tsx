@@ -69,27 +69,48 @@ export function PlatformStatistics() {
 
   const AnimatedCounter = ({ value, duration = 2000 }: { value: number; duration?: number }) => {
     const [count, setCount] = useState(0)
+    const [isVisible, setIsVisible] = useState(false)
 
     useEffect(() => {
       let startTime: number
       let animationFrame: number
+      let isMounted = true
 
       const animate = (timestamp: number) => {
+        if (!isMounted) return
+
         if (!startTime) startTime = timestamp
         const progress = Math.min((timestamp - startTime) / duration, 1)
-        
+
         setCount(Math.floor(progress * value))
-        
+
         if (progress < 1) {
           animationFrame = requestAnimationFrame(animate)
         }
       }
 
-      animationFrame = requestAnimationFrame(animate)
-      return () => cancelAnimationFrame(animationFrame)
-    }, [value, duration])
+      // PRODUCTION FIX: Only animate when component is visible
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting && !isVisible) {
+            setIsVisible(true)
+            animationFrame = requestAnimationFrame(animate)
+          }
+        },
+        { threshold: 0.1 }
+      )
 
-    return <span>{formatNumber(count)}</span>
+      const element = document.getElementById(`counter-${value}`)
+      if (element) observer.observe(element)
+
+      return () => {
+        isMounted = false
+        if (animationFrame) cancelAnimationFrame(animationFrame)
+        observer.disconnect()
+      }
+    }, [value, duration, isVisible])
+
+    return <span id={`counter-${value}`}>{formatNumber(count)}</span>
   }
 
   if (isLoading) {

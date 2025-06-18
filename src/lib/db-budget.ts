@@ -18,15 +18,15 @@ class BudgetDatabaseService {
   }
 
   /**
-   * Aggressive caching for leaderboard (update every 15 minutes)
+   * Aggressive caching for leaderboard (optimized for high traffic)
    */
   async getLeaderboard(limit: number = 100, updateRanks: boolean = true): Promise<any[]> {
     const cacheKey = `leaderboard:${limit}`
 
-    // Try cache first (15 minute TTL)
+    // PRODUCTION FIX: Extended cache TTL for high traffic (30 minutes)
     const cached = await this.cache.get<any[]>(cacheKey)
     if (cached) {
-      console.log('📋 Returning cached leaderboard (15min cache)')
+      console.log('📋 Returning cached leaderboard (30min cache)')
       return cached
     }
 
@@ -66,8 +66,8 @@ class BudgetDatabaseService {
       }
     }
 
-    // Cache for 15 minutes
-    await this.cache.set(cacheKey, leaderboard, 900)
+    // PRODUCTION FIX: Extended cache for high traffic (30 minutes)
+    await this.cache.set(cacheKey, leaderboard, 1800)
     return leaderboard
   }
 

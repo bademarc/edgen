@@ -6,6 +6,27 @@ import { getFallbackService } from '@/lib/fallback-service'
 import { TweetErrorHandler, createErrorResponse } from '@/lib/tweet-error-handler'
 import { getEnhancedContentValidator } from '@/lib/enhanced-content-validator'
 
+// PRODUCTION FIX: Rate limiting for high-traffic scenarios
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+function checkRateLimit(identifier: string, limit: number = 10, windowMs: number = 60000): boolean {
+  const now = Date.now()
+  const key = identifier
+  const current = rateLimitMap.get(key)
+
+  if (!current || now > current.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs })
+    return true
+  }
+
+  if (current.count >= limit) {
+    return false
+  }
+
+  current.count++
+  return true
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -67,6 +88,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      )
+    }
+
+    // PRODUCTION FIX: Rate limiting for tweet submissions
+    const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    const rateLimitKey = `tweet_submit:${userId}:${clientIP}`
+
+    if (!checkRateLimit(rateLimitKey, 5, 300000)) { // 5 submissions per 5 minutes
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          message: 'Too many tweet submissions. Please wait 5 minutes before trying again.',
+          retryAfter: 300
+        },
+        { status: 429 }
       )
     }
 
