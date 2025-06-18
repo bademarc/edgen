@@ -58,8 +58,9 @@ export interface ApifyApiResponse {
 
 export class ApifyTwitterService {
   private config: ApifyConfig
-  private readonly MAX_WAIT_TIME = 120000 // 2 minutes
-  private readonly POLL_INTERVAL = 5000 // 5 seconds
+  private readonly MAX_WAIT_TIME = 60000 // 1 minute (reduced for better UX)
+  private readonly POLL_INTERVAL = 3000 // 3 seconds (faster polling)
+  private readonly QUICK_TIMEOUT = 15000 // 15 seconds for quick responses
 
   constructor(config?: Partial<ApifyConfig>) {
     this.config = {
@@ -108,13 +109,13 @@ export class ApifyTwitterService {
   }
 
   /**
-   * Fetch tweet engagement metrics by tweet ID
+   * Fetch tweet engagement metrics by tweet ID with timeout handling
    */
-  async getTweetEngagementMetrics(tweetId: string): Promise<ApifyEngagementMetrics | null> {
+  async getTweetEngagementMetrics(tweetId: string, quickMode = false): Promise<ApifyEngagementMetrics | null> {
     try {
-      console.log(`🔍 Fetching engagement metrics for tweet ID: ${tweetId}`)
+      console.log(`🔍 Fetching engagement metrics for tweet ID: ${tweetId} (quick mode: ${quickMode})`)
 
-      const tweetData = await this.getTweetById(tweetId)
+      const tweetData = await this.getTweetById(tweetId, quickMode)
       if (!tweetData) {
         console.log('❌ No tweet data received from Apify')
         return null
@@ -139,22 +140,30 @@ export class ApifyTwitterService {
   }
 
   /**
-   * Fetch tweet engagement metrics by URL
+   * Fetch tweet engagement metrics by URL with timeout options
    */
-  async getTweetEngagementMetricsByUrl(tweetUrl: string): Promise<ApifyEngagementMetrics | null> {
+  async getTweetEngagementMetricsByUrl(tweetUrl: string, quickMode = false): Promise<ApifyEngagementMetrics | null> {
     const tweetId = this.extractTweetId(tweetUrl)
     if (!tweetId) {
       console.error('❌ Could not extract tweet ID from URL:', tweetUrl)
       return null
     }
 
-    return this.getTweetEngagementMetrics(tweetId)
+    return this.getTweetEngagementMetrics(tweetId, quickMode)
   }
 
   /**
-   * Get tweet data by ID using Apify API
+   * Quick engagement metrics fetch with short timeout for UI responsiveness
    */
-  async getTweetById(tweetId: string): Promise<ApifyTweetData | null> {
+  async getQuickEngagementMetrics(tweetUrl: string): Promise<ApifyEngagementMetrics | null> {
+    console.log('⚡ Quick engagement metrics fetch requested')
+    return this.getTweetEngagementMetricsByUrl(tweetUrl, true)
+  }
+
+  /**
+   * Get tweet data by ID using Apify API with timeout options
+   */
+  async getTweetById(tweetId: string, quickMode = false): Promise<ApifyTweetData | null> {
     try {
       // Start async run
       const runResponse = await this.startApifyRun('tweet/by_ids', {
@@ -166,8 +175,8 @@ export class ApifyTwitterService {
         return null
       }
 
-      // Wait for completion and get results
-      const results = await this.waitForRunCompletion(runResponse.runId)
+      // Wait for completion and get results with appropriate timeout
+      const results = await this.waitForRunCompletion(runResponse.runId, quickMode)
 
       if (!results || results.length === 0) {
         console.log('❌ No results returned from Apify')
@@ -249,12 +258,16 @@ export class ApifyTwitterService {
   }
 
   /**
-   * Wait for Apify run completion and get results
+   * Wait for Apify run completion and get results with timeout options
    */
-  private async waitForRunCompletion(runId: string): Promise<any[] | null> {
+  private async waitForRunCompletion(runId: string, quickMode = false): Promise<any[] | null> {
     const startTime = Date.now()
+    const maxWaitTime = quickMode ? this.QUICK_TIMEOUT : this.MAX_WAIT_TIME
+    const timeoutLabel = quickMode ? 'quick mode' : 'standard mode'
 
-    while (Date.now() - startTime < this.MAX_WAIT_TIME) {
+    console.log(`⏱️ Waiting for Apify run completion (${timeoutLabel}, max ${maxWaitTime}ms)`)
+
+    while (Date.now() - startTime < maxWaitTime) {
       try {
         // Check run status
         const statusUrl = `${this.config.baseUrl}/acts/${this.config.actorId}/runs/${runId}?token=${this.config.apiToken}`
@@ -264,7 +277,7 @@ export class ApifyTwitterService {
           const statusData = await statusResponse.json()
           const status = statusData.data?.status
 
-          console.log(`📊 Run status: ${status}`)
+          console.log(`📊 Run status: ${status} (elapsed: ${Date.now() - startTime}ms)`)
 
           if (status === 'SUCCEEDED') {
             // Get results
@@ -284,7 +297,7 @@ export class ApifyTwitterService {
       }
     }
 
-    console.error('❌ Apify run timed out')
+    console.error(`❌ Apify run timed out after ${maxWaitTime}ms (${timeoutLabel})`)
     return null
   }
 

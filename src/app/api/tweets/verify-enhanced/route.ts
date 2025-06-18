@@ -56,22 +56,23 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Fetch real-time engagement metrics using Apify
+    // Fetch real-time engagement metrics using Apify with quick mode for better UX
     console.log(`📊 Fetching real-time engagement metrics for tweet: ${tweetId}`)
-    
+
     const apifyService = getApifyTwitterService()
     let engagementMetrics = null
     let engagementError = null
 
     try {
       if (apifyService.isReady()) {
-        engagementMetrics = await apifyService.getTweetEngagementMetrics(tweetId)
-        
+        // Use quick mode for verification to provide faster feedback
+        engagementMetrics = await apifyService.getQuickEngagementMetrics(tweetUrl)
+
         if (engagementMetrics) {
           console.log('✅ Successfully fetched engagement metrics:', engagementMetrics)
         } else {
-          console.log('⚠️ No engagement metrics returned from Apify')
-          engagementError = 'Unable to fetch engagement metrics'
+          console.log('⚠️ No engagement metrics returned from Apify (quick mode)')
+          engagementError = 'Engagement metrics temporarily unavailable (will be updated after submission)'
         }
       } else {
         console.log('⚠️ Apify service not configured')
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       console.error('❌ Error fetching engagement metrics:', error)
-      engagementError = 'Failed to fetch engagement metrics'
+      engagementError = 'Failed to fetch engagement metrics (will retry after submission)'
     }
 
     // Calculate enhanced points if we have engagement metrics

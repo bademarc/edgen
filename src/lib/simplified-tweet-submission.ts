@@ -309,7 +309,8 @@ export class SimplifiedTweetSubmissionService {
       const apifyService = getApifyTwitterService()
 
       if (apifyService.isReady()) {
-        enhancedMetrics = await apifyService.getTweetEngagementMetricsByUrl(tweetUrl)
+        // Use standard timeout for submission storage (accuracy over speed)
+        enhancedMetrics = await apifyService.getTweetEngagementMetricsByUrl(tweetUrl, false)
       }
     } catch (error) {
       console.log('⚠️ Could not fetch enhanced metrics for storage:', error)
@@ -576,7 +577,8 @@ export class SimplifiedTweetSubmissionService {
           const apifyService = getApifyTwitterService()
 
           if (apifyService.isReady()) {
-            enhancedMetrics = await apifyService.getTweetEngagementMetricsByUrl(tweetUrl)
+            // Use standard timeout for submission (accuracy over speed)
+            enhancedMetrics = await apifyService.getTweetEngagementMetricsByUrl(tweetUrl, false)
             console.log('📊 Enhanced metrics from Apify:', enhancedMetrics)
           }
         } catch (error) {
