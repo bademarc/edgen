@@ -7,21 +7,25 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '10')
 
-    // Use free tier optimized service
-    const freeTierService = getFreeTierService()
-
     // Check if we're in free tier mode
     const isFreeTier = process.env.OPTIMIZE_FOR_FREE_TIER === 'true'
 
     if (isFreeTier) {
       console.log('📋 Using FREE TIER leaderboard service')
-      const leaderboard = await freeTierService.getLeaderboard(limit)
+      try {
+        // Use free tier optimized service
+        const freeTierService = getFreeTierService()
+        const leaderboard = await freeTierService.getLeaderboard(limit)
 
-      return NextResponse.json({
-        users: leaderboard,
-        cached: true,
-        freeTier: true
-      })
+        return NextResponse.json({
+          users: leaderboard,
+          cached: true,
+          freeTier: true
+        })
+      } catch (freeTierError) {
+        console.error('❌ Free tier service failed, falling back to direct DB:', freeTierError)
+        // Fall through to direct database query
+      }
     }
 
     // Fallback to original method
