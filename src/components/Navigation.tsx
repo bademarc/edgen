@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -30,6 +30,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 export function Navigation() {
   const { user, isLoading, signInWithTwitter, signOut } = useAuth()
   const pathname = usePathname()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -196,7 +197,7 @@ export function Navigation() {
         </div>
 
         {/* Mobile Menu Button - Enhanced with Sheet */}
-        <Sheet>
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="sm" className="md:hidden p-2">
               <Menu className="h-6 w-6" />
@@ -223,15 +224,15 @@ export function Navigation() {
             <div className="mt-6 space-y-4">
               {/* Navigation Links */}
               <div className="space-y-2">
-                <MobileNavLink href="/" icon={Home} label="Home" />
-                <MobileNavLink href="/dashboard" icon={BarChart3} label="Dashboard" requiresAuth />
-                <MobileNavLink href="/quests" icon={Target} label="Quests" requiresAuth />
-                <MobileNavLink href="/leaderboard" icon={Trophy} label="Leaderboard" />
-                <MobileNavLink href="/submit-tweet" icon={MessageSquare} label="Submit Tweet" />
-                <MobileNavLink href="/recent" icon={FileText} label="Activity Feed" />
-                <MobileNavLink href="/helper" icon={HelpCircle} label="Helper" />
-                <MobileNavLink href="/about" icon={FileText} label="About" />
-                <MobileNavLink href="/faq" icon={HelpCircle} label="FAQ" />
+                <MobileNavLink href="/" icon={Home} label="Home" onNavigate={() => setMobileMenuOpen(false)} />
+                <MobileNavLink href="/dashboard" icon={BarChart3} label="Dashboard" requiresAuth onNavigate={() => setMobileMenuOpen(false)} />
+                <MobileNavLink href="/quests" icon={Target} label="Quests" requiresAuth onNavigate={() => setMobileMenuOpen(false)} />
+                <MobileNavLink href="/leaderboard" icon={Trophy} label="Leaderboard" onNavigate={() => setMobileMenuOpen(false)} />
+                <MobileNavLink href="/submit-tweet" icon={MessageSquare} label="Submit Tweet" onNavigate={() => setMobileMenuOpen(false)} />
+                <MobileNavLink href="/recent" icon={FileText} label="Activity Feed" onNavigate={() => setMobileMenuOpen(false)} />
+                <MobileNavLink href="/helper" icon={HelpCircle} label="Helper" onNavigate={() => setMobileMenuOpen(false)} />
+                <MobileNavLink href="/about" icon={FileText} label="About" onNavigate={() => setMobileMenuOpen(false)} />
+                <MobileNavLink href="/faq" icon={HelpCircle} label="FAQ" onNavigate={() => setMobileMenuOpen(false)} />
               </div>
 
               {/* User Section */}
@@ -268,7 +269,10 @@ export function Navigation() {
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={() => signOut()}
+                      onClick={() => {
+                        signOut()
+                        setMobileMenuOpen(false)
+                      }}
                     >
                       <LogOut className="h-4 w-4 mr-2" />
                       Sign out
@@ -277,7 +281,10 @@ export function Navigation() {
                 ) : (
                   <Button
                     className="w-full"
-                    onClick={() => signInWithTwitter()}
+                    onClick={() => {
+                      signInWithTwitter()
+                      setMobileMenuOpen(false)
+                    }}
                   >
                     <User className="h-4 w-4 mr-2" />
                     Sign in with X
@@ -330,11 +337,13 @@ const MobileNavLink = ({
   icon: Icon,
   label,
   requiresAuth = false,
+  onNavigate,
 }: {
   href: string
   icon: React.ComponentType<{ className?: string }>
   label: string
   requiresAuth?: boolean
+  onNavigate?: () => void
 }) => {
   const { user } = useAuth()
   const pathname = usePathname()
@@ -348,6 +357,7 @@ const MobileNavLink = ({
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={cn(
         "flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
         isActive && "bg-accent text-accent-foreground"
