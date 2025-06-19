@@ -436,15 +436,39 @@ export default function HelperPage() {
                                     } else if (line.startsWith('## ')) {
                                       return <h2 key={index} className="text-sm sm:text-base font-semibold mb-2 mt-3">{line.substring(3)}</h2>
                                     } else if (line.startsWith('• ')) {
-                                      return <p key={index} className="mb-1 text-sm sm:text-base">• {line.substring(2)}</p>
+                                      const bulletContent = line.substring(2)
+                                      if (bulletContent.includes('**')) {
+                                        const parts = bulletContent.split('**')
+                                        return (
+                                          <p key={index} className="mb-1 text-sm sm:text-base">
+                                            • {parts.map((part, i) =>
+                                              i % 2 === 1 ? <strong key={i} className="font-semibold">{part}</strong> : part
+                                            )}
+                                          </p>
+                                        )
+                                      } else {
+                                        return <p key={index} className="mb-1 text-sm sm:text-base">• {bulletContent}</p>
+                                      }
                                     } else if (line.startsWith('- ')) {
-                                      return <p key={index} className="mb-1 text-sm sm:text-base">- {line.substring(2)}</p>
-                                    } else if (line.includes('**') && line.includes('**')) {
+                                      const dashContent = line.substring(2)
+                                      if (dashContent.includes('**')) {
+                                        const parts = dashContent.split('**')
+                                        return (
+                                          <p key={index} className="mb-1 text-sm sm:text-base">
+                                            - {parts.map((part, i) =>
+                                              i % 2 === 1 ? <strong key={i} className="font-semibold">{part}</strong> : part
+                                            )}
+                                          </p>
+                                        )
+                                      } else {
+                                        return <p key={index} className="mb-1 text-sm sm:text-base">- {dashContent}</p>
+                                      }
+                                    } else if (line.includes('**')) {
                                       const parts = line.split('**')
                                       return (
                                         <p key={index} className="mb-1 text-sm sm:text-base">
                                           {parts.map((part, i) =>
-                                            i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+                                            i % 2 === 1 ? <strong key={i} className="font-semibold">{part}</strong> : part
                                           )}
                                         </p>
                                       )
