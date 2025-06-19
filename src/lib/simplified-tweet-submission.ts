@@ -309,11 +309,20 @@ export class SimplifiedTweetSubmissionService {
       const apifyService = getApifyTwitterService()
 
       if (apifyService.isReady()) {
+        console.log('🔍 Fetching enhanced metrics from Apify for database storage...')
         // Use standard timeout for submission storage (accuracy over speed)
         enhancedMetrics = await apifyService.getTweetEngagementMetricsByUrl(tweetUrl, false)
+
+        if (enhancedMetrics) {
+          console.log('✅ Successfully fetched enhanced metrics from Apify:', enhancedMetrics)
+        } else {
+          console.log('⚠️ Apify returned null metrics, will use fallback data')
+        }
+      } else {
+        console.log('⚠️ Apify service not ready, will use fallback data')
       }
     } catch (error) {
-      console.log('⚠️ Could not fetch enhanced metrics for storage:', error)
+      console.log('⚠️ Could not fetch enhanced metrics for storage, will use fallback data:', error)
     }
 
     // Save submission to database using Tweet model with enhanced metrics
@@ -577,12 +586,20 @@ export class SimplifiedTweetSubmissionService {
           const apifyService = getApifyTwitterService()
 
           if (apifyService.isReady()) {
+            console.log('🔍 Fetching enhanced metrics from Apify for points calculation...')
             // Use standard timeout for submission (accuracy over speed)
             enhancedMetrics = await apifyService.getTweetEngagementMetricsByUrl(tweetUrl, false)
-            console.log('📊 Enhanced metrics from Apify:', enhancedMetrics)
+
+            if (enhancedMetrics) {
+              console.log('✅ Enhanced metrics from Apify for points calculation:', enhancedMetrics)
+            } else {
+              console.log('⚠️ Apify returned null metrics for points calculation, using fallback')
+            }
+          } else {
+            console.log('⚠️ Apify service not ready for points calculation, using fallback')
           }
         } catch (error) {
-          console.log('⚠️ Could not fetch enhanced metrics, using fallback:', error)
+          console.log('⚠️ Could not fetch enhanced metrics for points calculation, using fallback:', error)
         }
       }
 

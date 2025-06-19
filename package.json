@@ -13,19 +13,10 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
-    "db:seed": "tsx scripts/seed.ts",
+    "db:seed": "tsx src/lib/seed.ts",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:baseline": "node scripts/baseline-database.js",
     "db:migrate:force": "prisma migrate deploy --force-reset",
-    "cleanup:redis": "node scripts/cleanup-redis-corruption.cjs",
-    "cleanup:unclaimed": "node scripts/cleanup-unclaimed-tweets.cjs",
-    "validate:engagement": "node scripts/validate-fix.cjs",
-    "test:engagement": "node scripts/test-engagement-fix.cjs",
-    "services:start": "curl -X POST http://localhost:3000/api/services/status -H 'Content-Type: application/json' -d '{\"action\":\"start\"}'",
-    "services:stop": "curl -X POST http://localhost:3000/api/services/status -H 'Content-Type: application/json' -d '{\"action\":\"stop\"}'",
-    "services:restart": "curl -X POST http://localhost:3000/api/services/status -H 'Content-Type: application/json' -d '{\"action\":\"restart\"}'",
-    "services:status": "curl -s http://localhost:3000/api/services/status | jq",
-    "services:health": "curl -s http://localhost:3000/api/services/status?action=health | jq",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -92,7 +83,6 @@
     "tailwindcss": "^3.4.15",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.19.4",
-    "tw-animate-css": "^1.3.0",
     "typescript": "5.8.3"
   }
 }

@@ -165,7 +165,8 @@ export class ApifyTwitterService {
    */
   async getTweetById(tweetId: string, quickMode = false): Promise<ApifyTweetData | null> {
     try {
-      // Start async run
+      // FIXED: According to the documentation, tweet_ids should be a string (comma-separated)
+      // For single tweet, just pass the ID as string
       const runResponse = await this.startApifyRun('tweet/by_ids', {
         tweet_ids: tweetId
       })
@@ -206,7 +207,8 @@ export class ApifyTwitterService {
       // Use direct actor ID (no encoding needed for gdN28kzr6QsU4nVh8)
       const url = `${this.config.baseUrl}/acts/${this.config.actorId}/runs?token=${this.config.apiToken}`
 
-      // The input should be passed directly as the POST body for this specific actor
+      // FIXED: The input should be passed directly as the POST body for this specific actor
+      // According to the documentation, the actor expects { endpoint, parameters } format
       const requestBody = {
         endpoint,
         parameters
