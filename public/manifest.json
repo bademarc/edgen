@@ -9,10 +9,10 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon/-AlLx9IW_400x400.png",
-      "sizes": "400x400",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "/icon/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
       "src": "/icon/-AlLx9IW_400x400.png",
@@ -23,6 +23,18 @@
     {
       "src": "/icon/-AlLx9IW_400x400.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon/-AlLx9IW_400x400.png",
+      "sizes": "400x400",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon/-AlLx9IW_400x400.png",
+      "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     }
@@ -36,7 +48,8 @@
       "icons": [
         {
           "src": "/icon/-AlLx9IW_400x400.png",
-          "sizes": "96x96"
+          "sizes": "96x96",
+          "type": "image/png"
         }
       ]
     },
@@ -48,7 +61,8 @@
       "icons": [
         {
           "src": "/icon/-AlLx9IW_400x400.png",
-          "sizes": "96x96"
+          "sizes": "96x96",
+          "type": "image/png"
         }
       ]
     },
@@ -60,7 +74,8 @@
       "icons": [
         {
           "src": "/icon/-AlLx9IW_400x400.png",
-          "sizes": "96x96"
+          "sizes": "96x96",
+          "type": "image/png"
         }
       ]
     }

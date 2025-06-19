@@ -38,8 +38,65 @@ export const metadata: Metadata = {
   },
   generator: 'LayerEdge Community Platform',
   icons: {
-    icon: "/icon/-AlLx9IW_400x400.png",
-    apple: "/icon/-AlLx9IW_400x400.png",
+    icon: [
+      {
+        url: "/icon/icon.svg",
+        type: "image/svg+xml",
+      },
+      {
+        url: "/icon/-AlLx9IW_400x400.png",
+        sizes: "400x400",
+        type: "image/png",
+      },
+      {
+        url: "/icon/-AlLx9IW_400x400.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/icon/-AlLx9IW_400x400.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+      {
+        url: "/icon/-AlLx9IW_400x400.png",
+        sizes: "16x16",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/icon/-AlLx9IW_400x400.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+      {
+        url: "/icon/-AlLx9IW_400x400.png",
+        sizes: "152x152",
+        type: "image/png",
+      },
+      {
+        url: "/icon/-AlLx9IW_400x400.png",
+        sizes: "120x120",
+        type: "image/png",
+      },
+      {
+        url: "/icon/-AlLx9IW_400x400.png",
+        sizes: "76x76",
+        type: "image/png",
+      },
+    ],
+    shortcut: "/favicon.ico",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "LayerEdge",
+    "mobile-web-app-capable": "yes",
+    "application-name": "LayerEdge",
+    "msapplication-TileImage": "/icon/-AlLx9IW_400x400.png",
+    "msapplication-TileColor": "#000000",
+    "msapplication-config": "none",
   }
 };
 
