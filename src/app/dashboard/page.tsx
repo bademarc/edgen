@@ -479,28 +479,12 @@ export default function DashboardPage() {
           </motion.div>
             </div>
 
-            {/* Activity Feed Sidebar */}
-            <div className="xl:w-80 flex-shrink-0">
-              <div className="sticky top-8">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.7 }}
-                >
-                  <ActivityFeedWithProfiles
-                    className="w-full"
-                    maxItems={6}
-                    showProfilesOnClick={true}
-                    useMockData={false}
-                    enableLiveUpdates={true}
-                  />
-                </motion.div>
+          
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    
   )
 }
 
