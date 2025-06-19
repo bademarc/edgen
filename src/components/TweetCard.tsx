@@ -5,13 +5,12 @@ import {
   RotateCw,
   MessageCircle,
   Sparkles,
-  Calendar,
   User,
   RotateCw as ArrowPath
 } from 'lucide-react'
-import { formatDate, formatNumber } from '@/lib/utils'
+import { formatNumber } from '@/lib/utils'
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
-import { DateTooltip, ButtonTooltip } from '@/components/ui/tooltip'
+import { ButtonTooltip } from '@/components/ui/tooltip'
 
 interface TweetCardProps {
   tweet: {
@@ -37,6 +36,15 @@ interface TweetCardProps {
   isUpdating?: boolean
   onUpdateEngagement?: (tweetId: string) => Promise<void>
   showUpdateButton?: boolean
+  onUserClick?: (user: {
+    id: string
+    name?: string | null
+    xUsername?: string | null
+    image?: string | null
+    totalPoints: number
+    rank?: number
+    tweetsCount?: number
+  }) => void
 }
 
 export const TweetCard = memo(function TweetCard({
@@ -45,7 +53,8 @@ export const TweetCard = memo(function TweetCard({
   className = '',
   isUpdating = false,
   onUpdateEngagement,
-  showUpdateButton = false
+  showUpdateButton = false,
+  onUserClick
 }: TweetCardProps) {
   const [previousMetrics, setPreviousMetrics] = useState({
     likes: tweet.likes,
@@ -111,6 +120,20 @@ export const TweetCard = memo(function TweetCard({
     }
   }, [onUpdateEngagement, tweet.id])
 
+  const handleUserClick = useCallback(() => {
+    if (onUserClick) {
+      onUserClick({
+        id: tweet.user.id,
+        name: tweet.user.name,
+        xUsername: tweet.user.xUsername,
+        image: tweet.user.image,
+        totalPoints: tweet.totalPoints,
+        // Note: rank and tweetsCount would need to be provided by parent component
+        // or fetched from API if needed for the profile modal
+      })
+    }
+  }, [onUserClick, tweet.user, tweet.totalPoints])
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -136,7 +159,10 @@ export const TweetCard = memo(function TweetCard({
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         {showUser && (
-          <div className="flex items-center space-x-3">
+          <div
+            className={`flex items-center space-x-3 ${onUserClick ? 'cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-all duration-200' : ''}`}
+            onClick={onUserClick ? handleUserClick : undefined}
+          >
             {tweet.user.image ? (
               <div className="relative">
                 <Image
@@ -144,19 +170,19 @@ export const TweetCard = memo(function TweetCard({
                   alt={tweet.user.name || tweet.user.xUsername || 'User'}
                   width={40}
                   height={40}
-                  className="h-10 w-10 rounded-full ring-2 ring-border hover:ring-layeredge-orange transition-all duration-300"
+                  className={`h-10 w-10 rounded-full ring-2 ring-border transition-all duration-300 ${onUserClick ? 'hover:ring-layeredge-orange hover:scale-105' : 'hover:ring-layeredge-orange'}`}
                 />
                 <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-layeredge-orange rounded-full border-2 border-card flex items-center justify-center">
                   <div className="h-2 w-2 bg-black rounded-full"></div>
                 </div>
               </div>
             ) : (
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-muted to-muted-hover flex items-center justify-center ring-2 ring-border">
+              <div className={`h-10 w-10 rounded-full bg-gradient-to-br from-muted to-muted-hover flex items-center justify-center ring-2 ring-border transition-all duration-300 ${onUserClick ? 'hover:ring-layeredge-orange hover:scale-105' : ''}`}>
                 <User className="h-5 w-5 text-muted-foreground" />
               </div>
             )}
             <div>
-              <p className="font-semibold text-foreground hover:text-layeredge-orange transition-colors">
+              <p className={`font-semibold text-foreground transition-colors ${onUserClick ? 'hover:text-layeredge-orange' : ''}`}>
                 {tweet.user.name || tweet.user.xUsername || 'Anonymous'}
               </p>
               {tweet.user.xUsername && (
@@ -212,7 +238,7 @@ export const TweetCard = memo(function TweetCard({
       <div className="divider-layeredge my-4"></div>
 
       {/* Engagement Stats */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-center">
         <div className="flex items-center space-x-6 text-sm">
           <motion.div
             className={`flex items-center space-x-2 text-red-400 hover:text-red-300 transition-colors group relative ${showChanges.likes ? 'ring-1 ring-red-400/50 rounded px-2 py-1' : ''}`}
@@ -268,29 +294,6 @@ export const TweetCard = memo(function TweetCard({
               )}
             </AnimatePresence>
           </motion.div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <DateTooltip
-            originalDate={tweet.originalTweetDate || tweet.createdAt}
-            submittedDate={tweet.submittedAt}
-            className="flex items-center space-x-2 text-sm text-muted-foreground"
-          >
-            <Calendar className="h-4 w-4" />
-            <span>{formatDate(tweet.originalTweetDate || tweet.createdAt)}</span>
-            {tweet.submittedAt && tweet.originalTweetDate && (
-              <span className="text-xs text-muted-foreground/70 ml-1">ℹ️</span>
-            )}
-          </DateTooltip>
-
-          <ButtonTooltip
-            tooltip="View original tweet on X/Twitter"
-            side="top"
-            className="btn-layeredge-ghost px-4 py-2 rounded-lg text-sm font-semibold hover-lift btn-with-tooltip"
-            onClick={() => window.open(tweet.url, '_blank', 'noopener,noreferrer')}
-          >
-            View Tweet →
-          </ButtonTooltip>
         </div>
       </div>
     </motion.div>

@@ -15,6 +15,7 @@ import { TweetCard } from '@/components/TweetCard'
 import { formatNumber } from '@/lib/utils'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { ActivityFeedWithProfiles } from '@/components/ui/activity-feed-with-profiles'
+import { UserProfileModal } from '@/components/ui/user-profile-modal'
 
 // Simplified Tweet interface for database-only approach
 interface Tweet {
@@ -64,16 +65,45 @@ export default function RecentSubmissionsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  
+
   // Filter and pagination state
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'recent' | 'points' | 'engagement'>('recent')
   const [currentPage, setCurrentPage] = useState(1)
   const [pagination, setPagination] = useState<ApiResponse['pagination'] | null>(null)
-  
+
   // UI state
   const [isHydrated, setIsHydrated] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+
+  // Profile modal state
+  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+
+  // Handle user click for profile view
+  const handleUserClick = useCallback((user: {
+    id: string
+    name?: string | null
+    xUsername?: string | null
+    image?: string | null
+    totalPoints: number
+    rank?: number
+    tweetsCount?: number
+  }) => {
+    // Convert to UserProfileModal format
+    const profileUser = {
+      id: user.id,
+      name: user.name,
+      xUsername: user.xUsername,
+      image: user.image,
+      totalPoints: user.totalPoints,
+      rank: user.rank || 0, // Default rank if not provided
+      tweetsCount: user.tweetsCount || 0, // Default tweets count if not provided
+    }
+
+    setSelectedUser(profileUser)
+    setIsProfileModalOpen(true)
+  }, [])
 
   // Hydration fix
   useEffect(() => {
@@ -406,6 +436,7 @@ export default function RecentSubmissionsPage() {
                         showUser={true}
                         isUpdating={false}
                         showUpdateButton={false}
+                        onUserClick={handleUserClick}
                         className="hover:shadow-lg transition-shadow duration-200"
                       />
                     </motion.div>
@@ -467,27 +498,23 @@ export default function RecentSubmissionsPage() {
           )}
             </div>
 
-            {/* Activity Feed Sidebar */}
-            <div className="lg:w-80 flex-shrink-0">
-              <div className="sticky top-8">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                >
-                  <ActivityFeedWithProfiles
-                    className="w-full"
-                    maxItems={8}
-                    showProfilesOnClick={true}
-                    useMockData={false}
-                    enableLiveUpdates={true}
-                  />
-                </motion.div>
+    
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        
+    
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        user={selectedUser}
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false)
+          setSelectedUser(null)
+        }}
+        context="activity-feed"
+      />
     </ErrorBoundary>
   )
 }
