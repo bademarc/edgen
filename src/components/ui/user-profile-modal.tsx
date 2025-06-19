@@ -24,6 +24,7 @@ import {
 import { formatNumber } from '@/lib/utils'
 import { ActivityTimeline } from './activity-timeline'
 
+// Enhanced interface to support both leaderboard and activity feed users
 interface UserProfileModalProps {
   user: {
     id: string
@@ -36,12 +37,20 @@ interface UserProfileModalProps {
     joinDate?: string
     thisWeekPoints?: number
     lastActivityDate?: string
+    // Additional fields for activity feed context
+    tweetsSubmitted?: number
+    questsCompleted?: number
+    dailyStreak?: number
+    weeklyPoints?: number
+    monthlyPoints?: number
   } | null
   isOpen: boolean
   onClose: () => void
+  // Optional context to customize the modal for different use cases
+  context?: 'leaderboard' | 'activity-feed' | 'general'
 }
 
-export function UserProfileModal({ user, isOpen, onClose }: UserProfileModalProps) {
+export function UserProfileModal({ user, isOpen, onClose, context = 'general' }: UserProfileModalProps) {
   if (!user) return null
 
   // Calculate tier based on points
@@ -128,7 +137,7 @@ export function UserProfileModal({ user, isOpen, onClose }: UserProfileModalProp
                 <div className="flex items-center justify-center mb-2">
                   <ChartBarIcon className="h-5 w-5 text-blue-500" />
                 </div>
-                <div className="text-2xl font-bold">{user.tweetsCount}</div>
+                <div className="text-2xl font-bold">{user.tweetsCount || user.tweetsSubmitted || 0}</div>
                 <p className="text-xs text-muted-foreground">Contributions</p>
               </CardContent>
             </Card>
@@ -143,6 +152,49 @@ export function UserProfileModal({ user, isOpen, onClose }: UserProfileModalProp
               </CardContent>
             </Card>
           </div>
+
+          {/* Context-specific additional stats for activity feed */}
+          {context === 'activity-feed' && (user.thisWeekPoints || user.weeklyPoints || user.dailyStreak) && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(user.thisWeekPoints || user.weeklyPoints) && (
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <CalendarIcon className="h-5 w-5 text-purple-500" />
+                    </div>
+                    <div className="text-xl font-bold text-purple-600">
+                      +{formatNumber(user.thisWeekPoints || user.weeklyPoints || 0)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">This Week</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {user.dailyStreak && (
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <span className="text-orange-500">🔥</span>
+                    </div>
+                    <div className="text-xl font-bold text-orange-600">{user.dailyStreak}</div>
+                    <p className="text-xs text-muted-foreground">Day Streak</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {user.questsCompleted && (
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <span className="text-green-500">🎯</span>
+                    </div>
+                    <div className="text-xl font-bold text-green-600">{user.questsCompleted}</div>
+                    <p className="text-xs text-muted-foreground">Quests Done</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
 
           {/* Tier Progress */}
           <Card>

@@ -14,6 +14,7 @@ import {
 import { TweetCard } from '@/components/TweetCard'
 import { formatNumber } from '@/lib/utils'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { ActivityFeedWithProfiles } from '@/components/ui/activity-feed-with-profiles'
 
 // Simplified Tweet interface for database-only approach
 interface Tweet {
@@ -276,7 +277,10 @@ export default function RecentSubmissionsPage() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen py-12">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Main Content */}
+            <div className="flex-1 max-w-4xl">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -461,6 +465,27 @@ export default function RecentSubmissionsPage() {
               </div>
             </motion.div>
           )}
+            </div>
+
+            {/* Activity Feed Sidebar */}
+            <div className="lg:w-80 flex-shrink-0">
+              <div className="sticky top-8">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  <ActivityFeedWithProfiles
+                    className="w-full"
+                    maxItems={8}
+                    showProfilesOnClick={true}
+                    useMockData={false}
+                    enableLiveUpdates={true}
+                  />
+                </motion.div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </ErrorBoundary>

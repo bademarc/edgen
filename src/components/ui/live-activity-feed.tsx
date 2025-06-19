@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './avatar'
 import { Badge } from './badge'
 import { Card, CardContent } from './card'
 import { Separator } from './separator'
+import { UserProfileModal } from './user-profile-modal'
 import {
   SparklesIcon,
   HeartIcon,
@@ -21,9 +22,19 @@ interface ActivityItem {
   id: string
   type: 'tweet' | 'achievement' | 'milestone' | 'join'
   user: {
+    id: string
     name: string
     username: string
     avatar?: string
+    // Enhanced user data for profile view
+    totalPoints: number
+    rank: number
+    tweetsCount: number
+    tweetsSubmitted?: number
+    thisWeekPoints?: number
+    joinDate?: string
+    questsCompleted?: number
+    dailyStreak?: number
   }
   content: string
   points?: number
@@ -43,16 +54,78 @@ interface ActivityItem {
 interface LiveActivityFeedProps {
   className?: string
   maxItems?: number
+  showProfilesOnClick?: boolean
+  enableUserInteraction?: boolean
 }
 
-// Mock data generator for demo
+// Mock data generator for demo (enhanced with profile data)
 function generateMockActivity(): ActivityItem {
   const users = [
-    { name: 'Alex Chen', username: 'alexc_btc', avatar: '/avatars/alex.jpg' },
-    { name: 'Sarah Kim', username: 'sarahk_crypto', avatar: '/avatars/sarah.jpg' },
-    { name: 'Mike Johnson', username: 'mikej_layer', avatar: '/avatars/mike.jpg' },
-    { name: 'Emma Davis', username: 'emmad_edge', avatar: '/avatars/emma.jpg' },
-    { name: 'David Wilson', username: 'davidw_btc', avatar: '/avatars/david.jpg' },
+    {
+      id: '1',
+      name: 'Alex Chen',
+      username: 'alexc_btc',
+      avatar: '/avatars/alex.jpg',
+      totalPoints: 2450,
+      rank: 15,
+      tweetsCount: 23,
+      thisWeekPoints: 180,
+      joinDate: '2024-01-15',
+      questsCompleted: 5,
+      dailyStreak: 7
+    },
+    {
+      id: '2',
+      name: 'Sarah Kim',
+      username: 'sarahk_crypto',
+      avatar: '/avatars/sarah.jpg',
+      totalPoints: 3200,
+      rank: 8,
+      tweetsCount: 31,
+      thisWeekPoints: 220,
+      joinDate: '2024-01-10',
+      questsCompleted: 8,
+      dailyStreak: 12
+    },
+    {
+      id: '3',
+      name: 'Mike Johnson',
+      username: 'mikej_layer',
+      avatar: '/avatars/mike.jpg',
+      totalPoints: 1890,
+      rank: 28,
+      tweetsCount: 18,
+      thisWeekPoints: 95,
+      joinDate: '2024-02-01',
+      questsCompleted: 3,
+      dailyStreak: 4
+    },
+    {
+      id: '4',
+      name: 'Emma Davis',
+      username: 'emmad_edge',
+      avatar: '/avatars/emma.jpg',
+      totalPoints: 4100,
+      rank: 5,
+      tweetsCount: 42,
+      thisWeekPoints: 310,
+      joinDate: '2024-01-05',
+      questsCompleted: 12,
+      dailyStreak: 18
+    },
+    {
+      id: '5',
+      name: 'David Wilson',
+      username: 'davidw_btc',
+      avatar: '/avatars/david.jpg',
+      totalPoints: 2780,
+      rank: 12,
+      tweetsCount: 27,
+      thisWeekPoints: 150,
+      joinDate: '2024-01-20',
+      questsCompleted: 6,
+      dailyStreak: 9
+    },
   ]
 
   const activities = [
@@ -127,8 +200,15 @@ function formatTimeAgo(date: Date) {
   return `${Math.floor(diffInSeconds / 86400)}d ago`
 }
 
-export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedProps) {
+export function LiveActivityFeed({
+  className,
+  maxItems = 10,
+  showProfilesOnClick = true,
+  enableUserInteraction = true
+}: LiveActivityFeedProps) {
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [selectedUser, setSelectedUser] = useState<any>(null) // Use any to handle interface conversion
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_isLive, _setIsLive] = useState(true)
 
@@ -151,7 +231,32 @@ export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedP
     return () => clearInterval(interval)
   }, [_isLive, maxItems])
 
+  // Handle user click for profile view
+  const handleUserClick = (user: ActivityItem['user']) => {
+    if (!enableUserInteraction || !showProfilesOnClick) return
+
+    // Convert to UserProfileModal format
+    const profileUser = {
+      id: user.id,
+      name: user.name,
+      xUsername: user.username, // Convert username to xUsername for UserProfileModal
+      image: user.avatar,
+      totalPoints: user.totalPoints,
+      rank: user.rank,
+      tweetsCount: user.tweetsCount || user.tweetsSubmitted || 0,
+      thisWeekPoints: user.thisWeekPoints,
+      joinDate: user.joinDate,
+      questsCompleted: user.questsCompleted,
+      dailyStreak: user.dailyStreak
+    }
+
+    // Set the converted user for the modal
+    setSelectedUser(profileUser)
+    setIsProfileModalOpen(true)
+  }
+
   return (
+    <>
     <Card className={cn("w-full max-w-md", className)}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-6">
@@ -188,17 +293,31 @@ export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedP
                 className="relative"
               >
                 <div className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                  <Avatar className="h-8 w-8 ring-2 ring-border">
-                    <AvatarImage src={activity.user.avatar} alt={activity.user.name} />
-                    <AvatarFallback>
-                      {activity.user.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div
+                    className={cn(
+                      "cursor-pointer transition-transform hover:scale-105",
+                      enableUserInteraction && showProfilesOnClick && "hover:ring-2 hover:ring-primary/50 rounded-full"
+                    )}
+                    onClick={() => handleUserClick(activity.user)}
+                  >
+                    <Avatar className="h-8 w-8 ring-2 ring-border">
+                      <AvatarImage src={activity.user.avatar} alt={activity.user.name} />
+                      <AvatarFallback>
+                        {activity.user.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
                       <ActivityIcon type={activity.type} _achievement={activity.achievement} />
-                      <span className="text-sm font-medium text-foreground truncate">
+                      <span
+                        className={cn(
+                          "text-sm font-medium text-foreground truncate",
+                          enableUserInteraction && showProfilesOnClick && "cursor-pointer hover:text-primary transition-colors"
+                        )}
+                        onClick={() => handleUserClick(activity.user)}
+                      >
                         {activity.user.name}
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -272,5 +391,19 @@ export function LiveActivityFeed({ className, maxItems = 10 }: LiveActivityFeedP
         )}
       </CardContent>
     </Card>
+
+    {/* User Profile Modal */}
+    {enableUserInteraction && showProfilesOnClick && (
+      <UserProfileModal
+        user={selectedUser}
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false)
+          setSelectedUser(null)
+        }}
+        context="activity-feed"
+      />
+    )}
+  </>
   )
 }
