@@ -61,6 +61,58 @@ const parseAIContent = (content: string): string => {
   return cleanContent
 }
 
+// Markdown rendering utility for chat messages
+const renderMarkdownContent = (content: string): React.ReactElement[] => {
+  return content.split('\n').map((line, index) => {
+    if (line.startsWith('# ')) {
+      return <h1 key={index} className="text-base sm:text-lg font-bold mb-2 mt-0">{line.substring(2)}</h1>
+    } else if (line.startsWith('## ')) {
+      return <h2 key={index} className="text-sm sm:text-base font-semibold mb-2 mt-3">{line.substring(3)}</h2>
+    } else if (line.startsWith('• ')) {
+      const bulletContent = line.substring(2)
+      if (bulletContent.includes('**')) {
+        const parts = bulletContent.split('**')
+        return (
+          <p key={index} className="mb-1 text-xs sm:text-sm">
+            • {parts.map((part, i) =>
+              i % 2 === 1 ? <strong key={i} className="font-semibold">{part}</strong> : part
+            )}
+          </p>
+        )
+      } else {
+        return <p key={index} className="mb-1 text-xs sm:text-sm">• {bulletContent}</p>
+      }
+    } else if (line.startsWith('- ')) {
+      const dashContent = line.substring(2)
+      if (dashContent.includes('**')) {
+        const parts = dashContent.split('**')
+        return (
+          <p key={index} className="mb-1 text-xs sm:text-sm">
+            - {parts.map((part, i) =>
+              i % 2 === 1 ? <strong key={i} className="font-semibold">{part}</strong> : part
+            )}
+          </p>
+        )
+      } else {
+        return <p key={index} className="mb-1 text-xs sm:text-sm">- {dashContent}</p>
+      }
+    } else if (line.includes('**')) {
+      const parts = line.split('**')
+      return (
+        <p key={index} className="mb-1 text-xs sm:text-sm">
+          {parts.map((part, i) =>
+            i % 2 === 1 ? <strong key={i} className="font-semibold">{part}</strong> : part
+          )}
+        </p>
+      )
+    } else if (line.trim()) {
+      return <p key={index} className="mb-1 text-xs sm:text-sm">{line}</p>
+    } else {
+      return <br key={index} />
+    }
+  })
+}
+
 export function EdgenHelperChatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
@@ -101,8 +153,8 @@ export function EdgenHelperChatbot() {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const welcomeContent = isMobile
-        ? "👋 Hi! I'm Edgen Helper, your LayerEdge AI assistant.\n\nI can help with:\n• Enhanced points system (up to 380 points/tweet)\n• Quest completion (2000+ bonus points)\n• Real-time Twitter metrics\n• Platform optimization strategies\n\nWhat can I help you with?"
-        : "👋 Hi! I'm Edgen Helper, your LayerEdge community assistant with comprehensive platform knowledge!\n\n🎯 **I can help you with**:\n• **Enhanced Points System**: Up to 380 points per tweet with detailed engagement metrics\n• **Quest System**: Complete quests for 2000+ bonus points\n• **Real-time Metrics**: Real-time Twitter metrics for accurate calculations\n• **Platform Features**: Dashboard, leaderboard, submission optimization\n• **Strategic Guidance**: Maximize your earnings with proven strategies\n\n💡 **Key Platform Info**:\n- Base points: 10 per tweet\n- Enhanced engagement multipliers \n- 5-minute cooldown between submissions\n- Production site: edgen.koyeb.app\n\nWhat would you like to know about maximizing your LayerEdge earnings?"
+        ? "👋 Hi! I'm Edgen Helper, your LayerEdge AI assistant.\n\nI can help with:\n• **Tweet Submission & Optimization** - Learn the best strategies for earning maximum points\n• **Points System Mastery** - Understand how engagement translates to rewards\n• **Hashtag Strategy** - Master the use of @layeredge and $EDGEN mentions\n• **Platform Navigation** - Get help with any LayerEdge feature\n• **Troubleshooting** - Solve issues with submissions, login, or account problems\n• **Community Insights** - Learn about LayerEdge ecosystem and opportunities\n\nWhat can I help you with?"
+        : "👋 Hi! I'm Edgen Helper, your LayerEdge community assistant with comprehensive platform knowledge!\n\n🎯 **I can help you with**:\n• **Tweet Submission & Optimization** - Learn the best strategies for earning maximum points\n• **Points System Mastery** - Understand how engagement translates to rewards\n• **Hashtag Strategy** - Master the use of @layeredge and $EDGEN mentions\n• **Platform Navigation** - Get help with any LayerEdge feature\n• **Troubleshooting** - Solve issues with submissions, login, or account problems\n• **Community Insights** - Learn about LayerEdge ecosystem and opportunities\n\n💡 **Key Platform Info**:\n- Base points: 10 per tweet\n- Enhanced engagement multipliers \n- 5-minute cooldown between submissions\n- Production site: edgen.koyeb.app\n\nWhat would you like to know about maximizing your LayerEdge earnings?"
 
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
@@ -204,7 +256,7 @@ export function EdgenHelperChatbot() {
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
@@ -338,7 +390,9 @@ export function EdgenHelperChatbot() {
                                       <span className="text-xs sm:text-sm">{message.content}</span>
                                     </div>
                                   ) : (
-                                    <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                                    <div className="text-xs sm:text-sm leading-relaxed">
+                                      {renderMarkdownContent(message.content)}
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -375,7 +429,7 @@ export function EdgenHelperChatbot() {
                             ref={inputRef}
                             value={inputMessage}
                             onChange={(e) => setInputMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
+                            onKeyDown={handleKeyDown}
                             placeholder={isMobile ? "Ask Edgen..." : "Ask Edgen Helper..."}
                             className="flex-1 bg-gray-800 border-gray-600 text-white placeholder-gray-400 text-sm sm:text-base h-10 sm:h-auto chat-input-mobile"
                             disabled={isLoading}
