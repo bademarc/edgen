@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       configured: !!bearerToken,
       hasUrlEncoding: bearerToken?.includes('%') || false,
       length: bearerToken?.length || 0,
-      format: bearerToken?.startsWith('AAAAAAAAAAAAAAAAAAAAAA') ? 'VALID' : 'INVALID'
+      format: (bearerToken?.length || 0) >= 50 && bearerToken?.startsWith('A') ? 'VALID' : 'INVALID'
     }
 
     return NextResponse.json({

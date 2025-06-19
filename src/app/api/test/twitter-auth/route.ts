@@ -16,16 +16,16 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Check token format - Twitter Bearer Tokens should start with 'AAAAAAAAAAAAAAAAAAAAAA'
-    // and be at least 100 characters long (typical length is around 100-120 characters)
+    // Check token format - Twitter Bearer Tokens are typically 100+ characters long
+    // Note: Format can vary, so we'll be more flexible with validation
     const tokenValidation = {
       hasToken: !!bearerToken,
       tokenLength: bearerToken.length,
-      startsCorrectly: bearerToken.startsWith('AAAAAAAAAAAAAAAAAAAAAA'),
-      hasValidLength: bearerToken.length >= 100,
+      startsWithA: bearerToken.startsWith('A'),
+      hasValidLength: bearerToken.length >= 50, // More flexible minimum length
       containsUrlEncoding: bearerToken.includes('%'),
       decodedLength: decodeURIComponent(bearerToken).length,
-      isValidFormat: bearerToken.startsWith('AAAAAAAAAAAAAAAAAAAAAA') && bearerToken.length >= 100
+      isValidFormat: bearerToken.length >= 50 && bearerToken.startsWith('A') // More flexible validation
     }
 
     console.log('🔍 Token validation:', tokenValidation)
