@@ -29,6 +29,9 @@ interface TweetCardProps {
       name?: string | null
       xUsername?: string | null
       image?: string | null
+      totalPoints?: number
+      rank?: number
+      tweetsCount?: number
     }
   }
   showUser?: boolean
@@ -127,12 +130,12 @@ export const TweetCard = memo(function TweetCard({
         name: tweet.user.name,
         xUsername: tweet.user.xUsername,
         image: tweet.user.image,
-        totalPoints: tweet.totalPoints,
-        // Note: rank and tweetsCount would need to be provided by parent component
-        // or fetched from API if needed for the profile modal
+        totalPoints: tweet.user.totalPoints || tweet.totalPoints, // Use user's total points if available, fallback to tweet points
+        rank: tweet.user.rank || 0, // Use current rank from user record
+        tweetsCount: tweet.user.tweetsCount || 0, // Use actual tweets count from user record
       })
     }
-  }, [onUserClick, tweet.user, tweet.totalPoints])
+  }, [onUserClick, tweet.user])
 
   return (
     <motion.div

@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 Fetching recent tweets: limit=${validatedLimit}, offset=${validatedOffset}, sortBy=${sortBy}, search="${search}"`)
 
-    // Fetch tweets with optimized query
+    // Fetch tweets with optimized query including user rank and total points
     const [tweets, totalCount] = await Promise.all([
       prisma.tweet.findMany({
         where: whereClause,
@@ -81,6 +81,13 @@ export async function GET(request: NextRequest) {
               name: true,
               xUsername: true,
               image: true,
+              totalPoints: true,
+              rank: true,
+              _count: {
+                select: {
+                  tweets: true,
+                },
+              },
             },
           },
         },
@@ -106,6 +113,14 @@ export async function GET(request: NextRequest) {
       lastEngagementUpdate: tweet.lastEngagementUpdate?.toISOString() || null,
       // Add display-friendly date
       displayDate: (tweet.originalTweetDate || tweet.submittedAt || tweet.createdAt).toISOString(),
+      // Enhanced user data with current rank and total points
+      user: {
+        ...tweet.user,
+        tweetsCount: tweet.user._count.tweets,
+        // Ensure rank is available (fallback to calculating if not set)
+        rank: tweet.user.rank || 0,
+        totalPoints: tweet.user.totalPoints,
+      }
     }))
 
     return NextResponse.json({

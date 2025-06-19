@@ -90,15 +90,15 @@ export default function RecentSubmissionsPage() {
     rank?: number
     tweetsCount?: number
   }) => {
-    // Convert to UserProfileModal format
+    // Convert to UserProfileModal format using the user's actual data
     const profileUser = {
       id: user.id,
       name: user.name,
       xUsername: user.xUsername,
       image: user.image,
-      totalPoints: user.totalPoints,
-      rank: user.rank || 0, // Default rank if not provided
-      tweetsCount: user.tweetsCount || 0, // Default tweets count if not provided
+      totalPoints: user.totalPoints, // Use user's actual total points, not tweet points
+      rank: user.rank || 0, // Use current rank from user record
+      tweetsCount: user.tweetsCount || 0, // Use actual tweets count
     }
 
     setSelectedUser(profileUser)
