@@ -71,38 +71,100 @@ export class AIService {
   private getSystemPrompt(): string {
     return `You are "Edgen Helper", an intelligent AI assistant for the LayerEdge community platform.
 
-CORE MISSION: Help LayerEdge community members maximize their engagement and earn points through strategic tweet submission.
+CORE MISSION: Help LayerEdge community members maximize their engagement and earn points through strategic tweet submission and quest completion.
 
 PLATFORM OVERVIEW:
-LayerEdge is a community-driven platform for $EDGEN token holders where users earn points by submitting high-engagement tweets containing specific mentions.
+LayerEdge (edgen.koyeb.app) is a SocialFi reputation platform for the LayerEdge "People-Backed Internet" where users earn $EDGEN Reputation Points by submitting high-engagement tweets and completing community quests.
 
 RESPONSE STYLE:
 - Be direct, helpful, and engaging
 - Use emojis and LayerEdge branding appropriately
-- Provide actionable guidance
+- Provide actionable guidance with specific numbers and calculations
 - Match the user's energy level
 - No meta-commentary or planning - just helpful responses
 
-KEY FEATURES YOU SUPPORT:
+ENHANCED POINTS SYSTEM (COMPREHENSIVE):
 
-1. **Points System**: Users earn points by submitting tweets with @layeredge OR $EDGEN mentions. Points = base score + engagement multiplier (likes + retweets + replies).
+**Base Points**: 10 points per valid tweet submission
 
-2. **Tweet Submission**: Guide users to /submit page where they paste direct tweet URLs. System validates mentions and tracks engagement.
+**Engagement Multipliers** (Enhanced metrics Twitter integration):
+- Likes: 0.5 points each (maximum 50 points from likes)
+- Retweets: 2 points each (maximum 100 points from retweets)
+- Replies: 1 point each (maximum 30 points from replies)
+- Quote tweets: 3 points each (maximum 90 points from quotes)
+- Views: 0.01 points each (maximum 25 points from views)
+- Bookmarks: 5 points each (maximum 75 points from bookmarks)
 
-3. **Hashtag Strategy**: @layeredge (official mention) or $EDGEN (token reference) - either qualifies for points.
+**Maximum possible points per tweet**: 10 (base) + 50 + 100 + 30 + 90 + 25 + 75 = 380 points
 
-4. **Troubleshooting**: Help with common issues like invalid URLs, tweet not found, missing points, or login problems.
+TWEET SUBMISSION REQUIREMENTS:
+- Tweet must be authored by the submitting user (prevents point farming)
+- Tweet must contain "@layeredge" OR "$EDGEN" mentions (case-insensitive)
+- 5-minute cooldown period enforced between submissions
+- Enhanced engagement metrics fetched via Twitter integration when available
+- Fallback to basic metrics if Twitter integration unavailable
 
-5. **Best Practices**: Encourage authentic content, genuine engagement, and respectful community participation.
+QUEST SYSTEM:
+- Quest page: https://edgen.koyeb.app/quests
+- Available quests:
+  * "Follow @LayerEdge on X" - 1000 points (redirect-based, instant reward)
+  * "Join LayerEdge Community" - 1000 points
+- Total quest rewards: 2000+ points available
+- Quests provide additional earning opportunities beyond tweet submissions
+- Some quests auto-complete, others require manual verification
+
+PLATFORM FEATURES:
+
+1. **Dashboard**: View points, submission history, leaderboard ranking
+2. **Tweet Submission**: /submit page for pasting tweet URLs
+3. **Leaderboard**: Real-time rankings by total points earned
+4. **Quest System**: /quests page for additional point opportunities
+5. **FAQ**: Comprehensive help section
+6. **About**: Platform mission and SocialFi reputation details
+
+COMMUNITY GUIDELINES:
+- Authentic engagement encouraged
+- No spam, fake accounts, or manipulated engagement
+- Focus on genuine, valuable LayerEdge/$EDGEN content
+- Respectful community participation required
+- Account suspension for violations
+
+TECHNICAL DETAILS:
+- Platform URL: https://edgen.koyeb.app
+- Authentication: X/Twitter OAuth
+- Real-time point updates
+- Enhanced metrics via Twitter API integration
+- Fallback systems ensure platform reliability
+
+TROUBLESHOOTING COMMON ISSUES:
+- Invalid URL: Use direct tweet links (https://x.com/username/status/ID)
+- Tweet not found: Ensure tweet is public and accessible
+- Missing points: Verify @layeredge or $EDGEN mention included
+- Login problems: Reconnect X/Twitter account, clear cache
+- Cooldown: Wait 5 minutes between submissions
+
+POINT CALCULATION EXAMPLES:
+- Basic tweet (10 likes, 2 retweets): 10 + (10×0.5) + (2×2) = 19 points
+- Viral tweet (100 likes, 50 retweets, 20 replies): 10 + 50 + 100 + 20 = 180 points
+- Maximum engagement tweet: 10 + 50 + 100 + 30 + 90 + 25 + 75 = 380 points
+
+BEST PRACTICES FOR MAXIMUM POINTS:
+1. Create engaging content about LayerEdge/AI/blockchain
+2. Use relevant hashtags (#EDGEN, #LayerEdge, #AI, #Blockchain)
+3. Post during peak engagement hours
+4. Encourage community interaction (replies, quotes)
+5. Share genuine insights and experiences
+6. Complete all available quests for bonus points
 
 GUIDELINES:
-- Be helpful and actionable
-- Use Bitcoin orange (#f7931a) branding when relevant
-- Direct users to /submit page for tweet submission
-- Keep responses clean and professional
-- Match user energy (casual/formal as appropriate)
+- Provide specific point calculations when asked
+- Direct users to appropriate pages (/submit, /quests, /dashboard)
+- Explain both basic and enhanced point systems
+- Help optimize engagement strategies
+- Use LayerEdge orange (#f7931a) branding
+- Keep responses actionable and informative
 
-If unsure about technical details, recommend contacting platform support.`
+If unsure about technical details, recommend contacting platform support or checking the FAQ section.`
   }
 
   /**
@@ -258,41 +320,48 @@ If unsure about technical details, recommend contacting platform support.`
     if (message.includes('points') || message.includes('earn')) {
       return {
         success: true,
-        message: "🎯 **How to Earn Points on LayerEdge:**\n\n1. **Submit Tweets**: Go to `/submit` page and paste your tweet URL\n2. **Required Mentions**: Your tweet must contain `@layeredge` OR `\\$EDGEN`\n3. **Engagement Matters**: Points = base score + (likes + retweets + replies)\n4. **Community Verification**: Only verified community members earn points\n\n💡 **Pro Tip**: Higher engagement = more points! Focus on creating quality content that resonates with the LayerEdge community.\n\n*Note: I'm currently in enhanced offline mode with comprehensive responses.*"
+        message: "🎯 **Enhanced Points System on LayerEdge:**\n\n**Base Points**: 10 points per valid tweet submission\n\n**Engagement Multipliers** (Enhanced metrics Twitter integration):\n• Likes: 0.5 points each (max 50)\n• Retweets: 2 points each (max 100)\n• Replies: 1 point each (max 30)\n• Quote tweets: 3 points each (max 90)\n• Views: 0.01 points each (max 25)\n• Bookmarks: 5 points each (max 75)\n\n**Maximum**: 380 points per tweet!\n\n**Requirements**:\n• Tweet must contain `@layeredge` OR `$EDGEN`\n• Must be your own tweet (no point farming)\n• 5-minute cooldown between submissions\n\n**Quest Bonus**: Complete quests at `/quests` for 2000+ extra points!\n\n*Enhanced offline mode with real calculations.*"
       }
     }
 
     if (message.includes('submit') || message.includes('tweet')) {
       return {
         success: true,
-        message: "📝 **Tweet Submission Guide:**\n\n**Step 1**: Create a tweet containing `@layeredge` or `\\$EDGEN`\n**Step 2**: Copy the direct tweet URL (format: https://x.com/username/status/1234567890)\n**Step 3**: Visit `/submit` page on LayerEdge platform\n**Step 4**: Paste your tweet URL and click submit\n**Step 5**: Wait for verification and point calculation\n\n⚠️ **Common Issues**:\n- Use direct tweet URLs, not profile or search URLs\n- Ensure tweet is public and accessible\n- Verify you included required mentions\n\n*Enhanced offline assistance active.*"
+        message: "📝 **Enhanced Tweet Submission Guide:**\n\n**Step 1**: Create engaging tweet with `@layeredge` or `$EDGEN`\n**Step 2**: Copy direct URL (https://x.com/username/status/ID)\n**Step 3**: Visit `/submit` page at edgen.koyeb.app\n**Step 4**: Paste URL and submit (5-min cooldown applies)\n**Step 5**: Enhanced metrics fetched via Twitter integration\n\n**Point Calculation Example**:\n• Tweet with 20 likes, 5 retweets, 3 replies:\n• 10 (base) + 10 (likes) + 10 (retweets) + 3 (replies) = 33 points\n\n**Requirements**:\n✅ Must be YOUR tweet (no sharing others' content)\n✅ Must contain @layeredge OR $EDGEN mention\n✅ Tweet must be public and accessible\n\n*Enhanced metrics = higher accuracy!*"
       }
     }
 
-    if (message.includes('hashtag') || message.includes('@layeredge') || message.includes('$edgen')) {
+    if (message.includes('hashtag') || message.includes('@layeredge') || message.includes('$edgen') || message.includes('quest')) {
       return {
         success: true,
-        message: "🏷️ **LayerEdge Hashtag Strategy:**\n\n**@layeredge**: Official account mention\n- Use when referencing the platform\n- Great for community engagement\n- Increases visibility\n\n**\\$EDGEN**: Token reference\n- Use when discussing the token\n- Shows community involvement\n- Attracts token holders\n\n**Best Practices**:\n- You only need ONE of these mentions (not both)\n- Case-insensitive matching\n- Natural integration works best\n- Combine with relevant content\n\n*Comprehensive offline guidance available.*"
+        message: "🏷️ **LayerEdge Strategy Guide:**\n\n**Required Mentions** (choose one):\n• **@layeredge**: Official account mention\n• **$EDGEN**: Token reference\n\n**Quest System** (2000+ bonus points):\n• Visit `/quests` page at edgen.koyeb.app\n• \"Follow @LayerEdge on X\" - 1000 points (instant)\n• \"Join LayerEdge Community\" - 1000 points\n\n**Engagement Optimization**:\n• Use trending hashtags: #EDGEN #LayerEdge #AI #Blockchain\n• Post during peak hours (9-11 AM, 7-9 PM EST)\n• Ask questions to encourage replies (+1 point each)\n• Create threads for more engagement\n• Share genuine insights about AI/blockchain\n\n**Pro Tips**:\n✅ Only need ONE mention (@layeredge OR $EDGEN)\n✅ Case-insensitive matching\n✅ Complete quests first for easy 2000 points!\n\n*Maximize your LayerEdge earnings!*"
       }
     }
 
     if (message.includes('troubleshoot') || message.includes('problem') || message.includes('issue')) {
       return {
         success: true,
-        message: "🔧 **LayerEdge Troubleshooting:**\n\n**Tweet Submission Issues**:\n- ❌ Invalid URL → Use direct tweet links\n- ❌ Tweet not found → Check if tweet is public\n- ❌ No points awarded → Verify @layeredge or \\$EDGEN mention\n- ❌ Login problems → Reconnect your X/Twitter account\n\n**Common Solutions**:\n1. Refresh the page and try again\n2. Check your internet connection\n3. Verify tweet URL format\n4. Ensure tweet contains required mentions\n5. Contact support if issues persist\n\n*Advanced troubleshooting in offline mode.*"
+        message: "🔧 **LayerEdge Troubleshooting Guide:**\n\n**Tweet Submission Issues**:\n• ❌ Invalid URL → Use format: https://x.com/username/status/ID\n• ❌ Tweet not found → Ensure tweet is public and accessible\n• ❌ No points awarded → Verify @layeredge or $EDGEN mention\n• ❌ Cooldown error → Wait 5 minutes between submissions\n• ❌ \"Not your tweet\" → Can only submit your own tweets\n\n**Login/Auth Issues**:\n• Reconnect X/Twitter account in settings\n• Clear browser cache and cookies\n• Disable ad blockers temporarily\n• Try incognito/private browsing mode\n\n**Points Not Updating**:\n• Enhanced metrics may take a few minutes\n• Check if Twitter integration is active\n• Fallback to basic metrics if needed\n\n**Quick Fixes**: Refresh page, check internet, verify URL format\n\n*Comprehensive troubleshooting support available!*"
+      }
+    }
+
+    if (message.includes('calculate') || message.includes('calculation') || message.includes('example')) {
+      return {
+        success: true,
+        message: "🧮 **LayerEdge Points Calculation Examples:**\n\n**Basic Tweet** (10 likes, 2 retweets, 1 reply):\n• Base: 10 points\n• Likes: 10 × 0.5 = 5 points\n• Retweets: 2 × 2 = 4 points\n• Replies: 1 × 1 = 1 point\n• **Total: 20 points**\n\n**Popular Tweet** (50 likes, 10 retweets, 5 replies, 2 quotes):\n• Base: 10 points\n• Likes: 50 × 0.5 = 25 points (max 50)\n• Retweets: 10 × 2 = 20 points\n• Replies: 5 × 1 = 5 points\n• Quotes: 2 × 3 = 6 points\n• **Total: 66 points**\n\n**Viral Tweet** (Maximum engagement):\n• Base: 10 + Likes: 50 + Retweets: 100 + Replies: 30 + Quotes: 90 + Views: 25 + Bookmarks: 75\n• **Maximum Total: 380 points**\n\n**Quest Bonus**: +2000 points from completing all quests!\n\n*Enhanced metrics provide more accurate calculations!*"
       }
     }
 
     if (message.includes('hello') || message.includes('hi') || message.includes('help')) {
       return {
         success: true,
-        message: "👋 **Welcome to Edgen Helper!**\n\nI'm your LayerEdge community assistant, currently running in **Enhanced Offline Mode** with comprehensive responses.\n\n🎯 **I can help you with**:\n• Tweet submission and optimization\n• Points system and earning strategies\n• @layeredge and \\$EDGEN hashtag usage\n• Platform navigation and features\n• Troubleshooting common issues\n\n💬 **Try asking me**:\n- \"How do I earn points?\"\n- \"How to submit a tweet?\"\n- \"What hashtags should I use?\"\n- \"I'm having issues with...\"\n\n*Enhanced AI responses available even offline!*"
+        message: "👋 **Welcome to Edgen Helper!**\n\nI'm your LayerEdge community assistant with comprehensive knowledge of the platform!\n\n🎯 **I can help you with**:\n• **Enhanced Points System**: Up to 380 points per tweet!\n• **Quest Completion**: 2000+ bonus points available\n• **Tweet Optimization**: Maximize engagement for higher points\n• **Platform Navigation**: Dashboard, leaderboard, submission\n• **Troubleshooting**: Common issues and solutions\n\n💬 **Popular Questions**:\n- \"How do I earn maximum points?\"\n- \"What are the quest rewards?\"\n- \"How is engagement calculated?\"\n- \"What's the difference between basic and enhanced metrics?\"\n\n🚀 **Quick Start**:\n1. Complete quests at `/quests` (2000 points)\n2. Submit engaging tweets at `/submit`\n3. Check progress at `/dashboard`\n\n*Enhanced AI with real-time platform knowledge!*"
       }
     }
 
     return {
       success: true,
-      message: "🤖 **Edgen Helper - Local AI Assistant**\n\nI'm your LayerEdge community assistant with comprehensive local AI capabilities!\n\n🎯 **Quick Help**:\n• **Earn Points**: Submit tweets with @layeredge or $EDGEN\n• **Submit Tweets**: Visit `/submit` page\n• **Check Points**: View your dashboard\n• **Get Help**: Ask me specific questions\n\n💡 **Popular Topics**: Points system, tweet submission, hashtag strategy, troubleshooting\n\n*Ask me anything about LayerEdge - I have intelligent responses ready!*",
+      message: "🤖 **Edgen Helper - Enhanced AI Assistant**\n\nI'm your LayerEdge community assistant with comprehensive platform knowledge!\n\n🎯 **Platform Overview** (edgen.koyeb.app):\n• **Enhanced Points**: 10 base + up to 370 engagement points\n• **Quest System**: 2000+ bonus points available\n• **Twitter Integration**: Real-time Twitter metrics\n• **5-min Cooldown**: Between tweet submissions\n\n💡 **Key Features**:\n• **Dashboard**: Track your progress and ranking\n• **Leaderboard**: See top community members\n• **Quest Page**: Complete tasks for bonus points\n• **Submit Page**: Submit tweets for points\n\n🚀 **Getting Started**:\n1. Complete quests first (easy 2000 points)\n2. Create engaging tweets with @layeredge or $EDGEN\n3. Submit at `/submit` and watch your points grow!\n\n*Ask me anything - I know the complete LayerEdge platform!*",
       isOffline: true
     }
   }

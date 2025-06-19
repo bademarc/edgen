@@ -101,8 +101,8 @@ export function EdgenHelperChatbot() {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const welcomeContent = isMobile
-        ? "👋 Hi! I'm Edgen Helper, your LayerEdge AI assistant.\n\nI can help with:\n• Tweet submissions & points\n• Platform features\n• @layeredge hashtag tips\n• Troubleshooting\n\nWhat can I help you with?"
-        : "👋 Hi! I'm Edgen Helper, your LayerEdge community assistant powered by DeepSeek-R1 AI. I can help you with:\n\n• Tweet submission and points system\n• Platform navigation and features\n• @layeredge and $EDGEN hashtag strategy\n• Troubleshooting and optimization tips\n• Advanced engagement analysis\n\nWhat would you like to know about LayerEdge?"
+        ? "👋 Hi! I'm Edgen Helper, your LayerEdge AI assistant.\n\nI can help with:\n• Enhanced points system (up to 380 points/tweet)\n• Quest completion (2000+ bonus points)\n• Apify Twitter integration benefits\n• Platform optimization strategies\n\nWhat can I help you with?"
+        : "👋 Hi! I'm Edgen Helper, your LayerEdge community assistant with comprehensive platform knowledge!\n\n🎯 **I can help you with**:\n• **Enhanced Points System**: Up to 380 points per tweet with detailed engagement metrics\n• **Quest System**: Complete quests for 2000+ bonus points\n• **Apify Integration**: Real-time Twitter metrics for accurate calculations\n• **Platform Features**: Dashboard, leaderboard, submission optimization\n• **Strategic Guidance**: Maximize your earnings with proven strategies\n\n💡 **Key Platform Info**:\n- Base points: 10 per tweet\n- Enhanced engagement multipliers via Apify\n- 5-minute cooldown between submissions\n- Production site: edgen.koyeb.app\n\nWhat would you like to know about maximizing your LayerEdge earnings?"
 
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
@@ -216,11 +216,10 @@ export function EdgenHelperChatbot() {
   }
 
   const quickActions = [
-    { label: "Earn points strategy", message: "What's the best strategy to earn maximum points on LayerEdge?" },
-    { label: "Tweet submission", message: "Walk me through the tweet submission process step by step" },
-    { label: "Hashtag optimization", message: "How should I use @layeredge and $EDGEN for maximum engagement?" },
-    { label: "Troubleshoot issues", message: "I'm having issues with tweet submission - can you diagnose the problem?" },
-    { label: "Engagement analysis", message: "How are points calculated based on likes, retweets, and replies?" }
+    { label: "Maximum points strategy", message: "What's the best strategy to earn the maximum 380 points per tweet on LayerEdge?" },
+    { label: "Quest system guide", message: "How do I complete quests to earn the 2000+ bonus points available?" },
+    { label: "Enhanced vs basic metrics", message: "What's the difference between enhanced and basic point calculations?" },
+    { label: "Point calculation examples", message: "Can you show me examples of how points are calculated for different engagement levels?" },
   ]
 
   return (
